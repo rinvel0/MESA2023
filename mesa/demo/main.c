@@ -771,6 +771,7 @@ static void main_cli_init(void)
     for (i = 0; i < sizeof(cli_cmd_table)/sizeof(cli_cmd_t); i++) {
         mscc_appl_cli_cmd_reg(&cli_cmd_table[i]);
     }
+    printf("main_cli_init");
 }
 
 static int  RESET_FPGA = 0;
@@ -902,10 +903,12 @@ static void main_init(mscc_appl_init_t *init)
         mscc_appl_opt_reg(&main_opt_reset);
         mscc_appl_opt_reg(&main_opt_spidev);
         mscc_appl_opt_reg(&main_opt_vlan_counters_disable);
+        printf(" main_init case MSCC_INIT_CMD_REG");
         break;
 
     case MSCC_INIT_CMD_INIT:
         main_cli_init();
+        printf(" main_init case MSCC_INIT_CMD_INIT");
         break;
 
     default:
@@ -933,6 +936,7 @@ static void init_modules(mscc_appl_init_t *init)
     mscc_appl_uio_init(init);
     mscc_appl_spi_init(init);
     mscc_appl_intr_init(init);
+    printf(" init_modules completed ");
 }
 
 typedef struct {
@@ -1140,6 +1144,7 @@ int main(int argc, char **argv)
     // Setup port mapping
     if ((port_map = calloc(port_cnt, sizeof(*port_map))) == NULL) {
         T_E("port map calloc() failed");
+        printf(" port map calloc() failed ");
         return 1;
     }
     for (port_no = 0; port_no < port_cnt; port_no++) {
@@ -1161,9 +1166,11 @@ int main(int argc, char **argv)
     // Read chip id (register access check)
     if (mesa_chip_id_get(NULL, &chip_id) != MESA_RC_OK) {
         T_E("mesa_chip_id_get() failed");
+        printf(" mesa_chip_id_get() failed ");
         return 1;
     }
     T_D("Chip ID: 0x%04x, revision: %u", chip_id.part_number, chip_id.revision);
+    printf(" Chip ID: 0x%04x, revision: %u ", chip_id.part_number, chip_id.revision);
 
     // Initialize modules
     init->cmd = MSCC_INIT_CMD_INIT;
