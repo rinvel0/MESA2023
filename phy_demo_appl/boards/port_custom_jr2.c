@@ -1675,6 +1675,7 @@ static u8 jr2_temp_sensors_cnt(void) {
 
 static BOOL vtss_board_probe_jr2_cu48(vtss_board_t *board, vtss_board_info_t *board_info)
 {
+    printf(" vtss board probe jr2 cu48 from port custom ");
     vtss_port_no_t      port_no;
     port_custom_entry_t *entry;
     u32 gpio_no, alt_mask;

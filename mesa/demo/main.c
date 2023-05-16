@@ -1097,6 +1097,7 @@ int main(int argc, char **argv)
     }
     init->board_inst = meba_inst;
     T_D("MEBA Instantiated");
+    printf(" MEBA initialized ");
 
     // Create API instance
     mesa_inst_get(meba_inst->props.target, &create);
@@ -1105,10 +1106,12 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("API Instantiated");
+    printf(" API Instantiated ");
 
     // Initialize API instance
     if (mesa_init_conf_get(NULL, &conf) != MESA_RC_OK) {
         T_E("mesa_init_conf_get() failed");
+        printf(" mesa_init_conf_get failed ");
         return 1;
     }
     conf.reg_read = board_info.reg_read;
@@ -1129,6 +1132,7 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("API initialized");
+    printf(" API Initialized ");
 
     // Do a board init before the port map is established in case of any changes
     MEBA_WRAP(meba_reset, init->board_inst, MEBA_BOARD_INITIALIZE);
@@ -1152,6 +1156,7 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("Port map initialized");
+    printf(" Port initialized ");
 
     // Read chip id (register access check)
     if (mesa_chip_id_get(NULL, &chip_id) != MESA_RC_OK) {
