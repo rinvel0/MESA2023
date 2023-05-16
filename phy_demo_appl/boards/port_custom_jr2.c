@@ -366,6 +366,7 @@ static void jr2_init_cu48(void)
     (void)vtss_sgpio_event_enable(NULL, 0, 2, 25, 2, TRUE); // SFPplusB_TXFAULT
 }
 
+
 static void jr2_init_sfp24(void)
 {
     vtss_sgpio_conf_t conf;
@@ -1694,7 +1695,7 @@ static BOOL vtss_board_probe_jr2_cu48(vtss_board_t *board, vtss_board_info_t *bo
     board->type = VTSS_BOARD_JAGUAR2_CU48_REF,
     jr2_board_type = board_info->board_type = board->type;
 
-    board->name = "Jaguar-2 CU48 Reference";
+    board->name = "Jaguar-2 CU48 Reference - KBA";
     board->features = (VTSS_BOARD_FEATURE_LOS | VTSS_BOARD_FEATURE_1588_CLK_ADJ_DAC | VTSS_BOARD_FEATURE_POE);
     board->custom_port_table = jr2_port_table;
     board->init = jr2_init_cu48;
@@ -1718,17 +1719,26 @@ static BOOL vtss_board_probe_jr2_cu48(vtss_board_t *board, vtss_board_info_t *bo
 #else
     board->mux_mode = VTSS_PORT_MUX_MODE_AUTO;
 #endif
-
+    printf(" PORT CONF might be from port_custom_jr2.c ");
     for (port_no = 0; port_no < VTSS_PORTS; port_no++) {
         entry = &jr2_port_table[port_no];
-        if (port_no < 48) {
+        if (port_no < 18 || port_no == 20){
             /* Port 0-47: Copper ports */
+            //entry->map.chip_port       = port_no;
+            //entry->map.miim_controller = port_no < 24 ? VTSS_MIIM_CONTROLLER_1 : VTSS_MIIM_CONTROLLER_2;
+            //entry->map.miim_addr       = port_no < 24 ? port_no : port_no - 24;
+            //entry->map.max_bw          = VTSS_BW_1G;
+            //entry->mac_if              = VTSS_PORT_INTERFACE_QSGMII;
+            //entry->cap                 = PORT_CAP_TRI_SPEED_COPPER;
+            
+        /* Port 0-17 and 20 SERDES No MIIM controller, 1G FDX */
             entry->map.chip_port       = port_no;
-            entry->map.miim_controller = port_no < 24 ? VTSS_MIIM_CONTROLLER_1 : VTSS_MIIM_CONTROLLER_2;
-            entry->map.miim_addr       = port_no < 24 ? port_no : port_no - 24;
-            entry->map.max_bw          = VTSS_BW_1G;
-            entry->mac_if              = VTSS_PORT_INTERFACE_QSGMII;
-            entry->cap                 = PORT_CAP_TRI_SPEED_COPPER;
+            entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+            entry->map.miim_addr       = port_no;
+            entry->mac_if              = MESA_PORT_INTERFACE_SERDES;
+            entry->map.max_bw          = MESA_BW_1G;
+            entry->cap                 = MEBA_PORT_CAP_1G_FDX;
+
 #ifdef VTSS_SW_OPTION_POE
             entry->poe_chip_port       =  entry->map.chip_port;
             entry->poe_support         =  port_no < 24 ? TRUE : FALSE;
@@ -1774,14 +1784,14 @@ static BOOL vtss_board_probe_jr2_cu48(vtss_board_t *board, vtss_board_info_t *bo
             detect.cap = 0;
             entry->map.max_bw = VTSS_BW_DEFAULT; // 10G
 
-            if (jr2_10g_detect(&detect, board_info)) {
+           // if (jr2_10g_detect(&detect, board_info)) {
                 /* API Port 48,49: XAUI chip ports 49,50 - possibly VTSS PHYs */
-                entry->map.chip_port       = port_no + 1;
-                entry->map.miim_controller = VTSS_MIIM_CONTROLLER_0;
-                entry->map.miim_addr       = detect.miim_addr[0];
-                entry->mac_if              = VTSS_PORT_INTERFACE_XAUI;
-                entry->cap                 = detect.cap;
-            } else {
+            //    entry->map.chip_port       = port_no + 1;
+             //   entry->map.miim_controller = VTSS_MIIM_CONTROLLER_0;
+            //    entry->map.miim_addr       = detect.miim_addr[0];
+            //    entry->mac_if              = VTSS_PORT_INTERFACE_XAUI;
+            //   entry->cap                 = detect.cap;
+            //} else {
                 /* API Port 48-49: SFP+ chip ports:51,52 */
                 entry->map.chip_port       = port_no == 48 ? 52 : 51;
                 entry->map.miim_controller = VTSS_MIIM_CONTROLLER_NONE;

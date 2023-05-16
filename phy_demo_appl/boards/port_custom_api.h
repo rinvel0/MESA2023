@@ -12,6 +12,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define VTSS_ARCH_JAGUAR_2_B //CPMOD
+#define VTSS_CHIP_SPARX_IV_80 //CPMOD
+
 /******************************************************************************/
 /* Port capabilities                                                          */
 /******************************************************************************/

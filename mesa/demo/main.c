@@ -26,6 +26,8 @@
 
 #define I2C_PORT2DEV(p) (100 + p)
 
+
+
 // Local data
 static int LOOP_PORT = -1;
 static int REF_BOARD_PCB = -1;
@@ -446,8 +448,8 @@ static mesa_rc board_conf_get(const char *tag, char *buf, size_t bufsize, size_t
             }
         }
         if (REF_BOARD_PCB == 111) {
-            board = "Jaguar2-cu48";
-            target = 0x7449;
+            board = "Jaguar2-cu48 -KBA"; //CPMOD
+            target = 0x7448; //CPMOD was 7449
             type = 1;
         } else if (REF_BOARD_PCB == 116) {
             board = "Serval2 NID";
@@ -459,6 +461,9 @@ static mesa_rc board_conf_get(const char *tag, char *buf, size_t bufsize, size_t
             type = 2;
         } else {
             printf("unknown JR2 PCB: %d.\n", REF_BOARD_PCB);
+            board = "Jaguar2-cu48 -KBA"; //CPMOD
+            target = 0x7448; //CPMOD was 7449
+            type = 1;
         }
         break;
 
@@ -493,6 +498,7 @@ static mesa_rc board_conf_get(const char *tag, char *buf, size_t bufsize, size_t
 
     default:
         break;
+        printf(" NO BOARD CASE "); //CPMOD
     }
 
     if (strcmp(tag, "board") == 0 && board != NULL) {

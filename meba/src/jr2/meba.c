@@ -474,6 +474,90 @@ static void init_port_cu48(meba_inst_t inst, mesa_port_no_t port_no, meba_port_e
     }
 }
 
+
+static void init_port_cu48_kba(meba_inst_t inst, mesa_port_no_t port_no, meba_port_entry_t *entry)
+{
+    printf(" init from meba.c | ");
+    meba_board_state_t *board = INST2BOARD(inst);
+    if (port_no < 18 || port_no == 20) {
+        /* Port 0-17 and 20 SERDES No MIIM controller, 1G FDX */
+        entry->map.chip_port       = port_no;
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+        entry->map.miim_addr       = port_no;
+        entry->mac_if              = MESA_PORT_INTERFACE_SERDES;
+        entry->map.max_bw          = MESA_BW_1G;
+        entry->cap                 = MEBA_PORT_CAP_1G_FDX;
+            
+        //entry->map.miim_controller = port_no < 24 ? MESA_MIIM_CONTROLLER_1 : MESA_MIIM_CONTROLLER_2;
+        //entry->map.miim_addr       = port_no < 24 ? port_no : port_no - 24;
+        
+    } else if ( port_no > 17 && port_no < 27 && port_no != 20) {
+        /* Port 18,19,21-26 Copper, SGMII, external PHY MIIM COntroller for PHY Tri-Speed Copper*/
+        entry->map.chip_port       = port_no;
+        //entry->map.miim_controller = port_no < 24 ? MESA_MIIM_CONTROLLER_1 : MESA_MIIM_CONTROLLER_2;
+        //entry->map.miim_addr       = port_no > 22 ? 26 - port_no : (port_no > 20 ? 22 - port_no :  21 - port_no);
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_0; // CPMOD Check + the line (max 2) below
+        entry->map.miim_addr       = port_no == 18 ? 4 : (port_no == 19 ? 5 : (port_no == 21 ? 6 : (port_no == 22 ? 7 : (port_no == 23 ? 8 : (port_no == 24 ? 9 : (port_no == 25 ? 10 : 11))))));
+        //entry->map.miim_addr       = port_no == 18 ? 11 : (port_no == 19 ? 10 : (port_no == 21 ? 9 : (port_no == 22 ? 8 : (port_no == 23 ? 7 : (port_no == 24 ? 6 : (port_no == 25 ? 5 : 4))))));
+        entry->map.max_bw          = MESA_BW_1G;
+        entry->mac_if              = MESA_PORT_INTERFACE_SGMII;
+        entry->cap                 = MEBA_PORT_CAP_TRI_SPEED_COPPER | MEBA_PORT_CAP_INT_PHY;
+        //entry->poe_chip_port       = entry->map.chip_port % 24; // Each PD69200 controller controls 24 ports.
+        //entry->poe_support         = true;
+        //entry->poe_support         = false;
+
+    } else if (port_no > 48 && port_no < 53) {
+        // SFP ports 49-52
+        board->detect.port_no = port_no;
+        board->detect.miim_addr[0] = (port_no - 24);
+        board->detect.cap = 0;
+        entry->map.max_bw = MESA_BW_10G; // 10G
+
+        entry->map.chip_port       = port_no; //+ ((port_no & 1) ? 0 : 2);
+        entry->map.chip_port       = port_no;
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+        entry->mac_if              = MESA_PORT_INTERFACE_SFI;
+        entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
+        //if (port_no < 50) {
+            /* Port 48-49: 10G ports SFI or XAUI */
+            /* Detect 10G PHY, can be a VTSS PHY or X2/Xenpak module */
+            /* If a device is found then this XAUI port is activated and a SFP+ port disabled */
+            
+        //entry->map.chip_port       = port_no == 48 ? 50 : 49;
+        //entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+       // entry->mac_if              = MESA_PORT_INTERFACE_SFI;
+        //entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
+        
+        //} else if (port_no < 52 ) {
+            /* API Port 50,51: 10G SFI ports 52,51 */
+        //entry->map.chip_port       = port_no == 50 ? 52 : 51;
+        //entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+        //entry->map.max_bw          = MESA_BW_DEFAULT; // 10G
+       // entry->mac_if              = MESA_PORT_INTERFACE_SFI;
+        //entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
+       // }
+    } else  {//if (port_no > 26 && port_no <= 53 && port_no != 48) {
+        //unused ports
+        //entry->map.chip_port       = port_no;
+        //entry->map.miim_addr       = port_no - 24;
+        //entry->map.chip_port       = CHIP_PORT_UNUSED;
+        //entry->map.max_bw          = MESA_BW_1G;
+        //entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+        //entry->mac_if              = MESA_PORT_INTERFACE_NO_CONNECTION;
+        entry->cap                 = MEBA_PORT_CAP_NONE;
+//to compile and run check 48 and not used and also copper sgmii now loaded is reversed
+   
+    //} else {
+        /* Last port (NPI) */
+      //  entry->map.chip_port       = 48;
+      //  entry->map.miim_controller = mebaux_phy_detect(inst, &rawio, 28); // Autodetect controller 0 or 1
+       // entry->map.miim_addr       = 28;
+       // entry->map.max_bw          = MESA_BW_1G;
+       // entry->mac_if              = MESA_PORT_INTERFACE_NO_CONNECTION;//MESA_PORT_INTERFACE_SGMII;
+       // entry->cap                 = MEBA_PORT_CAP_TRI_SPEED_COPPER;
+    }
+}
+
 static void init_port_jr2(meba_inst_t inst, mesa_port_no_t port_no, meba_port_entry_t *entry)
 {
     meba_board_state_t *board = INST2BOARD(inst);
@@ -1428,7 +1512,7 @@ static const board_func_t board_funcs[] = {
     },
     [BOARD_TYPE_JAGUAR2_CU48] = {
         .board_init = jr2_init_cu48,
-        .init_port  = init_port_cu48,
+        .init_port  = init_port_cu48_kba, //CPMOD
         .led_update = led_update_j2_cu48 ,
     },
     [BOARD_TYPE_JAGUAR2] = {
@@ -3371,7 +3455,7 @@ meba_inst_t meba_initialize(size_t callouts_size,
             board->port_cnt = 15;
             break;
         case BOARD_TYPE_JAGUAR2_CU48:
-            if (inst->props.target == MESA_TARGET_SPARX_IV_90 || inst->props.target == MESA_TARGET_SPARX_IV_52) {
+            if (inst->props.target == MESA_TARGET_SPARX_IV_90 || inst->props.target == MESA_TARGET_SPARX_IV_52 || inst->props.target == MESA_TARGET_SPARX_IV_80) {
                 board->port_cnt = 53;
                 inst->props.mux_mode = MESA_PORT_MUX_MODE_2;
             } else {
