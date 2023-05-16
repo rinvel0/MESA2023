@@ -1,0 +1,5 @@
+CREATE libmeba_lan966x.a
+ADDLIB $<TARGET_FILE:meba_only_lan966x>
+ADDLIB $<TARGET_FILE:mepa_lan966x>
+SAVE
+END

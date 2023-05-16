@@ -1,0 +1,5 @@
+CREATE libmeba_servalt.a
+ADDLIB $<TARGET_FILE:meba_only_servalt>
+ADDLIB $<TARGET_FILE:mepa_servalt>
+SAVE
+END

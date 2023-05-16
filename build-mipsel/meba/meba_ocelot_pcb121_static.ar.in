@@ -1,0 +1,5 @@
+CREATE libmeba_ocelot_pcb121.a
+ADDLIB $<TARGET_FILE:meba_only_ocelot_pcb121>
+ADDLIB $<TARGET_FILE:mepa_ocelot_pcb121>
+SAVE
+END

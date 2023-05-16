@@ -1,0 +1,5 @@
+CREATE libmepa_servalt.a
+ADDLIB $<TARGET_FILE:mepa_servalt_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_10g_ts>
+SAVE
+END

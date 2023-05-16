@@ -1,0 +1,5 @@
+CREATE libmepa_caracal.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_caracal_common.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/vtss/libmepa_drv_vtss.a
+SAVE
+END

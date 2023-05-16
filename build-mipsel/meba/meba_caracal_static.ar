@@ -1,0 +1,5 @@
+CREATE libmeba_caracal.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_caracal.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_caracal.a
+SAVE
+END

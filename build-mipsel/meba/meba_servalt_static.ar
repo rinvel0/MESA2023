@@ -1,0 +1,5 @@
+CREATE libmeba_servalt.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_servalt.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_servalt.a
+SAVE
+END

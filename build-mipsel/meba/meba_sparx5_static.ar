@@ -1,0 +1,5 @@
+CREATE libmeba_sparx5.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_sparx5.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_sparx5.a
+SAVE
+END

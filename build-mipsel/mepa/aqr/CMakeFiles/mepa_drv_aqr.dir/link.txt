@@ -1,0 +1,2 @@
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-ar qc libmepa_drv_aqr.a  CMakeFiles/mepa_drv_aqr.dir/phy_driver.c.o CMakeFiles/mepa_drv_aqr.dir/vtss_platform/AQ_PhyInterface.c.o CMakeFiles/mepa_drv_aqr.dir/vtss_platform/AQ_PlatformRoutines.c.o CMakeFiles/mepa_drv_aqr.dir/AQR_API_2.6.1/src/AQ_API.c.o CMakeFiles/mepa_drv_aqr.dir/AQR_API_2.6.1/src/AQ_API_flash.c.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-ranlib libmepa_drv_aqr.a

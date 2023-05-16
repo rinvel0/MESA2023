@@ -1,0 +1,5 @@
+CREATE libmepa_jr2_bringup.a
+ADDLIB $<TARGET_FILE:mepa_jr2_bringup_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_10g_ts>
+SAVE
+END

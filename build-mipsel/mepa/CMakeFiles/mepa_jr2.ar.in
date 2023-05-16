@@ -1,0 +1,7 @@
+CREATE libmepa_jr2.a
+ADDLIB $<TARGET_FILE:mepa_jr2_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_10g_ts>
+ADDLIB $<TARGET_FILE:mepa_drv_aqr>
+ADDLIB $<TARGET_FILE:mepa_drv_intel>
+SAVE
+END

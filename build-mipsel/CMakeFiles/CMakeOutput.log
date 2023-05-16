@@ -1,0 +1,462 @@
+The target system is: Buildroot - 1 - mipsel
+The host system is: Linux - 5.19.0-41-generic - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc 
+Build flags: -D_LARGEFILE_SOURCE;-D_LARGEFILE64_SOURCE;-D_FILE_OFFSET_BITS=64;-Os;-g0
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is GNU, found in "/home/codrin/mesa/build-mipsel/CMakeFiles/3.16.9/CompilerIdC/a.out"
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ 
+Build flags: -D_LARGEFILE_SOURCE;-D_LARGEFILE64_SOURCE;-D_FILE_OFFSET_BITS=64;-Os;-g0
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is GNU, found in "/home/codrin/mesa/build-mipsel/CMakeFiles/3.16.9/CompilerIdCXX/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_f4538/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_f4538.dir/build.make CMakeFiles/cmTC_f4538.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f4538.dir/testCCompiler.c.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot   -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -o CMakeFiles/cmTC_f4538.dir/testCCompiler.c.o   -c /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_f4538
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f4538.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG    CMakeFiles/cmTC_f4538.dir/testCCompiler.c.o  -o cmTC_f4538 
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_0328f/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_0328f.dir/build.make CMakeFiles/cmTC_0328f.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot   -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v -o CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o   -c /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCCompilerABI.c
+Using built-in specs.
+COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-gcc.br_real
+Target: mipsel-mips32r2-linux-gnu
+Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp
+Thread model: posix
+Supported LTO compression algorithms: zlib
+gcc version 10.3.0 (Buildroot 2022.02) 
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/cc1 -quiet -v -iprefix /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/ -isysroot /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D _LARGEFILE_SOURCE -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64 -D NDEBUG /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCCompilerABI.c -mel -quiet -dumpbase CMakeCCompilerABI.c -mabi=32 -mnan=legacy -msoft-float -march=mips32r2 -mllsc -mips32r2 -mno-shared -auxbase-strip CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o -g0 -Os -version -o /tmp/cc1XFg3v.s
+GNU C17 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)
+	compiled by GNU C version 5.4.1 20160904, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version none
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include"
+ignoring nonexistent directory "/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/local/include"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include
+ /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include
+End of search list.
+GNU C17 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)
+	compiled by GNU C version 5.4.1 20160904, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version none
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: 808eaa97fde9b5fbad8d8b2caf65d145
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/as -v -EL -mips32r2 -O2 -g0 -mabi=32 -march=mips32r2 -mnan=legacy -mno-shared -msoft-float -KPIC -o CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o /tmp/cc1XFg3v.s
+GNU assembler version 2.36.1 (mipsel-mips32r2-linux-gnu) using BFD version (GNU Binutils) 2.36.1
+COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/
+LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared'
+Linking C executable cmTC_0328f
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0328f.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o  -o cmTC_0328f 
+Using built-in specs.
+COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-gcc.br_real
+COLLECT_LTO_WRAPPER=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper
+Target: mipsel-mips32r2-linux-gnu
+Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp
+Thread model: posix
+Supported LTO compression algorithms: zlib
+gcc version 10.3.0 (Buildroot 2022.02) 
+COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/
+LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_0328f' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2 -plugin /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so -plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2WwYkU.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot --eh-frame-hdr -EL -mips32r2 -dynamic-linker /lib/ld.so.1 -melf32ltsmip -o cmTC_0328f /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0 -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_0328f' '-mllsc' '-mips32r2' '-mno-shared'
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+
+Parsed C implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include]
+    add: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  end of search list found
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include]
+  collapse include dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  implicit include dirs: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(mipsel-linux-ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command(s):/usr/bin/gmake cmTC_0328f/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_0328f.dir/build.make CMakeFiles/cmTC_0328f.dir/build]
+  ignore line: [gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp']
+  ignore line: [Building C object CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot   -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v -o CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o   -c /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCCompilerABI.c]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-gcc.br_real]
+  ignore line: [Target: mipsel-mips32r2-linux-gnu]
+  ignore line: [Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib]
+  ignore line: [gcc version 10.3.0 (Buildroot 2022.02) ]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/cc1 -quiet -v -iprefix /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/ -isysroot /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D _LARGEFILE_SOURCE -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64 -D NDEBUG /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCCompilerABI.c -mel -quiet -dumpbase CMakeCCompilerABI.c -mabi=32 -mnan=legacy -msoft-float -march=mips32r2 -mllsc -mips32r2 -mno-shared -auxbase-strip CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o -g0 -Os -version -o /tmp/cc1XFg3v.s]
+  ignore line: [GNU C17 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)]
+  ignore line: [	compiled by GNU C version 5.4.1 20160904  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version none]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include"]
+  ignore line: [ignoring nonexistent directory "/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/local/include"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include]
+  ignore line: [ /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  ignore line: [End of search list.]
+  ignore line: [GNU C17 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)]
+  ignore line: [	compiled by GNU C version 5.4.1 20160904  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version none]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [Compiler executable checksum: 808eaa97fde9b5fbad8d8b2caf65d145]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/as -v -EL -mips32r2 -O2 -g0 -mabi=32 -march=mips32r2 -mnan=legacy -mno-shared -msoft-float -KPIC -o CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o /tmp/cc1XFg3v.s]
+  ignore line: [GNU assembler version 2.36.1 (mipsel-mips32r2-linux-gnu) using BFD version (GNU Binutils) 2.36.1]
+  ignore line: [COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/]
+  ignore line: [LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o' '-c' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [Linking C executable cmTC_0328f]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0328f.dir/link.txt --verbose=1]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o  -o cmTC_0328f ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-gcc.br_real]
+  ignore line: [COLLECT_LTO_WRAPPER=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper]
+  ignore line: [Target: mipsel-mips32r2-linux-gnu]
+  ignore line: [Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib]
+  ignore line: [gcc version 10.3.0 (Buildroot 2022.02) ]
+  ignore line: [COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/]
+  ignore line: [LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_0328f' '-mllsc' '-mips32r2' '-mno-shared']
+  link line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2 -plugin /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so -plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2WwYkU.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot --eh-frame-hdr -EL -mips32r2 -dynamic-linker /lib/ld.so.1 -melf32ltsmip -o cmTC_0328f /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0 -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o]
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/cc2WwYkU.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [--sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-EL] ==> ignore
+    arg [-mips32r2] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib/ld.so.1] ==> ignore
+    arg [-melf32ltsmip] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_0328f] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o] ==> ignore
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o] ==> ignore
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0]
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc]
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib]
+    arg [-L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib] ==> dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib]
+    arg [-L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib] ==> dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+    arg [CMakeFiles/cmTC_0328f.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-lgcc] ==> lib [gcc]
+    arg [--push-state] ==> ignore
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--pop-state] ==> ignore
+    arg [-lc] ==> lib [c]
+    arg [-lgcc] ==> lib [gcc]
+    arg [--push-state] ==> ignore
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--pop-state] ==> ignore
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o] ==> ignore
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0]
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc]
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/lib]
+  collapse library dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib]
+  collapse library dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+  implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+  implicit dirs: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/lib;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+  implicit fwks: []
+
+
+Determining if the CXX compiler works passed with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_c7f59/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_c7f59.dir/build.make CMakeFiles/cmTC_c7f59.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_c7f59.dir/testCXXCompiler.cxx.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot    -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -o CMakeFiles/cmTC_c7f59.dir/testCXXCompiler.cxx.o -c /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp/testCXXCompiler.cxx
+Linking CXX executable cmTC_c7f59
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c7f59.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot  -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG    CMakeFiles/cmTC_c7f59.dir/testCXXCompiler.cxx.o  -o cmTC_c7f59 
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_59ad8/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_59ad8.dir/build.make CMakeFiles/cmTC_59ad8.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot    -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v -o CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -c /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp
+Using built-in specs.
+COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-g++.br_real
+Target: mipsel-mips32r2-linux-gnu
+Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp
+Thread model: posix
+Supported LTO compression algorithms: zlib
+gcc version 10.3.0 (Buildroot 2022.02) 
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/cc1plus -quiet -v -iprefix /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/ -isysroot /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_GNU_SOURCE -D _LARGEFILE_SOURCE -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64 -D NDEBUG /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp -mel -quiet -dumpbase CMakeCXXCompilerABI.cpp -mabi=32 -mnan=legacy -msoft-float -march=mips32r2 -mllsc -mips32r2 -mno-shared -auxbase-strip CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -g0 -Os -version -o /tmp/ccQ6bvje.s
+GNU C++14 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)
+	compiled by GNU C version 5.4.1 20160904, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version none
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include"
+ignoring nonexistent directory "/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/local/include"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed"
+ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include
+ /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include
+End of search list.
+GNU C++14 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)
+	compiled by GNU C version 5.4.1 20160904, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version none
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: a2497a302c638e089a05217abe7ccce0
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/as -v -EL -mips32r2 -O2 -g0 -mabi=32 -march=mips32r2 -mnan=legacy -mno-shared -msoft-float -KPIC -o CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccQ6bvje.s
+GNU assembler version 2.36.1 (mipsel-mips32r2-linux-gnu) using BFD version (GNU Binutils) 2.36.1
+COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/
+LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared'
+Linking CXX executable cmTC_59ad8
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_59ad8.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot  -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_59ad8 
+Using built-in specs.
+COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-g++.br_real
+COLLECT_LTO_WRAPPER=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper
+Target: mipsel-mips32r2-linux-gnu
+Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp
+Thread model: posix
+Supported LTO compression algorithms: zlib
+gcc version 10.3.0 (Buildroot 2022.02) 
+COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/
+LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_59ad8' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared'
+ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2 -plugin /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so -plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccaKlNFv.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot --eh-frame-hdr -EL -mips32r2 -dynamic-linker /lib/ld.so.1 -melf32ltsmip -o cmTC_59ad8 /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0 -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o
+COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_59ad8' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared'
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+
+Parsed CXX implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+    add: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include]
+    add: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  end of search list found
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+  collapse include dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include]
+  collapse include dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  implicit include dirs: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/include;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+
+
+Parsed CXX implicit link information from above output:
+  link line regex: [^( *|.*[/\])(mipsel-linux-ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command(s):/usr/bin/gmake cmTC_59ad8/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_59ad8.dir/build.make CMakeFiles/cmTC_59ad8.dir/build]
+  ignore line: [gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp']
+  ignore line: [Building CXX object CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot    -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v -o CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -c /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-g++.br_real]
+  ignore line: [Target: mipsel-mips32r2-linux-gnu]
+  ignore line: [Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib]
+  ignore line: [gcc version 10.3.0 (Buildroot 2022.02) ]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/cc1plus -quiet -v -iprefix /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/ -isysroot /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_GNU_SOURCE -D _LARGEFILE_SOURCE -D _LARGEFILE64_SOURCE -D _FILE_OFFSET_BITS=64 -D NDEBUG /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/share/cmake-3.16/Modules/CMakeCXXCompilerABI.cpp -mel -quiet -dumpbase CMakeCXXCompilerABI.cpp -mabi=32 -mnan=legacy -msoft-float -march=mips32r2 -mllsc -mips32r2 -mno-shared -auxbase-strip CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -g0 -Os -version -o /tmp/ccQ6bvje.s]
+  ignore line: [GNU C++14 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)]
+  ignore line: [	compiled by GNU C version 5.4.1 20160904  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version none]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include"]
+  ignore line: [ignoring nonexistent directory "/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/local/include"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed"]
+  ignore line: [ignoring duplicate directory "/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/../../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/mipsel-mips32r2-linux-gnu]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include/c++/10.3.0/backward]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/include-fixed]
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/include]
+  ignore line: [ /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/include]
+  ignore line: [End of search list.]
+  ignore line: [GNU C++14 (Buildroot 2022.02) version 10.3.0 (mipsel-mips32r2-linux-gnu)]
+  ignore line: [	compiled by GNU C version 5.4.1 20160904  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version none]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [Compiler executable checksum: a2497a302c638e089a05217abe7ccce0]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/as -v -EL -mips32r2 -O2 -g0 -mabi=32 -march=mips32r2 -mnan=legacy -mno-shared -msoft-float -KPIC -o CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccQ6bvje.s]
+  ignore line: [GNU assembler version 2.36.1 (mipsel-mips32r2-linux-gnu) using BFD version (GNU Binutils) 2.36.1]
+  ignore line: [COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/]
+  ignore line: [LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared']
+  ignore line: [Linking CXX executable cmTC_59ad8]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_59ad8.dir/link.txt --verbose=1]
+  ignore line: [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-g++ --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot  -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Os -g0   -DNDEBUG   -v CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o  -o cmTC_59ad8 ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/mipsel-linux-g++.br_real]
+  ignore line: [COLLECT_LTO_WRAPPER=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper]
+  ignore line: [Target: mipsel-mips32r2-linux-gnu]
+  ignore line: [Configured with: ./configure --prefix=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --sysconfdir=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/etc --enable-static --target=mipsel-mips32r2-linux-gnu --with-sysroot=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/sysroot --enable-__cxa_atexit --with-gnu-ld --disable-libssp --disable-multilib --disable-decimal-float --with-gmp=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpc=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-mpfr=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host --with-pkgversion='Buildroot 2022.02' --with-bugurl=http://bugs.buildroot.net/ --without-zstd --disable-libquadmath --disable-libquadmath-support --enable-tls --enable-threads --without-isl --without-cloog --with-float=soft --with-arch=mips32r2 --with-abi=32 --with-nan=legacy --enable-languages=c,c++ --with-build-time-tools=/var/tmp/SimpleGrid/bsp/tTOrTa/stage/mscc-toolchain-source-2022.02-100/output/build_mips_glib_toolchain/host/mipsel-mips32r2-linux-gnu/bin --enable-shared --disable-libgomp]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib]
+  ignore line: [gcc version 10.3.0 (Buildroot 2022.02) ]
+  ignore line: [COMPILER_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/bin/]
+  ignore line: [LIBRARY_PATH=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/:/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib/:/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-mabi=32' '-mnan=legacy' '-msoft-float' '-EL' '-march=mips32r2' '-D' '_LARGEFILE_SOURCE' '-D' '_LARGEFILE64_SOURCE' '-D' '_FILE_OFFSET_BITS=64' '-Os' '-g0' '-D' 'NDEBUG' '-v' '-o' 'cmTC_59ad8' '-shared-libgcc' '-mllsc' '-mips32r2' '-mno-shared']
+  link line: [ /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2 -plugin /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so -plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccaKlNFv.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot --eh-frame-hdr -EL -mips32r2 -dynamic-linker /lib/ld.so.1 -melf32ltsmip -o cmTC_59ad8 /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0 -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc -L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib -L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o /opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o]
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../libexec/gcc/mipsel-mips32r2-linux-gnu/10.3.0/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccaKlNFv.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [--sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-EL] ==> ignore
+    arg [-mips32r2] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib/ld.so.1] ==> ignore
+    arg [-melf32ltsmip] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_59ad8] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crt1.o] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crti.o] ==> ignore
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtbegin.o] ==> ignore
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0]
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc]
+    arg [-L/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib] ==> dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib]
+    arg [-L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib] ==> dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib]
+    arg [-L/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib] ==> dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+    arg [CMakeFiles/cmTC_59ad8.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [-lstdc++] ==> lib [stdc++]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lc] ==> lib [c]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/crtend.o] ==> ignore
+    arg [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib/crtn.o] ==> ignore
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0]
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc]
+  collapse library dir [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/bin/../lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0/../../../../mipsel-mips32r2-linux-gnu/lib] ==> [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/lib]
+  collapse library dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib]
+  collapse library dir [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib] ==> [/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+  implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+  implicit dirs: [/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc/mipsel-mips32r2-linux-gnu/10.3.0;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/lib/gcc;/opt/mscc/mscc-toolchain-bin-2022.02-100/mipsel-mips32r2-linux-gnu/mipsel-mips32r2-linux-gnu/lib;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/lib;/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot/usr/lib]
+  implicit fwks: []
+
+
+Determining if files endian.h exist passed with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_bbaf5/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_bbaf5.dir/build.make CMakeFiles/cmTC_bbaf5.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_bbaf5.dir/VTSS_HAS_ENDIAN_H.c.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot   -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG   -DNDEBUG   -o CMakeFiles/cmTC_bbaf5.dir/VTSS_HAS_ENDIAN_H.c.o   -c /home/codrin/mesa/build-mipsel/CMakeFiles/CheckIncludeFiles/VTSS_HAS_ENDIAN_H.c
+Linking C executable cmTC_bbaf5
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bbaf5.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG   -DNDEBUG    CMakeFiles/cmTC_bbaf5.dir/VTSS_HAS_ENDIAN_H.c.o  -o cmTC_bbaf5 
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+
+Determining if files asm/byteorder.h exist passed with the following output:
+Change Dir: /home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/gmake cmTC_c85a5/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_c85a5.dir/build.make CMakeFiles/cmTC_c85a5.dir/build
+gmake[1]: Entering directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c85a5.dir/VTSS_HAS_ASM_BYTEORDER_H.c.o
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot   -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG   -DNDEBUG   -o CMakeFiles/cmTC_c85a5.dir/VTSS_HAS_ASM_BYTEORDER_H.c.o   -c /home/codrin/mesa/build-mipsel/CMakeFiles/CheckIncludeFiles/VTSS_HAS_ASM_BYTEORDER_H.c
+Linking C executable cmTC_c85a5
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c85a5.dir/link.txt --verbose=1
+/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc --sysroot=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/mipsel-buildroot-linux-gnu/sysroot -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG   -DNDEBUG    CMakeFiles/cmTC_c85a5.dir/VTSS_HAS_ASM_BYTEORDER_H.c.o  -o cmTC_c85a5 
+gmake[1]: Leaving directory '/home/codrin/mesa/build-mipsel/CMakeFiles/CMakeTmp'
+
+
+

@@ -1,0 +1,7 @@
+CREATE libmepa_jr2.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_jr2_common.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/vtss/libmepa_drv_vtss_10g_ts.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/aqr/libmepa_drv_aqr.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/intel/libmepa_drv_intel.a
+SAVE
+END

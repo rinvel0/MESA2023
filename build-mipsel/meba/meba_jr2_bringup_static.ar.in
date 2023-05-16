@@ -1,0 +1,5 @@
+CREATE libmeba_jr2_bringup.a
+ADDLIB $<TARGET_FILE:meba_only_jr2_bringup>
+ADDLIB $<TARGET_FILE:mepa_jr2_bringup>
+SAVE
+END

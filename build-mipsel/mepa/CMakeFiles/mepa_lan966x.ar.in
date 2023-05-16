@@ -1,0 +1,8 @@
+CREATE libmepa_lan966x.a
+ADDLIB $<TARGET_FILE:mepa_lan966x_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss>
+ADDLIB $<TARGET_FILE:mepa_drv_ksz9031>
+ADDLIB $<TARGET_FILE:mepa_drv_lan8814>
+ADDLIB $<TARGET_FILE:mepa_drv_lan884x>
+SAVE
+END

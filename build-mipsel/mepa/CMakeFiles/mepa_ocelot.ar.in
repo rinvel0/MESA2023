@@ -1,0 +1,6 @@
+CREATE libmepa_ocelot.a
+ADDLIB $<TARGET_FILE:mepa_ocelot_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_ts>
+ADDLIB $<TARGET_FILE:mepa_drv_lan8814>
+SAVE
+END

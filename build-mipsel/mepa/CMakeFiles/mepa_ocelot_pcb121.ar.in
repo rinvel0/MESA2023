@@ -1,0 +1,5 @@
+CREATE libmepa_ocelot_pcb121.a
+ADDLIB $<TARGET_FILE:mepa_ocelot_pcb121_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_ts>
+SAVE
+END

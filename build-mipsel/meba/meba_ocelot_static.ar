@@ -1,0 +1,5 @@
+CREATE libmeba_ocelot.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_ocelot.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_ocelot.a
+SAVE
+END

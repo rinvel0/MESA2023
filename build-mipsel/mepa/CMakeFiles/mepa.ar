@@ -1,0 +1,4 @@
+CREATE libmepa.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_common.a
+SAVE
+END

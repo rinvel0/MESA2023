@@ -1,0 +1,5 @@
+CREATE libmepa_caracal.a
+ADDLIB $<TARGET_FILE:mepa_caracal_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss>
+SAVE
+END

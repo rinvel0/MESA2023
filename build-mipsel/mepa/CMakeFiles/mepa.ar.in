@@ -1,0 +1,4 @@
+CREATE libmepa.a
+ADDLIB $<TARGET_FILE:mepa_common>
+SAVE
+END

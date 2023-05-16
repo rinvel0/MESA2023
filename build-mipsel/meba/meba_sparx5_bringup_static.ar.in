@@ -1,0 +1,5 @@
+CREATE libmeba_sparx5_bringup.a
+ADDLIB $<TARGET_FILE:meba_only_sparx5_bringup>
+ADDLIB $<TARGET_FILE:mepa_sparx5_bringup>
+SAVE
+END

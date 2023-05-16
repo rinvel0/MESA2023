@@ -1,0 +1,5 @@
+CREATE libmeba_ocelot_pcb121.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_ocelot_pcb121.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_ocelot_pcb121.a
+SAVE
+END

@@ -1,0 +1,5 @@
+CREATE libmeba_sparx5.a
+ADDLIB $<TARGET_FILE:meba_only_sparx5>
+ADDLIB $<TARGET_FILE:mepa_sparx5>
+SAVE
+END

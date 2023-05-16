@@ -1,0 +1,8 @@
+CREATE libmepa_sparx5.a
+ADDLIB $<TARGET_FILE:mepa_sparx5_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_10g_ts>
+ADDLIB $<TARGET_FILE:mepa_drv_aqr>
+ADDLIB $<TARGET_FILE:mepa_drv_intel>
+ADDLIB $<TARGET_FILE:mepa_drv_lan8814>
+SAVE
+END

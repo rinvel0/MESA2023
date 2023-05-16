@@ -1,0 +1,5 @@
+CREATE libmepa_sparx5_bringup.a
+ADDLIB $<TARGET_FILE:mepa_sparx5_bringup_common>
+ADDLIB $<TARGET_FILE:mepa_drv_vtss_10g_ts>
+SAVE
+END

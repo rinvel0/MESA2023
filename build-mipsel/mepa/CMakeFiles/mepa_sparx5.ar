@@ -1,0 +1,8 @@
+CREATE libmepa_sparx5.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_sparx5_common.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/vtss/libmepa_drv_vtss_10g_ts.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/aqr/libmepa_drv_aqr.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/intel/libmepa_drv_intel.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/microchip/lan8814/libmepa_drv_lan8814.a
+SAVE
+END

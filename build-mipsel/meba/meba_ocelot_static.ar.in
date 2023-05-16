@@ -1,0 +1,5 @@
+CREATE libmeba_ocelot.a
+ADDLIB $<TARGET_FILE:meba_only_ocelot>
+ADDLIB $<TARGET_FILE:mepa_ocelot>
+SAVE
+END

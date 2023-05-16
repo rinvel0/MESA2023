@@ -1,0 +1,5 @@
+CREATE libmeba_jr2_bringup.a
+ADDLIB /home/codrin/mesa/build-mipsel/meba/libmeba_only_jr2_bringup.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_jr2_bringup.a
+SAVE
+END

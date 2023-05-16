@@ -1,0 +1,5 @@
+CREATE libmeba_jr2.a
+ADDLIB $<TARGET_FILE:meba_only_jr2>
+ADDLIB $<TARGET_FILE:mepa_jr2>
+SAVE
+END

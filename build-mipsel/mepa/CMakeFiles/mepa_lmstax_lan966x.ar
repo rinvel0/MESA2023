@@ -1,0 +1,5 @@
+CREATE libmepa_lmstax_lan966x.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_lmstax_lan966x_common.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/microchip/lan8814/libmepa_drv_lan8814.a
+SAVE
+END

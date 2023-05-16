@@ -1,0 +1,6 @@
+CREATE libmepa_ocelot.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/libmepa_ocelot_common.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/vtss/libmepa_drv_vtss_ts.a
+ADDLIB /home/codrin/mesa/build-mipsel/mepa/microchip/lan8814/libmepa_drv_lan8814.a
+SAVE
+END
