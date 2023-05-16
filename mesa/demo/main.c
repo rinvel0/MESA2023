@@ -771,7 +771,7 @@ static void main_cli_init(void)
     for (i = 0; i < sizeof(cli_cmd_table)/sizeof(cli_cmd_t); i++) {
         mscc_appl_cli_cmd_reg(&cli_cmd_table[i]);
     }
-    printf("main_cli_init");
+    printf("main_cli_init"); //CPMOD
 }
 
 static int  RESET_FPGA = 0;
@@ -903,12 +903,12 @@ static void main_init(mscc_appl_init_t *init)
         mscc_appl_opt_reg(&main_opt_reset);
         mscc_appl_opt_reg(&main_opt_spidev);
         mscc_appl_opt_reg(&main_opt_vlan_counters_disable);
-        printf(" main_init case MSCC_INIT_CMD_REG");
+        printf(" main_init case MSCC_INIT_CMD_REG");//CPMOD
         break;
 
     case MSCC_INIT_CMD_INIT:
         main_cli_init();
-        printf(" main_init case MSCC_INIT_CMD_INIT");
+        printf(" main_init case MSCC_INIT_CMD_INIT");//CPMOD
         break;
 
     default:
@@ -935,8 +935,8 @@ static void init_modules(mscc_appl_init_t *init)
     mscc_appl_example_init(init);
     mscc_appl_uio_init(init);
     mscc_appl_spi_init(init);
-    mscc_appl_intr_init(init);
-    printf(" init_modules completed ");
+    //mscc_appl_intr_init(init); //CPMOD 
+    printf(" init_modules completed "); //CPMOD
 }
 
 typedef struct {
@@ -1101,7 +1101,7 @@ int main(int argc, char **argv)
     }
     init->board_inst = meba_inst;
     T_D("MEBA Instantiated");
-    printf(" MEBA initialized ");
+    printf(" MEBA initialized ");//CPMOD
 
     // Create API instance
     mesa_inst_get(meba_inst->props.target, &create);
@@ -1110,12 +1110,12 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("API Instantiated");
-    printf(" API Instantiated ");
+    printf(" API Instantiated ");//CPMOD
 
     // Initialize API instance
     if (mesa_init_conf_get(NULL, &conf) != MESA_RC_OK) {
         T_E("mesa_init_conf_get() failed");
-        printf(" mesa_init_conf_get failed ");
+        printf(" mesa_init_conf_get failed ");//CPMOD
         return 1;
     }
     conf.reg_read = board_info.reg_read;
@@ -1136,7 +1136,7 @@ int main(int argc, char **argv)
         return 1;
     }
     T_D("API initialized");
-    printf(" API Initialized ");
+    printf(" API Initialized "); //CPMOD
 
     // Do a board init before the port map is established in case of any changes
     MEBA_WRAP(meba_reset, init->board_inst, MEBA_BOARD_INITIALIZE);
@@ -1144,7 +1144,7 @@ int main(int argc, char **argv)
     // Setup port mapping
     if ((port_map = calloc(port_cnt, sizeof(*port_map))) == NULL) {
         T_E("port map calloc() failed");
-        printf(" port map calloc() failed ");
+        printf(" port map calloc() failed ");//CPMOD
         return 1;
     }
     for (port_no = 0; port_no < port_cnt; port_no++) {

@@ -447,7 +447,7 @@ void mscc_appl_cli_cmd_reg(cli_cmd_t *cmd)
         cmd->next = prev->next;
         prev->next = cmd;
     }
-    printf(" mscc_appl_cli_cmd_reg ");
+    printf(" mscc_appl_cli_cmd_reg "); //CPMOD
 }
 
 /* Register CLI parameter */
