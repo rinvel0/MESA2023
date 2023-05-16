@@ -1,0 +1,3248 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"°// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file vtss_port_api.h
+ * \brief Port API
+ */
+
+#ifndef _VTSS_PORT_API_H_
+#define _VTSS_PORT_API_H_
+
+#include <vtss/api/port.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief MII management controller */
+typedef enum
+{
+#if defined(VTSS_FEATURE_LAYER2)
+    VTSS_MIIM_CONTROLLER_0    = 0,  /**< MIIM controller 0 */
+    VTSS_MIIM_CONTROLLER_1    = 1,  /**< MIIM controller 1 */
+#endif
+#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+    VTSS_MIIM_CONTROLLER_2    = 2,  /**< MIIM controller 2 */
+#endif
+#if defined(VTSS_ARCH_SPARX5)
+    VTSS_MIIM_CONTROLLER_3    = 3,  /**< MIIM controller 3 */
+#endif
+    VTSS_MIIM_CONTROLLERS,          /**< Number of MIIM controllers */
+    VTSS_MIIM_CONTROLLER_NONE = -1  /**< Unassigned MIIM controller */
+} vtss_miim_controller_t;
+
+
+/* The Definition of vtss_sd10g_media_type_t is used by the PHY API and SWITCH API */
+/* It should not be inside any VTSS_FEATURE_PORT_CONTROL definition to be included */
+
+/** \brief Different media/cable types attached to the 10G Serdes */
+typedef enum {
+    VTSS_SD10G_MEDIA_PR_NONE,    /**< No preset > */
+    VTSS_SD10G_MEDIA_SR,         /**< SR, Short Range > */
+    VTSS_SD10G_MEDIA_ZR,         /**< ZR, Long Range > */
+    VTSS_SD10G_MEDIA_DAC,        /**< DAC (Direct attached copper) cable, unspecified lenght > */
+    VTSS_SD10G_MEDIA_DAC_1M,     /**< 1m DAC > */
+    VTSS_SD10G_MEDIA_DAC_2M,     /**< 2m DAC > */
+    VTSS_SD10G_MEDIA_DAC_3M,     /**< 3m DAC > */
+    VTSS_SD10G_MEDIA_DAC_5M,     /**< 5m DAC > */
+    VTSS_SD10G_MEDIA_BP,         /**< Backplane > */
+    VTSS_SD10G_MEDIA_B2B,        /**< Bord to Board > */
+    VTSS_SD10G_MEDIA_10G_KR,     /**< 10G Base KR > */
+} vtss_sd10g_media_type_t;
+
+
+#if defined(VTSS_FEATURE_PORT_CONTROL)
+
+/** \brief The internal bandwidth allocated for the port */
+typedef enum
+{
+    VTSS_BW_DEFAULT,     /**< Default to max port speed */
+    VTSS_BW_1G,          /**< Max 1G */
+    VTSS_BW_2G5,         /**< Max 2.5G */
+    VTSS_BW_5G,          /**< Max 5G */
+    VTSS_BW_10G,         /**< Max 10G */
+    VTSS_BW_25G,         /**< Max 25G */
+    VTSS_BW_UNDEFINED,   /**< Undefined */
+} vtss_internal_bw_t;
+
+/** \brief Enable/disable SD-to-SGPIO mapping */
+typedef enum
+{
+    VTSS_SD_SGPIO_MAP_IGNORE,   /**< No mapping as default */
+    VTSS_SD_SGPIO_MAP_ENABLE,   /**< Enable and use mapping  */
+    VTSS_SD_SGPIO_MAP_DISABLE,  /**< Disable mapping globally */
+} vtss_sd_sgpio_action_t;
+
+/** \brief Signal detect mapping to SGPIO group/port/bit */
+typedef struct
+{
+    vtss_sd_sgpio_action_t action; /**< Enable mapping */
+#if defined(VTSS_FEATURE_SERIAL_GPIO)
+    vtss_sgpio_group_t     group;  /**< SGPIO group (0-2) */
+#endif
+    u32                    port;   /**< SGPIO port (0-31) */
+    u32                    bit;    /**< SGPIO bit (0-3) */
+} vtss_port_sgpio_map_t;
+
+ /** Signifies an unused chip port */
+#define CHIP_PORT_UNUSED -1
+
+/** \brief Port map structure */
+typedef struct
+{
+    i32                    chip_port;        /**< Set to -1 if not used */
+    vtss_chip_no_t         chip_no;          /**< Chip number, multi-chip targets */
+#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+    vtss_internal_bw_t     max_bw;           /**< Max internal bandwidth reserved for the port */
+#endif /* VTSS_ARCH_JAGUAR_2 || VTSS_ARCH_SPARX5 */
+    vtss_miim_controller_t miim_controller;  /**< MII management controller */
+    u8                     miim_addr;        /**< PHY address, ignored for VTSS_MIIM_CONTROLLER_NONE */
+    vtss_chip_no_t         miim_chip_no;     /**< MII management chip number, multi-chip targets */
+#if defined(VTSS_ARCH_SPARX5)
+    vtss_port_sgpio_map_t  sd_map;           /**< PCS signal detect to SGPIO bit map */
+#endif /*VTSS_ARCH_SPARX5 */
+} vtss_port_map_t;
+
+/**
+ * \brief Set port map.
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param port_map [IN]  Port map array.
+ *
+ * \return Return code.
+ **/
+ vtss_rc vtss_port_map_set(const vtss_inst_t     inst,
+                           const vtss_port_map_t port_map[VTSS_PORT_ARRAY_SIZE]);
+
+/**
+ * \brief Get port map.
+ *
+ * \param inst [IN]       Target instance reference.
+ * \param port_map [OUT]  Port map.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_map_get(const vtss_inst_t  inst,
+                          vtss_port_map_t    port_map[VTSS_PORT_ARRAY_SIZE]);
+
+/**
+ * Advertisement Word (Refer to IEEE 802.3 Clause 37):
+ *  MSB                                                                         LSB
+ *  D15  D14  D13  D12  D11  D10   D9   D8   D7   D6   D5   D4   D3   D2   D1   D0
+ * +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+ * | NP | Ack| RF2| RF1|rsvd|rsvd|rsvd| PS2| PS1| HD | FD |rsvd|rsvd|rsvd|rsvd|rsvd|
+ * +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+ **/
+
+/** \brief Auto-negotiation remote fault type */
+typedef enum                      /* RF2      RF1 */
+{
+    VTSS_PORT_CLAUSE_37_RF_LINK_OK       = ((0<<1) | (0<<0)),   /**< Link OK */
+    VTSS_PORT_CLAUSE_37_RF_OFFLINE       = ((1<<1) | (0<<0)),   /**< Off line */
+    VTSS_PORT_CLAUSE_37_RF_LINK_FAILURE  = ((0<<1) | (1<<0)),   /**< Link failure */
+    VTSS_PORT_CLAUSE_37_RF_AUTONEG_ERROR = ((1<<1) | (1<<0))    /**< Autoneg error */
+} vtss_port_clause_37_remote_fault_t;
+
+/** \brief Advertisement control data for Clause 37 aneg */
+typedef struct
+{
+    BOOL                               fdx;               /**< (FD) */
+    BOOL                               hdx;               /**< (HD) */
+    BOOL                               symmetric_pause;   /**< (PS1) */
+    BOOL                               asymmetric_pause;  /**< (PS2) */
+    vtss_port_clause_37_remote_fault_t remote_fault;      /**< (RF1) + (RF2) */
+    BOOL                               acknowledge;       /**< (Ack) */
+    BOOL                               next_page;         /**< (NP) */
+} vtss_port_clause_37_adv_t;
+
+/** \brief Advertisement control data for SGMII aneg */
+typedef struct
+{
+    BOOL                               link;              /**< LP link status               */
+    BOOL                               fdx;               /**< FD                           */
+    BOOL                               hdx;               /**< HD                           */
+    BOOL                               speed_10M;         /**< speed 10 advertised          */
+    BOOL                               speed_100M;        /**< speed 100 advertised         */
+    BOOL                               speed_1G;          /**< speed 1G advertised          */
+    BOOL                               aneg_complete;     /**< Aneg process completed       */
+} vtss_port_sgmii_aneg_t;
+
+/** \brief Advertisement for USXGMII aneg */
+typedef struct
+{
+    BOOL                               link;              /**< LP link status               */
+    BOOL                               fdx;               /**< Full duplex                  */
+    vtss_port_speed_t                  speed;             /**< Port speed                   */
+    BOOL                               aneg_complete;     /**< Aneg process completed       */
+} vtss_port_usxgmii_aneg_t;
+
+
+/** \brief Auto-negotiation control parameter struct */
+typedef struct
+{
+    BOOL                      enable;           /**< Enable of Autoneg */
+    vtss_port_clause_37_adv_t advertisement;    /**< Clause 37 Advertisement control data */
+} vtss_port_clause_37_control_t;
+
+/**
+ * \brief Get clause 37 auto-negotiation Control word.
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param port_no [IN]   Port number.
+ * \param control [OUT]  Control structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_clause_37_control_get(const vtss_inst_t              inst,
+                                        const vtss_port_no_t           port_no,
+                                        vtss_port_clause_37_control_t  *const control);
+
+
+
+/**
+ * \brief Set clause 37 auto-negotiation Control word.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param control [IN]  Control structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_clause_37_control_set(const vtss_inst_t                    inst,
+                                        const vtss_port_no_t                 port_no,
+                                        const vtss_port_clause_37_control_t  *const control);
+
+
+/** \brief Flow control setup */
+typedef struct
+{
+    BOOL       obey;            /**< TRUE if 802.3x PAUSE frames should be obeyed */
+    BOOL       generate;        /**< TRUE if 802.3x PAUSE frames should generated */
+    vtss_mac_t smac;            /**< Port MAC address used as SMAC in PAUSE frames */
+#if defined(VTSS_FEATURE_PFC)
+    BOOL       pfc[VTSS_PRIOS]; /**< TRUE if 802.1Qbb Priority Flow Control should be generated and obeyed.
+                                     Cannot be enabled together with 802.3x Flowcontrol */
+#endif
+} vtss_port_flow_control_conf_t;
+
+#define VTSS_FRAME_GAP_DEFAULT 0 /**< Default frame gap used */
+
+/** \brief Inter frame gap structure */
+typedef struct
+{
+    u32 hdx_gap_1;      /**< Half duplex: First part of Rx to Tx gap */
+    u32 hdx_gap_2;      /**< Half duplex: Second part of Rx to Tx gap */
+    u32 fdx_gap;        /**< Full duplex: Tx to Tx gap */
+} vtss_port_frame_gaps_t;
+
+/* A selection of max frame lengths */
+#define VTSS_MAX_FRAME_LENGTH_STANDARD  1518  /**< IEEE 802.3 standard */
+#define VTSS_MAX_FRAME_LENGTH_MAX      10240  /**< Maximum frame length supported */
+
+#if defined(VTSS_ARCH_LUTON26)
+#undef VTSS_MAX_FRAME_LENGTH_MAX
+#define VTSS_MAX_FRAME_LENGTH_MAX      9600  /**< Maximum frame length supported */
+#endif /* VTSS_ARCH_LUTON26 */
+
+#if defined(VTSS_ARCH_OCELOT)
+#undef VTSS_MAX_FRAME_LENGTH_MAX
+#define VTSS_MAX_FRAME_LENGTH_MAX      10240 /**< Maximum frame length supported */
+#endif /* VTSS_ARCH_OCELOT */
+
+#if defined(VTSS_ARCH_JAGUAR_2)
+#undef VTSS_MAX_FRAME_LENGTH_MAX
+#define VTSS_MAX_FRAME_LENGTH_MAX      10240 /**< Maximum frame length supported */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+
+/** \brief VLAN awareness for frame length check */
+typedef enum
+{
+    VTSS_PORT_MAX_TAGS_NONE,  /**< No extra tags allowed */
+    VTSS_PORT_MAX_TAGS_ONE,   /**< Single tag allowed */
+    VTSS_PORT_MAX_TAGS_TWO    /**< Single and double tag allowed */
+} vtss_port_max_tags_t;
+
+/** \brief Port loop back configuration */
+typedef enum
+{
+    VTSS_PORT_LOOP_DISABLE,   /**< No port loop */
+    VTSS_PORT_LOOP_PCS_HOST,  /**< PCS host port loop */
+} vtss_port_loop_t;
+
+/** \brief SFI Serdes configuration */
+typedef struct
+{
+    BOOL                     sfp_dac;                /**< obsolete (use media_10g)        */
+    vtss_sd10g_media_type_t  media_type;             /**< The 10G Serdes media/cable type */
+    BOOL                     rx_invert;              /**< Invert the RX Serdes signal (1) */
+    BOOL                     tx_invert;              /**< Invert the TX Serdes signal (1) */
+} vtss_port_serdes_conf_t;
+
+#if defined(VTSS_FEATURE_PORT_PCS_CONF)
+/** \brief 1G PCS specific configuration */
+typedef enum
+{
+    VTSS_PORT_PCS_NORMAL,     /**< Normal 1G PCS configuration    */
+    VTSS_PORT_PCS_ENABLE,     /**< Only Enable 1G PCS and return  */
+    VTSS_PORT_PCS_DISABLE,    /**< Only Disable 1G PCS and return */
+    VTSS_PORT_PCS_IGNORE      /**< Skip any PCS settings          */
+} vtss_port_pcs_conf_t;
+#endif /* VTSS_FEATURE_PORT_PCS_CONF */
+
+/** \brief Port configuration structure */
+typedef struct
+{
+    vtss_port_interface_t         if_type;           /**< Interface type */
+    BOOL                          sd_enable;         /**< Signal detect enable */
+    BOOL                          sd_active_high;    /**< External signal detect polarity */
+    BOOL                          sd_internal;       /**< Internal signal detect selection */
+    vtss_port_frame_gaps_t        frame_gaps;        /**< Inter frame gaps */
+    BOOL                          power_down;        /**< Disable and power down the port */
+    vtss_port_speed_t             speed;             /**< Port speed */
+    BOOL                          fdx;               /**< Full duplex mode */
+    vtss_port_flow_control_conf_t flow_control;      /**< Flow control setup */
+    u32                           max_frame_length;  /**< Maximum frame length */
+    BOOL                          frame_length_chk;  /**< Enforce 802.3 frame length check (from ethertype field) */
+    vtss_port_max_tags_t          max_tags;          /**< VLAN awareness for length check */
+    BOOL                          exc_col_cont;      /**< Excessive collision continuation */
+    BOOL                          xaui_rx_lane_flip; /**< Xaui Rx lane flip */
+    BOOL                          xaui_tx_lane_flip; /**< Xaui Tx lane flip */
+    vtss_port_loop_t              loop;              /**< Enable/disable of port loop back */
+    vtss_port_serdes_conf_t       serdes;            /**< Serdes settings (for SFI interface) */
+#if defined(VTSS_FEATURE_PORT_PCS_CONF)
+    vtss_port_pcs_conf_t          pcs;               /**< Special 1G PCS settings, only supported for L26 */
+#endif
+} vtss_port_conf_t;
+
+/**
+ * \brief Set port configuration.
+ *  Note: If if_type in the vtss_port_conf_t/vtss_port_interface_t definition is set to VTSS_PORT_INTERFACE_QSGMII, the ports are mapped together in groups of four. If one of the four ports is used, all four ports in the group must always be configured, but the four ports doesn't need to configured with the same configuration.
+ * This is needed in order to achieve correct comma alignment at the QSGMII interface. Which ports that are mapped together can be found in the chip data-sheet.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [IN]     Port setup structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_conf_set(const vtss_inst_t       inst,
+                           const vtss_port_no_t    port_no,
+                           const vtss_port_conf_t  *const conf);
+
+
+
+/**
+ * \brief Get port setup.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [OUT]    Port configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_conf_get(const vtss_inst_t     inst,
+                           const vtss_port_no_t  port_no,
+                           vtss_port_conf_t      *const conf);
+
+
+/**
+ * \brief Get port status.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param status [OUT]  Status structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_status_get(const vtss_inst_t     inst,
+                             const vtss_port_no_t  port_no,
+                             vtss_port_status_t    *const status);
+
+
+
+/**
+ * \brief Update counters for port.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_counters_update(const vtss_inst_t     inst,
+                                  const vtss_port_no_t  port_no);
+
+
+
+/**
+ * \brief Clear counters for port.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port/aggregation number.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_counters_clear(const vtss_inst_t     inst,
+                                 const vtss_port_no_t  port_no);
+
+
+/**
+ * \brief Get counters for port.
+ *
+ * \param inst [IN]       Target instance reference.
+ * \param port_no [IN]    Port/aggregation number.
+ * \param counters [OUT]  Counter structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_counters_get(const vtss_inst_t     inst,
+                               const vtss_port_no_t  port_no,
+                               vtss_port_counters_t  *const counters);
+
+
+/** \brief Basic counters structure */
+typedef struct
+{
+    u32 rx_frames; /**< Rx frames */
+    u32 tx_frames; /**< Tx frames */
+} vtss_basic_counters_t;
+
+/**
+ * \brief Get basic counters for port.
+ *
+ * \param inst [IN]       Target instance reference.
+ * \param port_no [IN]    Port/aggregation number.
+ * \param counters [OUT]  Counter structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_basic_counters_get(const vtss_inst_t     inst,
+                                     const vtss_port_no_t  port_no,
+                                     vtss_basic_counters_t *const counters);
+
+
+/** \brief Port forwarding state */
+typedef enum
+{
+    VTSS_PORT_FORWARD_ENABLED,   /**< Forward in both directions */
+    VTSS_PORT_FORWARD_DISABLED,  /**< Forwarding and learning disabled */
+    VTSS_PORT_FORWARD_INGRESS,   /**< Forward frames from port only */
+    VTSS_PORT_FORWARD_EGRESS     /**< Forward frames to port only (learning disabled) */
+} vtss_port_forward_t;
+
+/**
+ * \brief Get port forwarding state.
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param port_no [IN]   Port number.
+ * \param forward [OUT]  Forwarding state.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_forward_state_get(const vtss_inst_t     inst,
+                                    const vtss_port_no_t  port_no,
+                                    vtss_port_forward_t   *const forward);
+
+/**
+ * \brief Set port forwarding state.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param forward [IN]  Forwarding state.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_forward_state_set(const vtss_inst_t          inst,
+                                    const vtss_port_no_t       port_no,
+                                    const vtss_port_forward_t  forward);
+
+#if defined(VTSS_FEATURE_PORT_IFH)
+/** \brief Port Internal Frame Header structure */
+typedef struct
+{
+#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
+    BOOL ena_inj_header; /**< At ingress expect long prefix followed by an internal frame header */
+    BOOL ena_xtr_header; /**< At egress prepend long prefix followed by the internal frame header */
+#endif /* VTSS_ARCH_OCELOT */
+
+#if defined(VTSS_ARCH_JAGUAR_2)
+    BOOL ena_inj_header; /**< At ingress expect short prefix: DMAC:SMAC:0x8880:0007
+                              followed by an internal frame header and then the frame */
+    BOOL ena_xtr_header; /**< At egress prepend short prefix: DMAC:SMAC:0x8880:0007  (DMAC:SMAC from frame)
+                              followed by an internal frame header and then the frame */
+    BOOL ena_ifh_header; /**< Same as ena_xtr_header (for compatability with JR1) */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+} vtss_port_ifh_t;
+
+/**
+ * \brief Set port Internal Frame Header settings.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [IN]     Port IFH structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_ifh_conf_set(const vtss_inst_t       inst,
+                               const vtss_port_no_t    port_no,
+                               const vtss_port_ifh_t  *const conf);
+
+/**
+ * \brief Get port Internal Frame Header settings.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [OUT]    Port IFH configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_ifh_conf_get(const vtss_inst_t     inst,
+                               const vtss_port_no_t  port_no,
+                               vtss_port_ifh_t      *const conf);
+#endif /* VTSS_FEATURE_PORT_IFH) */
+
+/**
+ * \brief Read value from MIIM register.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param addr    [IN]  PHY register address.
+ * \param value   [OUT] PHY register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_miim_read(const vtss_inst_t    inst,
+                            const vtss_port_no_t port_no,
+                            const u8             addr,
+                            u16                  *const value);
+
+/**
+ * \brief Write value to MIIM register.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param addr    [IN]  PHY register address.
+ * \param value   [IN]  PHY register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_miim_write(const vtss_inst_t    inst,
+                             const vtss_port_no_t port_no,
+                             const u8             addr,
+                             const u16            value);
+
+/**
+ * \brief Direct MIIM read (bypassing port map)
+ *
+ * \param inst            [IN]  Target instance reference.
+ * \param chip_no         [IN]  Chip number (if multi-chip instance).
+ * \param miim_controller [IN]  MIIM Controller Instance
+ * \param miim_addr       [IN]  MIIM Device Address
+ * \param addr            [IN]  MIIM Register Address
+ * \param value           [OUT] Register value read
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_miim_read(const vtss_inst_t            inst,
+                       const vtss_chip_no_t         chip_no,
+                       const vtss_miim_controller_t miim_controller,
+                       const u8                     miim_addr,
+                       const u8                     addr,
+                       u16                          *const value);
+
+/**
+ * \brief Direct MIIM write (bypassing port map)
+ *
+ * \param inst            [IN]  Target instance reference.
+ * \param chip_no         [IN]  Chip number (if multi-chip instance).
+ * \param miim_controller [IN]  MIIM Controller Instance
+ * \param miim_addr       [IN]  MIIM Device Address
+ * \param addr            [IN]  MIIM Register Address
+ * \param value           [IN]  Register value to write
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_miim_write(const vtss_inst_t            inst,
+                        const vtss_chip_no_t         chip_no,
+                        const vtss_miim_controller_t miim_controller,
+                        const u8                     miim_addr,
+                        const u8                     addr,
+                        const u16                    value);
+#endif /* VTSS_FEATURE_PORT_CONTROL */
+
+/**
+ * \brief Read value from MMD register.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number connected to MMD.
+ * \param mmd     [IN]  MMD number.
+ * \param addr    [IN]  PHY register address.
+ * \param value   [OUT] PHY register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_mmd_read(const vtss_inst_t     inst,
+                           const vtss_port_no_t  port_no,
+                           const u8              mmd,
+                           const u16             addr,
+                           u16                   *const value);
+/**
+ * \brief Read values (a number of 16 bit values) from MMD register.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number connected to MMD.
+ * \param mmd     [IN]  MMD number.
+ * \param addr    [IN]  PHY register address.
+ * \param buf     [OUT] PHY register values.
+ * \param count   [IN]  number of values to read.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_mmd_read_inc(const vtss_inst_t     inst,
+                               const vtss_port_no_t  port_no,
+                               const u8              mmd,
+                               const u16             addr,
+                               u16                   *const buf,
+                               u8                    count);
+
+/**
+ * \brief Write value to MMD register.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number connected to MMD.
+ * \param mmd     [IN]  MMD number.
+ * \param addr    [IN]  PHY register address.
+ * \param value   [IN]  PHY register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_mmd_write(const vtss_inst_t     inst,
+                            const vtss_port_no_t  port_no,
+                            const u8              mmd,
+                            const u16             addr,
+                            const u16             value);
+
+
+/**
+ * \brief Read, modify and write value to MMD register.
+ *
+ * \param inst     [IN]  Target instance reference.
+ * \param port_no  [IN]  Port number connected to MMD.
+ * \param mmd      [IN]  MMD number.
+ * \param addr     [IN]  PHY register address.
+ * \param value    [IN]  PHY register value.
+ * \param mask     [IN]  PHY register mask, only enabled bits are changed.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_mmd_masked_write(const vtss_inst_t     inst,
+                                   const vtss_port_no_t  port_no,
+                                   const u8              mmd,
+                                   const u16             addr,
+                                   const u16             value,
+                                   const u16             mask);
+
+/**
+ * \brief Direct MMD read (Clause 45, bypassing port map)
+ *
+ * \param inst            [IN]  Target instance reference.
+ * \param chip_no         [IN]  Chip number (if multi-chip instance).
+ * \param miim_controller [IN]  MIIM Controller Instance
+ * \param miim_addr       [IN]  MIIM Device Address
+ * \param mmd             [IN]  MMD number.
+ * \param addr            [IN]  MIIM Register Address
+ * \param value           [OUT] Register value read
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_mmd_read(const vtss_inst_t            inst,
+                      const vtss_chip_no_t         chip_no,
+                      const vtss_miim_controller_t miim_controller,
+                      const u8                     miim_addr,
+                      const u8                     mmd,
+                      const u16                    addr,
+                      u16                          *const value);
+
+/**
+ * \brief Direct MMD write (Clause 45, bypassing port map)
+ *
+ * \param inst            [IN]  Target instance reference.
+ * \param chip_no         [IN]  Chip number (if multi-chip instance).
+ * \param miim_controller [IN]  MIIM Controller Instance
+ * \param miim_addr       [IN]  MIIM Device Address
+ * \param mmd             [IN]  MMD number.
+ * \param addr            [IN]  MIIM Register Address
+ * \param value           [IN]  Register value to write
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_mmd_write(const vtss_inst_t            inst,
+                       const vtss_chip_no_t         chip_no,
+                       const vtss_miim_controller_t miim_controller,
+                       const u8                     miim_addr,
+                       const u8                     mmd,
+                       const u16                    addr,
+                       const u16                    value);
+
+#if defined(VTSS_FEATURE_PORT_KR) || defined(VTSS_FEATURE_PORT_KR_IRQ)
+/**
+ * ============================================================================
+ * 802.3ap 25G/10G Base KR Backplane Ethernet
+ * VTSS_FEATURE_PORT_KR     : JR2 Rev-C (10G polled)
+ * VTSS_FEATURE_PORT_KR_IRQ : Sparx-5 (10G/25G IRQ)
+ * ============================================================================
+ **/
+
+/** \brief KR Aneg status */
+typedef struct {
+    BOOL complete;            /**< Aneg completed successfully         */
+    BOOL active;              /**< Aneg is running between LD and LP   */
+    vtss_port_speed_t speed_req;   /**< Requested speed                */
+    BOOL request_fec_change;  /**< FEC change is negotiated            */
+    BOOL r_fec_enable;        /**< R-FEC enable/disable                */
+    BOOL rs_fec_enable;       /**< RS-FEC enable/disable               */
+    u32  sm;                  /**< (debug) Aneg state machine          */
+    u32  hist;                /**< (debug) Aneg history                */
+    BOOL lp_aneg_able;        /**< (debug) Link partner aneg ability   */
+    BOOL block_lock;          /**< (debug) PCS block lock              */
+    u16  lp_bp0;              /**< (debug) LP Base page 0-15           */
+    u16  lp_bp1;              /**< (debug) LP Base page 16-31          */
+    u16  lp_bp2;              /**< (debug) LP Base page 32-47          */
+    u16  lp_np0;              /**< (debug) LP Base page 0-15           */
+    u16  lp_np1;              /**< (debug) LP Base page 16-31          */
+    u16  lp_np2;              /**< (debug) LP Base page 32-47          */
+} vtss_port_kr_status_aneg_t;
+
+/** \brief  KR Training status */
+typedef struct {
+    BOOL complete;        /**< Training completed successfully */
+    u8 cm_ob_tap_result;  /**< The minus 1 coefficient c(-1).  */
+    u8 cp_ob_tap_result;  /**< The 0 coefficient c(0).         */
+    u8 c0_ob_tap_result;  /**< The plus 1 coefficient c(1).    */
+    u32 frame_sent;
+    u16 frame_errors;
+} vtss_port_kr_status_train_t;
+
+/** \brief  KR FEC status */
+typedef struct {
+    BOOL r_fec_enable;          /**< FEC Enabled (Clause 74)      */
+    BOOL rs_fec_enable;         /**< RS-FEC Enabled (Clause 108)  */
+    u32 corrected_block_cnt;    /**< Corrected block count        */
+    u32 uncorrected_block_cnt;  /**< Un-corrected block count     */
+} vtss_port_kr_status_fec_t;
+
+/** \brief  KR Aneg and Training structures */
+typedef struct {
+    vtss_port_kr_status_aneg_t aneg;   /**< Aneg structure      */
+    vtss_port_kr_status_train_t train; /**< Training structure  */
+    vtss_port_kr_status_fec_t fec;     /**< FEC structure       */
+} vtss_port_kr_status_t;
+
+
+/** \brief  KR Link Advertisement capability config */
+typedef struct {
+    BOOL enable;           /**< KR Autoneg enable  */
+    BOOL adv_25g;          /**< Advertise 25G          */
+    BOOL adv_10g;          /**< Advertise 10G          */
+    BOOL adv_5g;           /**< Advertise 5G           */
+    BOOL adv_2g5;          /**< Advertise 2G5          */
+    BOOL adv_1g;           /**< Advertise 1G           */
+    BOOL r_fec_req;        /**< Request R-FEC          */
+    BOOL rs_fec_req;       /**< Request RS-FEC         */
+    BOOL next_page;        /**< Use next page when adv.*/
+    BOOL no_pd;            /**< Do not enable parallel detect */
+} vtss_port_kr_aneg_t;
+
+/** \brief  KR Training config */
+typedef struct {
+    BOOL enable;            /**< Enable KR training, BER method used */
+    BOOL no_remote;         /**< Do not train remote, only local */
+    BOOL no_eq_apply;       /**< Do not apply TxEq settings to HW (debug only) */
+    BOOL use_ber_cnt;       /**< Use BER count instead of eye height */
+    BOOL test_mode;         /**< Debug only */
+    u32  test_repeat;       /**< Debug only */
+} vtss_port_kr_train_t;
+
+/** \brief  KR configuration structures */
+typedef struct {
+    vtss_port_kr_aneg_t   aneg;    /**< KR Aneg apability, 802.3ap Clause 73      */
+    vtss_port_kr_train_t  train;   /**< KR Training parameters, 802.3ap Clause 72 */
+} vtss_port_kr_conf_t;
+
+/** \brief  KR FEC structure */
+typedef struct {
+    BOOL r_fec;  /**< Enable/Disable Clause 74 R-FEC  */
+    BOOL rs_fec; /**< Enable/Disable Clause 108 RS-FEC (25G)  */
+} vtss_port_kr_fec_t;
+
+/**
+ * \brief Set  KR configuration incl. aneg (802.3ap Clause 73) and training (802.3ap Clause 72).
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf    [IN]  Configuration structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_conf_set(const vtss_inst_t inst,
+                                  const vtss_port_no_t port_no,
+                                  const vtss_port_kr_conf_t *const conf);
+
+/**
+ * \brief Get  KR configuration
+ *
+ * \param inst    [IN]   Target instance reference.
+ * \param port_no [IN]   Port number.
+ * \param conf    [OUT]  Configuration structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_conf_get(const vtss_inst_t inst,
+                                  const vtss_port_no_t port_no,
+                                  vtss_port_kr_conf_t *const conf);
+
+/**
+ * \brief Get KR FEC
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf    [IN]  FEC Enable/disable
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_fec_get(const vtss_inst_t inst,
+                             const vtss_port_no_t port_no,
+                             vtss_port_kr_fec_t *const conf);
+
+/**
+ * \brief Set KR FEC
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf    [IN]  FEC Enable/disable
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_fec_set(const vtss_inst_t inst,
+                             const vtss_port_no_t port_no,
+                             const vtss_port_kr_fec_t *const conf);
+
+/**
+ * \brief Get  KR aneg and training status
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param status  [OUT] KR Aneg and Training status
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_status_get(const vtss_inst_t inst,
+                                    const vtss_port_no_t port_no,
+                                    vtss_port_kr_status_t *const status);
+
+#endif // #if defined(VTSS_FEATURE_PORT_KR) || defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+typedef struct {
+    u32 vga;
+    u32 edc;
+    u32 eqr;
+} vtss_port_ctle_t;
+
+#if defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+/** \brief States of the training state machine */
+typedef enum {
+    VTSS_TR_INITILIZE,
+    VTSS_TR_SEND_TRAINING,
+    VTSS_TR_TRAIN_LOCAL,
+    VTSS_TR_TRAIN_REMOTE,
+    VTSS_TR_SEND_DATA,
+    VTSS_TR_TRAINING_FAILURE,
+    VTSS_TR_LINK_READY
+} vtss_train_state_t;
+
+/** \brief States of BER algorithm */
+typedef enum {
+    VTSS_BER_GO_TO_MIN,
+    VTSS_BER_CALCULATE_BER,
+    VTSS_BER_MOVE_TO_MID_MARK,
+    VTSS_BER_LOCAL_RX_TRAINED
+} vtss_ber_stage_t;
+
+/** \brief KR TAPs involved */
+typedef enum {
+    VTSS_TAP_CM1,
+    VTSS_TAP_C0,
+    VTSS_TAP_CP1,
+} vtss_kr_tap_t;
+
+typedef struct {
+    u16 cm1;
+    u16 c0;
+    u16 cp1;
+    u16 coef;
+    u16 status;
+} vtss_kr_status_results_t;
+
+/** \brief  KR state machine structures (for status/debug) */
+typedef struct {
+    vtss_train_state_t current_state;
+    vtss_ber_stage_t ber_training_stage;
+    vtss_kr_tap_t current_tap;
+    BOOL signal_detect;
+    BOOL training_started;
+    BOOL remote_rx_ready;
+    BOOL local_rx_ready;
+    BOOL dme_viol_handled;
+    BOOL dme_viol;
+    BOOL ber_busy;
+    BOOL tap_max_reached;
+    BOOL receiver_ready_sent;
+    BOOL kr_mw_done;
+    BOOL ignore_fail;
+    vtss_port_speed_t next_parallel_spd;
+    u16  lp_tap_max_cnt[3];
+    u16  lp_tap_end_cnt[3];
+    u32  tap_idx;
+    u16  ber_cnt[3][64];
+    u16  eye_height[3][64];
+    u16  decr_cnt;
+    u16  ber_coef_frm;
+    u16  ber_status_frm;
+    BOOL test_mode;
+    BOOL test_repeat;
+    vtss_kr_status_results_t tr_res;
+} vtss_port_kr_state_t;
+
+
+/** \brief  KR eye info */
+typedef struct {
+    u32 height;
+} vtss_port_kr_eye_dim_t;
+
+
+/**
+ * \brief Get KR state machine status
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param state   [OUT] Status of the state machine and results of training
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_state_get(const vtss_inst_t inst,
+                               const vtss_port_no_t port_no,
+                               vtss_port_kr_state_t *const state);
+
+/**
+ * \brief Apply KR interrupt
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param irq_vec [IN]  32 bit interrupt vector.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_irq_apply(const vtss_inst_t inst,
+                               const vtss_port_no_t port_no,
+                               const u32 *const irq_vec);
+
+/**
+ * \brief Get and clear KR interrupts
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param irq_vec [OUT] 32 bit interrupt vector.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_irq_get(vtss_inst_t inst,
+                             const vtss_port_no_t port_no,
+                             u32 *const irq_vec);
+
+
+/**
+ * \brief Get KR IRQ activity
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param irq_mask [OUT] 20 bit interrupt vector, one bit for each port.
+ *
+ * \return Return code.
+ **/
+
+vtss_rc vtss_port_kr_irq_activity(vtss_inst_t inst,
+                                  u32 *const mask);
+
+/**
+ * \brief Enable / Disable KR IRQs
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param enable  [OUT] enable/disable
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_event_enable(const vtss_inst_t     inst,
+                                  const vtss_port_no_t port_no,
+                                  BOOL enable);
+
+/**
+ * \brief Get and clear KR interrupts
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param eye     [OUT] The height of the eye.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_eye_get(vtss_inst_t inst,
+                             const vtss_port_no_t port_no,
+                             vtss_port_kr_eye_dim_t *const eye);
+/**
+ * \brief Start CTLE eq
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_ctle_adjust(vtss_inst_t inst,
+                                 const vtss_port_no_t port_no);
+/**
+ * \brief Get CTLE config
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_kr_ctle_get(vtss_inst_t inst,
+                              const vtss_port_no_t port_no, vtss_port_ctle_t *const ctle);
+
+/**
+ * ============================================================================
+ * 802.3ap 25G/10G Base KR Backplane Ethernet - End
+ * ============================================================================
+ **/
+
+#endif // defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+/** \brief Port loopback */
+typedef enum
+{
+    VTSS_PORT_LB_DISABLED, /**< Loopback disabled */
+    VTSS_PORT_LB_NEAR_END, /**< Near-end loopback */
+    VTSS_PORT_LB_FAR_END,  /**< Far-end loopback */
+    VTSS_PORT_LB_FACILITY, /**< Facility loopback */
+    VTSS_PORT_LB_EQUIPMENT /**< Equipment loopback */
+} vtss_port_lb_t;
+
+/** \brief Port test configuration structure */
+typedef struct
+{
+    vtss_port_lb_t loopback; /**< Loopback type */
+} vtss_port_test_conf_t;
+
+/**
+ * \brief Get port test configuration.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [OUT]    Port test configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_test_conf_get(const vtss_inst_t      inst,
+                                const vtss_port_no_t   port_no,
+                                vtss_port_test_conf_t  *const conf);
+
+/**
+ * \brief Set port test configuration.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [IN]     Port test configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_test_conf_set(const vtss_inst_t            inst,
+                                const vtss_port_no_t         port_no,
+                                const vtss_port_test_conf_t  *const conf);
+
+/** \brief Serdes Tx taps */
+typedef enum
+{
+    VTSS_SERDES_PRE_CURSOR,
+    VTSS_SERDES_MAIN_CURSOR,
+    VTSS_SERDES_POST_CURSOR,
+} vtss_port_serdes_tap_enum_t;
+
+
+/**
+ * \brief Function pointer for API callout.
+          This function will typically be implemented in MEBA were the board specifics are known.
+          The purpose is to get the tap value for a specific port/speed/tap.
+ * \param port_no [IN]  Port number.
+ * \param speed [IN]    Port speed.
+ * \param tap [IN]      Pre/main/post tap.
+ * \param value [OUT]   The register value to be written.
+
+ * \return Return code.
+ *
+ **/
+typedef vtss_rc (*vtss_port_serdes_tap_get_t)(const vtss_inst_t                 inst,
+                                              const vtss_port_no_t              port_no,
+                                              const vtss_port_speed_t           speed,
+                                              const vtss_port_serdes_tap_enum_t tap,
+                                              u32                               *const value);
+
+/** \brief Serdes debug parameters */
+typedef enum
+{
+    VTSS_SERDES_DFE_PRM,  /**< DFE prms. in this order : h1,h2,h3,h4,h5,dlev */
+    VTSS_SERDES_CTLE_PRM, /**< CTLE prms. in this order: r,c,vga */
+    VTSS_SERDES_TXEQ_PRM, /**< TxEQ prms. in this order: tap_dly, tap_adv, amplitude */
+} vtss_serdes_debug_type_t;
+
+/** \brief Serdes debug configuration structure */
+typedef struct
+{
+    vtss_serdes_debug_type_t debug_type;
+    u32                      serdes_prm[10]; /**< Depends on debug_type */
+} vtss_port_serdes_debug_t;
+
+/**
+ * \brief Used for Serdes debugging.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [IN]     Serdes test configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_port_serdes_debug_set(const vtss_inst_t              inst,
+                                   const vtss_port_no_t           port_no,
+                                   const vtss_port_serdes_debug_t *const conf);
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* _VTSS_PORT_API_H_ */
+:@byteposi¢:	@str"#ifndef _VTSS_PORT_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[xiPipiqiriviäiùi°i¢iºi÷i◊iÚiÛiiiiiCiPiRisi±iÔiˆi3iqixiñi‘i€i"iiiÉiÑiÖi€i1i2iwiÜiªiˆi0iíiƒiˆi(iZièi»iˇiiiiCiDiÄiçièi iÚiiDimiñi¡i◊iÿi		i	i	iV	iñ	i◊	iÒ	iÚ	i.
+i=
+i?
+iy
+iü
+i‹
+i„
+i i[itiuiõi∑i∏iŸiËiÍi5iäi«i)i]i¨iixiñiÓiiii#i;i>iriõiûi∂iªiÚiDiEiIiaidiôiΩi¿iÿi›ii^i_iciöiÓiAiñiÎi@iEiFiwi¨iÆi˛iOi§i˙i i!i]iliniµi¸iDiåi‹i$ikiàiâi¡i–i“i1iêiÔiNi≠iikiÖiÜi≥i¬iƒi#iÇi·i@i\i]i^iñi•ißiÒiNioipiti´iÆi‚ii4i7iOiTi°iÒiIiJiKiLiPiáiäiΩi‚i i i( i- iÄ i÷ i4!i5!i6!iW!if!ih!iΩ!i"ih"iÜ"iÚ"iM#iT#iu#iv#i∂#i∑#iﬂ#iÓ#i#i8$iÅ$iª$i’$i÷$i˝$iG%iú%iù%iº%i›%i1&iP&iQ&io&iê&i‰&i'i'i#'iD'iò'i∏'iπ'iÌ'i˙'i¸'i8(iq(iµ(iÕ(iŒ(i˘(i)i)i;)it)ià)iâ)i∞)iø)i¡)i*i{*iÿ*i5+iP+iQ+iy+i•+i≤+i¥+i˘+i>,iÉ,i»,i‡,i-i	-i4-iC-iE-ië-i„-i@.iû.iÏ.iI/ië/iﬂ/i/0iÅ0iˆ0iS1i±1i 2iO2i≠2i3i63i£3i™3iæ3iø3i√3iÂ3i.5iœ5i“5i6i*6iX6i[6is6ix6i±6iÌ6i.7i/7i07i17i57iO7iR7iÖ7i™7i÷7iŸ7iÒ7iˆ7i-8ig8i¶8iß8i®8i¨8i«8i 8i˝8i"9iL9iO9ig9il9i•9i·9i$:i%:i&:i':i+:iO:iR:iÖ:i™:i≠:i≈:i :i;iJ;iK;iL;iM;iQ;it;iw;i™;i€;iﬁ;iˆ;i˚;i8<iy<iz<i{<i<i†<i£<iÿ<i=i8=i;=iS=iX=iì=i—=i>i>i>iA>iP>iR>iw>iú>iµ>i∂>i∫>i·>i‰>i?iL?iy?i|?iî?iô?i⁄?i@ik@il@im@ië@iû@i†@i‰@i.AiuAiŒAiÂAiÊAiÍAiBiBiFBilBióBiöBi≤Bi∑Bi˜Bi:CiÖCiÜCiäCiØCi≤CiÂCi
+Di4Di7DiODiTDiôDi·Di*Ei+EiNEiÅEiêEiíEiŒEi2FióFiµFi∂Fi÷Fi*GiÉGiÔGiHHiùHiΩHi–Hi—Hi’HiIiIi>IicIièIiíIi™IiØIiÏIi,JipJiqJiuJi®Ji´JiﬁJiKi3Ki6KiNKiSKiéKiÃKiLi2Li3Li7Li`LicLiñLiªLiÈLiMiMi0Mi5MilMi¶Mi›MiNiNi"NiJNiMNiÄNi•Ni”NiˇNiOiOiOiWOiíOi OiPiPi	Pi9Pi<PiwPiΩPiˆPi*Qi`QiîQióQiØQi¥QiÓQi+RipRiØRiÈRi,Si-Si1SibSieSi†SiÊSiTiSTiâTi¡TiƒTi‹Ti·TiUiZUi†Ui‡UiViXViViÄViÑVi¨ViØVi‚ViWi<WijWiñWiôWi±Wi∂WiÌWi'Xi]XiîXi‘XiÿXiYi YiSYiâYi≠Yi€YiZi:Zi=ZiUZiZZiïZi”Zi[iH[iâ[i∆[i«[iÀ[iÚ[iı[i(\i^\iÇ\i∞\i‹\iﬂ\i˜\i¸\i4]io]i¶]iﬁ]i^i^i^i^iV^iY^iç^iƒ^iÈ^i_iE_iê_iì_i´_i∞_iÔ_i1`io`iÆ`iÓ`i.ai/ai3aimaipai´aiÒai*bi^biäbi¿biÙbi˜biciciMciâciÕcidiCdi|diædiødi√di˛diei<eiÇeiªeiÔeifiQfiâfiåfi§fi©fi„fi giegi§gi›gihiShiThiõhiühiÔhiiiRiiÜii÷ii€ii‹ii˘ii
+jiTjiûjiËji2ki|ki∆kiliZli§liÓli8miÇmiÃmini`ni™ni»ni…niÎni¸ni>oiÄoi¬oipipi.piMpiNpikpi|pi¡piqiKqiêqi≠qiÆqi›qiÓqi1ritri∑ri–ri—ri“ri	sisiPsiäsiƒsi˛si8tirti¨tiÊti uiauixuiyuiõui¨uiÙui8viävi“viwi0wiHwiIwitwiÖwi⁄wi/xiFxiGxigxixxi±xiÚxiyi	yiyinyiqyityißyiÃyi˝yi ziziziSziìzi›ziﬁzi‚zi{i{i9{i_{ië{iî{i¨{i±{iÁ{i'|ik|il|ip|iÖ|ià|iã|iæ|i„|i}i}i)}i.}ic}iû}i‹}i›}i·}iˆ}i˘}i¸}i/~iT~i~iÇ~iö~iü~i‘~iiSiTiXiÉiÜiπiﬁiÄiÄi-Äi2ÄijÄi¨ÄiˆÄi˜ÄiHÅiIÅiZÅigÅitÅiÅÅiïÅiñÅiºÅiΩÅiÅiˇÅiÇi1ÇiJÇidÇi{ÇiôÇi∞Çi∆Çi«ÇiÌÇi¸ÇiÉi0ÉiOÉimÉiÅÉiÇÉi°Éi∞Éi¬Éi”ÉiÂÉiˆÉi˜ÉiÑiÑi!Ñi.Ñi<ÑiLÑihÑiiÑißÑi∏ÑiﬁÑiÖi&Öi>ÖiYÖisÖiåÖißÖi∫ÖiÕÖiÁÖiÜiÜi0ÜiYÜiuÜiëÜi£ÜiºÜiÿÜiÎÜiáiái/áiEáijáiÇáiÉáiÑáiüái∞ái¿ái⁄ái€ái‹ái‡áiài	ài<àiaài≠ài∞ài»àiÕàiâiAâiÑâiÖâiââi¶âi©âi¨âiﬂâiäi5äi8äiPäiUäiåäi…äiãiãiãi.ãi1ãi4ãigãiåãiΩãi¿ãiÿãi›ãiåiGåiyåizåi{åiåiùåi†åi£åi÷åiçi"çi:çi?çi@çitçi®çi©çi≠çi–çi”çi÷çi	éi.éiUéiXéipéiuéi≥éiÛéi#èi$èi(èiNèiQèiTèiáèi¨èi€èiﬁèiˆèi˚èi*êieêi¶êi™êi¬êi≈êi»êi˚êi ëi#ëi;ëi@ëisëi≥ëi∑ëi—ëi‘ëi◊ëi
+íi/íi2íiJíiOíiíi⁄íi€íiﬂíi/ìicìi≥ìi∏ìiπìiÂìiÊìiîiîiîiFîi{îiØîi‰îiïi,ïi-ïi]ïilïinïi°ïi∫ïiªïiøïiÊïiÈïiñiAñirñiuñiçñiíñiœñióiTóiUóiYóiÄóiÉói∂ói€óiòiòi'òi,òioòiµòi ôiôiôi+ôi-ôiIôifôiÉôi¢ôi£ôi§ôi®ôi‘ôi6öiÉöi®öiÃöi˜öi1õi2õiJõiMõiRõi®õiúiXúi≠úiùiùi3ùi@ùiBùiíùi÷ùi.ûiJûiKûi~ûiçûièûi∏ûiüiüi üi$üiIüiLüiüi§üi◊üi⁄üiÚüi˜üi?†iä†i⁄†i€†i‹†i›†iﬁ†iÒ†iÛ†i˙†i°:@last_line_endi°{;o;;o;	;
+@
+;iº;" #define _VTSS_PORT_API_H_
+
+;@{;o;;o;	;
+@
+;i◊;"!#include <vtss/api/port.h>
+
+;@{;o;;o;	;
+@
+;iÛ;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;i;"extern;@:stringo;;o;	;
+@
+;i;""C";@; [t{;o;;o;	;
+@
+;i;"#endif
+
+;@{
+;o;;o;	;
+@
+;iC;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iK;"	enum;@:
+enums[{;o;;o;	;
+@
+;iR;"&#if defined(VTSS_FEATURE_LAYER2)
+;@{:	enum{	:enum_nameo;;o;	;
+@
+;iw;"VTSS_MIIM_CONTROLLER_0    ;@:operatoro;;o;	;
+@
+;ië;"=;@:	expro;;o;	;
+@
+;iì;"0;@:cap0{;{	;o;;o;	;
+@
+;iµ;"VTSS_MIIM_CONTROLLER_1    ;@;o;;o;	;
+@
+;iœ;"=;@;o;;o;	;
+@
+;i—;"1;@;0{;o;;o;	;
+@
+;iÔ;"#endif
+;@{;o;;o;	;
+@
+;iˆ;"B#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+;@{;{	;o;;o;	;
+@
+;i7;"VTSS_MIIM_CONTROLLER_2    ;@;o;;o;	;
+@
+;iQ;"=;@;o;;o;	;
+@
+;iS;"2;@;0{;o;;o;	;
+@
+;iq;"#endif
+;@{;o;;o;	;
+@
+;ix;"##if defined(VTSS_ARCH_SPARX5)
+;@{;{	;o;;o;	;
+@
+;iö;"VTSS_MIIM_CONTROLLER_3    ;@;o;;o;	;
+@
+;i¥;"=;@;o;;o;	;
+@
+;i∂;"3;@;0{;o;;o;	;
+@
+;i‘;"#endif
+;@{;{;o;;o;	;
+@
+;iﬂ;"VTSS_MIIM_CONTROLLERS;@;0{;{	;o;;o;	;
+@
+;i&;"VTSS_MIIM_CONTROLLER_NONE ;@;o;;o;	;
+@
+;i@;"=;@;o;;o;	;
+@
+;iB;"	-1  ;@;0:typedef_nameo;;o;	;
+@
+;ik;"vtss_miim_controller_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;iw;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@;[{;{;o;;o;	;
+@
+;iä;"VTSS_SD10G_MEDIA_PR_NONE;@;0{;{;o;;o;	;
+@
+;iø;"VTSS_SD10G_MEDIA_SR;@;0{;{;o;;o;	;
+@
+;i˙;"VTSS_SD10G_MEDIA_ZR;@;0{;{;o;;o;	;
+@
+;i4;"VTSS_SD10G_MEDIA_DAC;@;0{;{;o;;o;	;
+@
+;iñ;"VTSS_SD10G_MEDIA_DAC_1M;@;0{;{;o;;o;	;
+@
+;i»;"VTSS_SD10G_MEDIA_DAC_2M;@;0{;{;o;;o;	;
+@
+;i˙;"VTSS_SD10G_MEDIA_DAC_3M;@;0{;{;o;;o;	;
+@
+;i,;"VTSS_SD10G_MEDIA_DAC_5M;@;0{;{;o;;o;	;
+@
+;i^;"VTSS_SD10G_MEDIA_BP;@;0{;{;o;;o;	;
+@
+;iì;"VTSS_SD10G_MEDIA_B2B;@;0{;{;o;;o;	;
+@
+;iÃ;"VTSS_SD10G_MEDIA_10G_KR;@;0;o;;o;	;
+@
+;i;"vtss_sd10g_media_type_t;@;[ ;0{;o;;o;	;
+@
+;i;"-#if defined(VTSS_FEATURE_PORT_CONTROL)
+
+;@{
+;o;;o;	;
+@
+;iÄ;"typedef;@;{;o;;o;	;
+@
+;ià;"	enum;@;[{;{;o;;o;	;
+@
+;iì;"VTSS_BW_DEFAULT;@;0{;{;o;;o;	;
+@
+;iŒ;"VTSS_BW_1G;@;0{;{;o;;o;	;
+@
+;iˆ;"VTSS_BW_2G5;@;0{;{;o;;o;	;
+@
+;i ;"VTSS_BW_5G;@;0{;{;o;;o;	;
+@
+;iH;"VTSS_BW_10G;@;0{;{;o;;o;	;
+@
+;iq;"VTSS_BW_25G;@;0{;{;o;;o;	;
+@
+;iö;"VTSS_BW_UNDEFINED;@;0;o;;o;	;
+@
+;i√;"vtss_internal_bw_t;@;[ ;0{
+;o;;o;	;
+@
+;i		;"typedef;@;{;o;;o;	;
+@
+;i	;"	enum;@;[{;{;o;;o;	;
+@
+;i	;"VTSS_SD_SGPIO_MAP_IGNORE;@;0{;{;o;;o;	;
+@
+;iZ	;"VTSS_SD_SGPIO_MAP_ENABLE;@;0{;{;o;;o;	;
+@
+;iö	;"VTSS_SD_SGPIO_MAP_DISABLE;@;0;o;;o;	;
+@
+;iŸ	;"vtss_sd_sgpio_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i.
+;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iC
+;"vtss_sd_sgpio_action_t ;@:	nameo;;o;	;
+@
+;iZ
+;"action;@;[ ;0{;o;;o;	;
+@
+;iy
+;"+#if defined(VTSS_FEATURE_SERIAL_GPIO)
+;@{;{; {	;!o;;o;	;
+@
+;i£
+;"vtss_sgpio_group_t     ;@;"o;;o;	;
+@
+;i∫
+;"
+group;@;[ ;0{;o;;o;	;
+@
+;i‹
+;"#endif
+;@{;{; {	;!o;;o;	;
+@
+;iÁ
+;"u32                    ;@;"o;;o;	;
+@
+;i˛
+;"	port;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i$;"u32                    ;@;"o;;o;	;
+@
+;i;;"bit;@;[ ;0;o;;o;	;
+@
+;i];"vtss_port_sgpio_map_t;@;[ ;0{;o;;o;	;
+@
+;iõ;""#define CHIP_PORT_UNUSED -1
+
+;@{
+;o;;o;	;
+@
+;iŸ;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iÓ;"i32                    ;@;"o;;o;	;
+@
+;i;"chip_port;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i9;"vtss_chip_no_t         ;@;"o;;o;	;
+@
+;iP;"chip_no;@;[ ;0{;o;;o;	;
+@
+;iä;"B#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+;@{;{; {	;!o;;o;	;
+@
+;iÀ;"vtss_internal_bw_t     ;@;"o;;o;	;
+@
+;i‚;"max_bw;@;[ ;0{;o;;o;	;
+@
+;i);"9#endif /* VTSS_ARCH_JAGUAR_2 || VTSS_ARCH_SPARX5 */
+;@{;{; {	;!o;;o;	;
+@
+;ia;"vtss_miim_controller_t ;@;"o;;o;	;
+@
+;ix;"miim_controller;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i∞;"u8                     ;@;"o;;o;	;
+@
+;i«;"miim_addr;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i;"vtss_chip_no_t         ;@;"o;;o;	;
+@
+;i/;"miim_chip_no;@;[ ;0{;o;;o;	;
+@
+;ix;"##if defined(VTSS_ARCH_SPARX5)
+;@{;{; {	;!o;;o;	;
+@
+;iö;"vtss_port_sgpio_map_t  ;@;"o;;o;	;
+@
+;i±;"sd_map;@;[ ;0{;o;;o;	;
+@
+;iÓ;""#endif /*VTSS_ARCH_SPARX5 */
+;@;o;;o;	;
+@
+;i;"vtss_port_map_t;@;[ ;0{:func_proto{; {	;!o;;o;	;
+@
+;iº;"vtss_rc ;@;"o;;o;	;
+@
+;iƒ;"vtss_port_map_set;@;[ ;0:	args[{; {	;!o;;o;	;
+@
+;i÷;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iÏ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"const vtss_port_map_t ;@;"o;;o;	;
+@
+;i#;"port_map;@;[{;o;;o;	;
+@
+;i,;"VTSS_PORT_ARRAY_SIZE;@;0;0{;#{; {	;!o;;o;	;
+@
+;i›;"vtss_rc ;@;"o;;o;	;
+@
+;iÂ;"vtss_port_map_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i˜;"const vtss_inst_t  ;@;"o;;o;	;
+@
+;i
+;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i*;"vtss_port_map_t    ;@;"o;;o;	;
+@
+;i=;"port_map;@;[{;o;;o;	;
+@
+;iF;"VTSS_PORT_ARRAY_SIZE;@;0;0{
+;o;;o;	;
+@
+;iw;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@;[	{;{	;o;;o;	;
+@
+;i≤;"*VTSS_PORT_CLAUSE_37_RF_LINK_OK       ;@;o;;o;	;
+@
+;i◊;"=;@;o;;o;	;
+@
+;iŸ;"((0<<1) | (0<<0));@;0{;{	;o;;o;	;
+@
+;i;"*VTSS_PORT_CLAUSE_37_RF_OFFLINE       ;@;o;;o;	;
+@
+;i';"=;@;o;;o;	;
+@
+;i);"((1<<1) | (0<<0));@;0{;{	;o;;o;	;
+@
+;iS;"*VTSS_PORT_CLAUSE_37_RF_LINK_FAILURE  ;@;o;;o;	;
+@
+;ix;"=;@;o;;o;	;
+@
+;iz;"((0<<1) | (1<<0));@;0{;{	;o;;o;	;
+@
+;i®;"*VTSS_PORT_CLAUSE_37_RF_AUTONEG_ERROR ;@;o;;o;	;
+@
+;iÕ;"=;@;o;;o;	;
+@
+;iœ;"((1<<1) | (1<<0))    ;@;0;o;;o;	;
+@
+;i¸;"'vtss_port_clause_37_remote_fault_t;@;[ ;0{
+;o;;o;	;
+@
+;i];"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;ir;"(BOOL                               ;@;"o;;o;	;
+@
+;iï;"fdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iπ;"(BOOL                               ;@;"o;;o;	;
+@
+;i‹;"hdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i ;"(BOOL                               ;@;"o;;o;	;
+@
+;i#;"symmetric_pause;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iH;"(BOOL                               ;@;"o;;o;	;
+@
+;ik;"asymmetric_pause;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iê;"(vtss_port_clause_37_remote_fault_t ;@;"o;;o;	;
+@
+;i≥;"remote_fault;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i‡;"(BOOL                               ;@;"o;;o;	;
+@
+;i;"acknowledge;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i(;"(BOOL                               ;@;"o;;o;	;
+@
+;iK;"next_page;@;[ ;0;o;;o;	;
+@
+;im;"vtss_port_clause_37_adv_t;@;[ ;0{
+;o;;o;	;
+@
+;i¡;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i÷;"(BOOL                               ;@;"o;;o;	;
+@
+;i˘;"	link;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i5;"(BOOL                               ;@;"o;;o;	;
+@
+;iX;"fdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iî;"(BOOL                               ;@;"o;;o;	;
+@
+;i∑;"hdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÛ;"(BOOL                               ;@;"o;;o;	;
+@
+;i;"speed_10M;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iR;"(BOOL                               ;@;"o;;o;	;
+@
+;iu;"speed_100M;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i±;"(BOOL                               ;@;"o;;o;	;
+@
+;i‘;"speed_1G;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i;"(BOOL                               ;@;"o;;o;	;
+@
+;i3;"aneg_complete;@;[ ;0;o;;o;	;
+@
+;im;"vtss_port_sgmii_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;i≥;"typedef;@;{;[	{;{; {	;!o;;o;	;
+@
+;i»;"(BOOL                               ;@;"o;;o;	;
+@
+;iÎ;"	link;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i';"(BOOL                               ;@;"o;;o;	;
+@
+;iJ;"fdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÜ;"(vtss_port_speed_t                  ;@;"o;;o;	;
+@
+;i©;"
+speed;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÂ;"(BOOL                               ;@;"o;;o;	;
+@
+;i;"aneg_complete;@;[ ;0;o;;o;	;
+@
+;iB;"vtss_port_usxgmii_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;iñ;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i´;"BOOL                      ;@;"o;;o;	;
+@
+;i≈;"enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iı;"vtss_port_clause_37_adv_t ;@;"o;;o;	;
+@
+;i;"advertisement;@;[ ;0;o;;o;	;
+@
+;iP;""vtss_port_clause_37_control_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iT;"vtss_rc ;@;"o;;o;	;
+@
+;i\;"$vtss_port_clause_37_control_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i|;"$const vtss_inst_t              ;@;"o;;o;	;
+@
+;iõ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i…;"$const vtss_port_no_t           ;@;"o;;o;	;
+@
+;iË;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"+vtss_port_clause_37_control_t  *const ;@;"o;;o;	;
+@
+;i?;"control;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i- ;"vtss_rc ;@;"o;;o;	;
+@
+;i5 ;"$vtss_port_clause_37_control_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iU ;"*const vtss_inst_t                    ;@;"o;;o;	;
+@
+;iz ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i® ;"*const vtss_port_no_t                 ;@;"o;;o;	;
+@
+;iÕ ;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i˛ ;"1const vtss_port_clause_37_control_t  *const ;@;"o;;o;	;
+@
+;i*!;"control;@;[ ;0;0{
+;o;;o;	;
+@
+;iW!;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;il!;"BOOL       ;@;"o;;o;	;
+@
+;iw!;"	obey;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i¡!;"BOOL       ;@;"o;;o;	;
+@
+;iÃ!;"generate;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i";"vtss_mac_t ;@;"o;;o;	;
+@
+;i!";"	smac;@;[ ;0{;o;;o;	;
+@
+;ih";"##if defined(VTSS_FEATURE_PFC)
+;@{;{; {	;!o;;o;	;
+@
+;iä";"BOOL       ;@;"o;;o;	;
+@
+;iï";"pfc;@;[{;o;;o;	;
+@
+;iô";"VTSS_PRIOS;@;0{;o;;o;	;
+@
+;iM#;"#endif
+;@;o;;o;	;
+@
+;iV#;""vtss_port_flow_control_conf_t;@;[ ;0{;o;;o;	;
+@
+;iv#;"F#define VTSS_FRAME_GAP_DEFAULT 0 /**< Default frame gap used */
+
+;@{
+;o;;o;	;
+@
+;iﬂ#;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iÙ#;"	u32 ;@;"o;;o;	;
+@
+;i¯#;"hdx_gap_1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<$;"	u32 ;@;"o;;o;	;
+@
+;i@$;"hdx_gap_2;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÖ$;"	u32 ;@;"o;;o;	;
+@
+;iâ$;"fdx_gap;@;[ ;0;o;;o;	;
+@
+;iΩ$;"vtss_port_frame_gaps_t;@;[ ;0{;o;;o;	;
+@
+;i˝$;"O#define VTSS_MAX_FRAME_LENGTH_STANDARD  1518  /**< IEEE 802.3 standard */
+;@{;o;;o;	;
+@
+;iG%;"[#define VTSS_MAX_FRAME_LENGTH_MAX      10240  /**< Maximum frame length supported */
+
+;@{;o;;o;	;
+@
+;iù%;"$#if defined(VTSS_ARCH_LUTON26)
+;@{;o;;o;	;
+@
+;iº%;"&#undef VTSS_MAX_FRAME_LENGTH_MAX
+;@{;o;;o;	;
+@
+;i›%;"Y#define VTSS_MAX_FRAME_LENGTH_MAX      9600  /**< Maximum frame length supported */
+;@{;o;;o;	;
+@
+;i1&;"%#endif /* VTSS_ARCH_LUTON26 */
+
+;@{;o;;o;	;
+@
+;iQ&;"##if defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;io&;"&#undef VTSS_MAX_FRAME_LENGTH_MAX
+;@{;o;;o;	;
+@
+;iê&;"Y#define VTSS_MAX_FRAME_LENGTH_MAX      10240 /**< Maximum frame length supported */
+;@{;o;;o;	;
+@
+;i‰&;"$#endif /* VTSS_ARCH_OCELOT */
+
+;@{;o;;o;	;
+@
+;i';"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;o;;o;	;
+@
+;i#';"&#undef VTSS_MAX_FRAME_LENGTH_MAX
+;@{;o;;o;	;
+@
+;iD';"Y#define VTSS_MAX_FRAME_LENGTH_MAX      10240 /**< Maximum frame length supported */
+;@{;o;;o;	;
+@
+;iò';"&#endif /* VTSS_ARCH_JAGUAR_2 */
+
+;@{
+;o;;o;	;
+@
+;iÌ';"typedef;@;{;o;;o;	;
+@
+;iı';"	enum;@;[{;{;o;;o;	;
+@
+;i (;"VTSS_PORT_MAX_TAGS_NONE;@;0{;{;o;;o;	;
+@
+;i<(;"VTSS_PORT_MAX_TAGS_ONE;@;0{;{;o;;o;	;
+@
+;iu(;"VTSS_PORT_MAX_TAGS_TWO    ;@;0;o;;o;	;
+@
+;i∑(;"vtss_port_max_tags_t;@;[ ;0{
+;o;;o;	;
+@
+;i˘(;"typedef;@;{;o;;o;	;
+@
+;i);"	enum;@;[{;{;o;;o;	;
+@
+;i);"VTSS_PORT_LOOP_DISABLE;@;0{;{;o;;o;	;
+@
+;i?);"VTSS_PORT_LOOP_PCS_HOST;@;0;o;;o;	;
+@
+;iv);"vtss_port_loop_t;@;[ ;0{
+;o;;o;	;
+@
+;i∞);"typedef;@;{;[	{;{; {	;!o;;o;	;
+@
+;i≈);"BOOL                     ;@;"o;;o;	;
+@
+;iﬁ);"sfp_dac;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i"*;"vtss_sd10g_media_type_t  ;@;"o;;o;	;
+@
+;i;*;"media_type;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i*;"BOOL                     ;@;"o;;o;	;
+@
+;iò*;"rx_invert;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i‹*;"BOOL                     ;@;"o;;o;	;
+@
+;iı*;"tx_invert;@;[ ;0;o;;o;	;
+@
+;i7+;"vtss_port_serdes_conf_t;@;[ ;0{;o;;o;	;
+@
+;iQ+;"-#if defined(VTSS_FEATURE_PORT_PCS_CONF)
+;@{
+;o;;o;	;
+@
+;i•+;"typedef;@;{;o;;o;	;
+@
+;i≠+;"	enum;@;[	{;{;o;;o;	;
+@
+;i∏+;"VTSS_PORT_PCS_NORMAL;@;0{;{;o;;o;	;
+@
+;i˝+;"VTSS_PORT_PCS_ENABLE;@;0{;{;o;;o;	;
+@
+;iB,;"VTSS_PORT_PCS_DISABLE;@;0{;{;o;;o;	;
+@
+;iá,;"VTSS_PORT_PCS_IGNORE      ;@;0;o;;o;	;
+@
+;i ,;"vtss_port_pcs_conf_t;@;[ ;0{;o;;o;	;
+@
+;i‡,;".#endif /* VTSS_FEATURE_PORT_PCS_CONF */
+
+;@{
+;o;;o;	;
+@
+;i4-;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iI-;"#vtss_port_interface_t         ;@;"o;;o;	;
+@
+;ig-;"if_type;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iï-;"#BOOL                          ;@;"o;;o;	;
+@
+;i≥-;"sd_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÁ-;"#BOOL                          ;@;"o;;o;	;
+@
+;i.;"sd_active_high;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iD.;"#BOOL                          ;@;"o;;o;	;
+@
+;ib.;"sd_internal;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i¢.;"#vtss_port_frame_gaps_t        ;@;"o;;o;	;
+@
+;i¿.;"frame_gaps;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i.;"#BOOL                          ;@;"o;;o;	;
+@
+;i/;"power_down;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iM/;"#vtss_port_speed_t             ;@;"o;;o;	;
+@
+;ik/;"
+speed;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iï/;"#BOOL                          ;@;"o;;o;	;
+@
+;i≥/;"fdx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i„/;"#vtss_port_flow_control_conf_t ;@;"o;;o;	;
+@
+;i0;"flow_control;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i30;"#u32                           ;@;"o;;o;	;
+@
+;iQ0;"max_frame_length;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÖ0;"#BOOL                          ;@;"o;;o;	;
+@
+;i£0;"frame_length_chk;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i˙0;"#vtss_port_max_tags_t          ;@;"o;;o;	;
+@
+;i1;"max_tags;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iW1;"#BOOL                          ;@;"o;;o;	;
+@
+;iu1;"exc_col_cont;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iµ1;"#BOOL                          ;@;"o;;o;	;
+@
+;i”1;"xaui_rx_lane_flip;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i2;"#BOOL                          ;@;"o;;o;	;
+@
+;i"2;"xaui_tx_lane_flip;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iS2;"#vtss_port_loop_t              ;@;"o;;o;	;
+@
+;iq2;"	loop;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i±2;"#vtss_port_serdes_conf_t       ;@;"o;;o;	;
+@
+;iœ2;"serdes;@;[ ;0{;o;;o;	;
+@
+;i3;"-#if defined(VTSS_FEATURE_PORT_PCS_CONF)
+;@{;{; {	;!o;;o;	;
+@
+;i:3;"#vtss_port_pcs_conf_t          ;@;"o;;o;	;
+@
+;iX3;"pcs;@;[ ;0{;o;;o;	;
+@
+;i£3;"#endif
+;@;o;;o;	;
+@
+;i¨3;"vtss_port_conf_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;ix6;"vtss_rc ;@;"o;;o;	;
+@
+;iÄ6;"vtss_port_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iì6;"const vtss_inst_t       ;@;"o;;o;	;
+@
+;i´6;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÃ6;"const vtss_port_no_t    ;@;"o;;o;	;
+@
+;i‰6;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i7;"$const vtss_port_conf_t  *const ;@;"o;;o;	;
+@
+;i'7;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iˆ7;"vtss_rc ;@;"o;;o;	;
+@
+;i˛7;"vtss_port_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i8;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i'8;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iH8;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i^8;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iÇ8;""vtss_port_conf_t      *const ;@;"o;;o;	;
+@
+;iü8;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;il9;"vtss_rc ;@;"o;;o;	;
+@
+;it9;"vtss_port_status_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iâ9;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iü9;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i¬9;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;iÿ9;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i˛9;""vtss_port_status_t    *const ;@;"o;;o;	;
+@
+;i:;"status;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i :;"vtss_rc ;@;"o;;o;	;
+@
+;i“:;"vtss_port_counters_update;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iÏ:;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i;;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i*;;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i@;;"port_no;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i˚;;"vtss_rc ;@;"o;;o;	;
+@
+;i<;"vtss_port_counters_clear;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i<;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i2<;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iY<;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;io<;"port_no;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iX=;"vtss_rc ;@;"o;;o;	;
+@
+;i`=;"vtss_port_counters_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iw=;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iç=;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i≤=;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i»=;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i=;""vtss_port_counters_t  *const ;@;"o;;o;	;
+@
+;i>;"counters;@;[ ;0;0{
+;o;;o;	;
+@
+;iA>;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iV>;"	u32 ;@;"o;;o;	;
+@
+;iZ>;"rx_frames;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i{>;"	u32 ;@;"o;;o;	;
+@
+;i>;"tx_frames;@;[ ;0;o;;o;	;
+@
+;iû>;"vtss_basic_counters_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iô?;"vtss_rc ;@;"o;;o;	;
+@
+;i°?;"!vtss_port_basic_counters_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iæ?;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i‘?;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iˇ?;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i@;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iC@;""vtss_basic_counters_t *const ;@;"o;;o;	;
+@
+;i`@;"counters;@;[ ;0;0{
+;o;;o;	;
+@
+;ië@;"typedef;@;{;o;;o;	;
+@
+;iô@;"	enum;@;[	{;{;o;;o;	;
+@
+;i§@;"VTSS_PORT_FORWARD_ENABLED;@;0{;{;o;;o;	;
+@
+;iË@;"VTSS_PORT_FORWARD_DISABLED;@;0{;{;o;;o;	;
+@
+;i2A;"VTSS_PORT_FORWARD_INGRESS;@;0{;{;o;;o;	;
+@
+;iyA;""VTSS_PORT_FORWARD_EGRESS     ;@;0;o;;o;	;
+@
+;i–A;"vtss_port_forward_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;i∑B;"vtss_rc ;@;"o;;o;	;
+@
+;iøB;" vtss_port_forward_state_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i€B;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iÒB;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iC;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i1C;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i^C;""vtss_port_forward_t   *const ;@;"o;;o;	;
+@
+;i{C;"forward;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iTD;"vtss_rc ;@;"o;;o;	;
+@
+;i\D;" vtss_port_forward_state_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;ixD;" const vtss_inst_t          ;@;"o;;o;	;
+@
+;iìD;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iΩD;" const vtss_port_no_t       ;@;"o;;o;	;
+@
+;iÿD;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iE;" const vtss_port_forward_t  ;@;"o;;o;	;
+@
+;i E;"forward;@;[ ;0;0{;o;;o;	;
+@
+;i+E;"(#if defined(VTSS_FEATURE_PORT_IFH)
+;@{
+;o;;o;	;
+@
+;iÅE;"typedef;@;{;[{;o;;o;	;
+@
+;iíE;"A#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
+;@{;{; {	;!o;;o;	;
+@
+;i“E;"
+BOOL ;@;"o;;o;	;
+@
+;i◊E;"ena_inj_header;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i6F;"
+BOOL ;@;"o;;o;	;
+@
+;i;F;"ena_xtr_header;@;[ ;0{;o;;o;	;
+@
+;ióF;"$#endif /* VTSS_ARCH_OCELOT */
+
+;@{;o;;o;	;
+@
+;i∂F;"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;{; {	;!o;;o;	;
+@
+;i⁄F;"
+BOOL ;@;"o;;o;	;
+@
+;iﬂF;"ena_inj_header;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iáG;"
+BOOL ;@;"o;;o;	;
+@
+;iåG;"ena_xtr_header;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iLH;"
+BOOL ;@;"o;;o;	;
+@
+;iQH;"ena_ifh_header;@;[ ;0{;o;;o;	;
+@
+;iùH;"%#endif /* VTSS_ARCH_JAGUAR_2 */
+;@;o;;o;	;
+@
+;iøH;"vtss_port_ifh_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iØI;"vtss_rc ;@;"o;;o;	;
+@
+;i∑I;"vtss_port_ifh_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iŒI;"const vtss_inst_t       ;@;"o;;o;	;
+@
+;iÊI;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iJ;"const vtss_port_no_t    ;@;"o;;o;	;
+@
+;i#J;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iKJ;"#const vtss_port_ifh_t  *const ;@;"o;;o;	;
+@
+;iiJ;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iSK;"vtss_rc ;@;"o;;o;	;
+@
+;i[K;"vtss_port_ifh_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;irK;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iàK;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i≠K;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i√K;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iÎK;"!vtss_port_ifh_t      *const ;@;"o;;o;	;
+@
+;iL;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iL;"*#endif /* VTSS_FEATURE_PORT_IFH) */
+
+;@{;#{; {	;!o;;o;	;
+@
+;i5M;"vtss_rc ;@;"o;;o;	;
+@
+;i=M;"vtss_port_miim_read;@;[ ;0;$[	{; {	;!o;;o;	;
+@
+;iQM;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;ifM;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iàM;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iùM;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i¬M;"const u8             ;@;"o;;o;	;
+@
+;i◊M;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i˘M;"!u16                  *const ;@;"o;;o;	;
+@
+;iN;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iO;"vtss_rc ;@;"o;;o;	;
+@
+;i'O;"vtss_port_miim_write;@;[ ;0;$[	{; {	;!o;;o;	;
+@
+;i<O;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;iQO;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;itO;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iâO;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iØO;"const u8             ;@;"o;;o;	;
+@
+;iƒO;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iÁO;"const u16            ;@;"o;;o;	;
+@
+;i¸O;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i¥Q;"vtss_rc ;@;"o;;o;	;
+@
+;iºQ;"vtss_miim_read;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iÀQ;""const vtss_inst_t            ;@;"o;;o;	;
+@
+;iËQ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iR;""const vtss_chip_no_t         ;@;"o;;o;	;
+@
+;i"R;"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iBR;""const vtss_miim_controller_t ;@;"o;;o;	;
+@
+;i_R;"miim_controller;@;[ ;0{; {	;!o;;o;	;
+@
+;iáR;""const u8                     ;@;"o;;o;	;
+@
+;i§R;"miim_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i∆R;""const u8                     ;@;"o;;o;	;
+@
+;i„R;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i S;")u16                          *const ;@;"o;;o;	;
+@
+;i$S;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i·T;"vtss_rc ;@;"o;;o;	;
+@
+;iÈT;"vtss_miim_write;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i˘T;""const vtss_inst_t            ;@;"o;;o;	;
+@
+;iU;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i4U;""const vtss_chip_no_t         ;@;"o;;o;	;
+@
+;iQU;"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;irU;""const vtss_miim_controller_t ;@;"o;;o;	;
+@
+;ièU;"miim_controller;@;[ ;0{; {	;!o;;o;	;
+@
+;i∏U;""const u8                     ;@;"o;;o;	;
+@
+;i’U;"miim_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i¯U;""const u8                     ;@;"o;;o;	;
+@
+;iV;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i3V;""const u16                    ;@;"o;;o;	;
+@
+;iPV;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iXV;"-#endif /* VTSS_FEATURE_PORT_CONTROL */
+
+;@{;#{; {	;!o;;o;	;
+@
+;i∂W;"vtss_rc ;@;"o;;o;	;
+@
+;iæW;"vtss_port_mmd_read;@;[ ;0;$[
+{; {	;!o;;o;	;
+@
+;i—W;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iÁW;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iX;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;iX;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iBX;"const u8              ;@;"o;;o;	;
+@
+;iXX;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;ixX;"const u16             ;@;"o;;o;	;
+@
+;iéX;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iØX;""u16                   *const ;@;"o;;o;	;
+@
+;iÃX;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iZZ;"vtss_rc ;@;"o;;o;	;
+@
+;ibZ;"vtss_port_mmd_read_inc;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iyZ;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;ièZ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i¥Z;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i Z;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iÚZ;"const u8              ;@;"o;;o;	;
+@
+;i[;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;i,[;"const u16             ;@;"o;;o;	;
+@
+;iB[;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;ig[;""u16                   *const ;@;"o;;o;	;
+@
+;iÑ[;"buf;@;[ ;0{; {	;!o;;o;	;
+@
+;i®[;"u8                    ;@;"o;;o;	;
+@
+;iæ[;"
+count;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i¸\;"vtss_rc ;@;"o;;o;	;
+@
+;i];"vtss_port_mmd_write;@;[ ;0;$[
+{; {	;!o;;o;	;
+@
+;i];"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i.];"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iP];"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;if];"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iã];"const u8              ;@;"o;;o;	;
+@
+;i°];"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;i¬];"const u16             ;@;"o;;o;	;
+@
+;iÿ];"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i˙];"const u16             ;@;"o;;o;	;
+@
+;i^;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i∞_;"vtss_rc ;@;"o;;o;	;
+@
+;i∏_;"vtss_port_mmd_masked_write;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i”_;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;iÈ_;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i`;"const vtss_port_no_t  ;@;"o;;o;	;
+@
+;i(`;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iT`;"const u8              ;@;"o;;o;	;
+@
+;ij`;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;ií`;"const u16             ;@;"o;;o;	;
+@
+;i®`;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i—`;"const u16             ;@;"o;;o;	;
+@
+;iÁ`;"
+value;@;[ ;0{; {	;!o;;o;	;
+@
+;ia;"const u16             ;@;"o;;o;	;
+@
+;i'a;"	mask;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;ic;"vtss_rc ;@;"o;;o;	;
+@
+;ic;"vtss_mmd_read;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i*c;""const vtss_inst_t            ;@;"o;;o;	;
+@
+;iGc;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;icc;""const vtss_chip_no_t         ;@;"o;;o;	;
+@
+;iÄc;"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iüc;""const vtss_miim_controller_t ;@;"o;;o;	;
+@
+;iºc;"miim_controller;@;[ ;0{; {	;!o;;o;	;
+@
+;i„c;""const u8                     ;@;"o;;o;	;
+@
+;i d;"miim_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i!d;""const u8                     ;@;"o;;o;	;
+@
+;i>d;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;iYd;""const u16                    ;@;"o;;o;	;
+@
+;ivd;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iíd;")u16                          *const ;@;"o;;o;	;
+@
+;i∂d;"
+value;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i©f;"vtss_rc ;@;"o;;o;	;
+@
+;i±f;"vtss_mmd_write;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i¿f;""const vtss_inst_t            ;@;"o;;o;	;
+@
+;i›f;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i˙f;""const vtss_chip_no_t         ;@;"o;;o;	;
+@
+;ig;"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i7g;""const vtss_miim_controller_t ;@;"o;;o;	;
+@
+;iTg;"miim_controller;@;[ ;0{; {	;!o;;o;	;
+@
+;i|g;""const u8                     ;@;"o;;o;	;
+@
+;iôg;"miim_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iªg;""const u8                     ;@;"o;;o;	;
+@
+;iÿg;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;iÙg;""const u16                    ;@;"o;;o;	;
+@
+;ih;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i.h;""const u16                    ;@;"o;;o;	;
+@
+;iKh;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iTh;"L#if defined(VTSS_FEATURE_PORT_KR) || defined(VTSS_FEATURE_PORT_KR_IRQ)
+;@{
+;o;;o;	;
+@
+;i˘i;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;ij;"
+BOOL ;@;"o;;o;	;
+@
+;ij;"complete;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iXj;"
+BOOL ;@;"o;;o;	;
+@
+;i]j;"active;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i¢j;"vtss_port_speed_t ;@;"o;;o;	;
+@
+;i¥j;"speed_req;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÏj;"
+BOOL ;@;"o;;o;	;
+@
+;iÒj;"request_fec_change;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i6k;"
+BOOL ;@;"o;;o;	;
+@
+;i;k;"r_fec_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÄk;"
+BOOL ;@;"o;;o;	;
+@
+;iÖk;"rs_fec_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i k;"
+u32  ;@;"o;;o;	;
+@
+;iœk;"sm;@;[ ;0{;{; {	;!o;;o;	;
+@
+;il;"
+u32  ;@;"o;;o;	;
+@
+;il;"	hist;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i^l;"
+BOOL ;@;"o;;o;	;
+@
+;icl;"lp_aneg_able;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i®l;"
+BOOL ;@;"o;;o;	;
+@
+;i≠l;"block_lock;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÚl;"
+u16  ;@;"o;;o;	;
+@
+;i˜l;"lp_bp0;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<m;"
+u16  ;@;"o;;o;	;
+@
+;iAm;"lp_bp1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÜm;"
+u16  ;@;"o;;o;	;
+@
+;iãm;"lp_bp2;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i–m;"
+u16  ;@;"o;;o;	;
+@
+;i’m;"lp_np0;@;[ ;0{;{; {	;!o;;o;	;
+@
+;in;"
+u16  ;@;"o;;o;	;
+@
+;in;"lp_np1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;idn;"
+u16  ;@;"o;;o;	;
+@
+;iin;"lp_np2;@;[ ;0;o;;o;	;
+@
+;i¨n;"vtss_port_kr_status_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;iÎn;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i o;"
+BOOL ;@;"o;;o;	;
+@
+;io;"complete;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iBo;"u8 ;@;"o;;o;	;
+@
+;iEo;"cm_ob_tap_result;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÑo;"u8 ;@;"o;;o;	;
+@
+;iáo;"cp_ob_tap_result;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i∆o;"u8 ;@;"o;;o;	;
+@
+;i…o;"c0_ob_tap_result;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ip;"	u32 ;@;"o;;o;	;
+@
+;ip;"frame_sent;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ip;"	u16 ;@;"o;;o;	;
+@
+;i p;"frame_errors;@;[ ;0;o;;o;	;
+@
+;i0p;" vtss_port_kr_status_train_t;@;[ ;0{
+;o;;o;	;
+@
+;ikp;"typedef;@;{;[	{;{; {	;!o;;o;	;
+@
+;iÄp;"
+BOOL ;@;"o;;o;	;
+@
+;iÖp;"r_fec_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i≈p;"
+BOOL ;@;"o;;o;	;
+@
+;i p;"rs_fec_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i
+q;"	u32 ;@;"o;;o;	;
+@
+;iq;"corrected_block_cnt;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iOq;"	u32 ;@;"o;;o;	;
+@
+;iSq;"uncorrected_block_cnt;@;[ ;0;o;;o;	;
+@
+;iíq;"vtss_port_kr_status_fec_t;@;[ ;0{
+;o;;o;	;
+@
+;i›q;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iÚq;" vtss_port_kr_status_aneg_t ;@;"o;;o;	;
+@
+;ir;"	aneg;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i5r;"!vtss_port_kr_status_train_t ;@;"o;;o;	;
+@
+;iQr;"
+train;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ixr;"vtss_port_kr_status_fec_t ;@;"o;;o;	;
+@
+;iír;"fec;@;[ ;0;o;;o;	;
+@
+;iπr;"vtss_port_kr_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i	s;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;is;"
+BOOL ;@;"o;;o;	;
+@
+;i#s;"enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iTs;"
+BOOL ;@;"o;;o;	;
+@
+;iYs;"adv_25g;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iés;"
+BOOL ;@;"o;;o;	;
+@
+;iìs;"adv_10g;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i»s;"
+BOOL ;@;"o;;o;	;
+@
+;iÕs;"adv_5g;@;[ ;0{;{; {	;!o;;o;	;
+@
+;it;"
+BOOL ;@;"o;;o;	;
+@
+;it;"adv_2g5;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<t;"
+BOOL ;@;"o;;o;	;
+@
+;iAt;"adv_1g;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ivt;"
+BOOL ;@;"o;;o;	;
+@
+;i{t;"r_fec_req;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i∞t;"
+BOOL ;@;"o;;o;	;
+@
+;iµt;"rs_fec_req;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÍt;"
+BOOL ;@;"o;;o;	;
+@
+;iÔt;"next_page;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i$u;"
+BOOL ;@;"o;;o;	;
+@
+;i)u;"
+no_pd;@;[ ;0;o;;o;	;
+@
+;icu;"vtss_port_kr_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;iõu;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i∞u;"
+BOOL ;@;"o;;o;	;
+@
+;iµu;"enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i¯u;"
+BOOL ;@;"o;;o;	;
+@
+;i˝u;"no_remote;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<v;"
+BOOL ;@;"o;;o;	;
+@
+;iAv;"no_eq_apply;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iév;"
+BOOL ;@;"o;;o;	;
+@
+;iìv;"use_ber_cnt;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i÷v;"
+BOOL ;@;"o;;o;	;
+@
+;i€v;"test_mode;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iw;"
+u32  ;@;"o;;o;	;
+@
+;i
+w;"test_repeat;@;[ ;0;o;;o;	;
+@
+;i2w;"vtss_port_kr_train_t;@;[ ;0{
+;o;;o;	;
+@
+;itw;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iâw;"vtss_port_kr_aneg_t   ;@;"o;;o;	;
+@
+;iüw;"	aneg;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iﬁw;"vtss_port_kr_train_t  ;@;"o;;o;	;
+@
+;iÙw;"
+train;@;[ ;0;o;;o;	;
+@
+;i1x;"vtss_port_kr_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;igx;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i|x;"
+BOOL ;@;"o;;o;	;
+@
+;iÅx;"
+r_fec;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iµx;"
+BOOL ;@;"o;;o;	;
+@
+;i∫x;"rs_fec;@;[ ;0;o;;o;	;
+@
+;iÙx;"vtss_port_kr_fec_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iz;"vtss_rc ;@;"o;;o;	;
+@
+;i%z;"vtss_port_kr_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i;z;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iMz;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iuz;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iäz;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iµz;"&const vtss_port_kr_conf_t *const ;@;"o;;o;	;
+@
+;i÷z;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i±{;"vtss_rc ;@;"o;;o;	;
+@
+;iπ{;"vtss_port_kr_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iœ{;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i·{;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i	|;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i|;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iI|;" vtss_port_kr_conf_t *const ;@;"o;;o;	;
+@
+;id|;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i.};"vtss_rc ;@;"o;;o;	;
+@
+;i6};"vtss_port_kr_fec_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iK};"const vtss_inst_t ;@;"o;;o;	;
+@
+;i]};"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÄ};"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iï};"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iª};"vtss_port_kr_fec_t *const ;@;"o;;o;	;
+@
+;i’};"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iü~;"vtss_rc ;@;"o;;o;	;
+@
+;iß~;"vtss_port_kr_fec_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iº~;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iŒ~;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÒ~;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i,;"%const vtss_port_kr_fec_t *const ;@;"o;;o;	;
+@
+;iL;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i2Ä;"vtss_rc ;@;"o;;o;	;
+@
+;i:Ä;"vtss_port_kr_status_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iRÄ;"const vtss_inst_t ;@;"o;;o;	;
+@
+;idÄ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iéÄ;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i£Ä;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i–Ä;""vtss_port_kr_status_t *const ;@;"o;;o;	;
+@
+;iÌÄ;"status;@;[ ;0;0{;o;;o;	;
+@
+;i˜Ä;"W#endif // #if defined(VTSS_FEATURE_PORT_KR) || defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+;@{
+;o;;o;	;
+@
+;iIÅ;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i^Å;"	u32 ;@;"o;;o;	;
+@
+;ibÅ;"vga;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ikÅ;"	u32 ;@;"o;;o;	;
+@
+;ioÅ;"edc;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ixÅ;"	u32 ;@;"o;;o;	;
+@
+;i|Å;"eqr;@;[ ;0;o;;o;	;
+@
+;iÉÅ;"vtss_port_ctle_t;@;[ ;0{;o;;o;	;
+@
+;iñÅ;",#if defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+;@{
+;o;;o;	;
+@
+;iÅ;"typedef;@;{;o;;o;	;
+@
+;i¯Å;"	enum;@;[{;{;o;;o;	;
+@
+;iÇ;"VTSS_TR_INITILIZE;@;0{;{;o;;o;	;
+@
+;iÇ;"VTSS_TR_SEND_TRAINING;@;0{;{;o;;o;	;
+@
+;i5Ç;"VTSS_TR_TRAIN_LOCAL;@;0{;{;o;;o;	;
+@
+;iNÇ;"VTSS_TR_TRAIN_REMOTE;@;0{;{;o;;o;	;
+@
+;ihÇ;"VTSS_TR_SEND_DATA;@;0{;{;o;;o;	;
+@
+;iÇ;"VTSS_TR_TRAINING_FAILURE;@;0{;{;o;;o;	;
+@
+;iùÇ;"VTSS_TR_LINK_READY
+;@;0;o;;o;	;
+@
+;i≤Ç;"vtss_train_state_t;@;[ ;0{
+;o;;o;	;
+@
+;iÌÇ;"typedef;@;{;o;;o;	;
+@
+;iıÇ;"	enum;@;[	{;{;o;;o;	;
+@
+;i É;"VTSS_BER_GO_TO_MIN;@;0{;{;o;;o;	;
+@
+;iÉ;"VTSS_BER_CALCULATE_BER;@;0{;{;o;;o;	;
+@
+;i4É;"VTSS_BER_MOVE_TO_MID_MARK;@;0{;{;o;;o;	;
+@
+;iSÉ;"VTSS_BER_LOCAL_RX_TRAINED
+;@;0;o;;o;	;
+@
+;ioÉ;"vtss_ber_stage_t;@;[ ;0{
+;o;;o;	;
+@
+;i°É;"typedef;@;{;o;;o;	;
+@
+;i©É;"	enum;@;[{;{;o;;o;	;
+@
+;i¥É;"VTSS_TAP_CM1;@;0{;{;o;;o;	;
+@
+;i∆É;"VTSS_TAP_C0;@;0{;{;o;;o;	;
+@
+;i◊É;"VTSS_TAP_CP1;@;0;o;;o;	;
+@
+;iÁÉ;"vtss_kr_tap_t;@;[ ;0{
+;o;;o;	;
+@
+;i˜É;"typedef;@;{;[
+{;{; {	;!o;;o;	;
+@
+;iÑ;"	u16 ;@;"o;;o;	;
+@
+;iÑ;"cm1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÑ;"	u16 ;@;"o;;o;	;
+@
+;iÑ;"c0;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i%Ñ;"	u16 ;@;"o;;o;	;
+@
+;i)Ñ;"cp1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i2Ñ;"	u16 ;@;"o;;o;	;
+@
+;i6Ñ;"	coef;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i@Ñ;"	u16 ;@;"o;;o;	;
+@
+;iDÑ;"status;@;[ ;0;o;;o;	;
+@
+;iNÑ;"vtss_kr_status_results_t;@;[ ;0{
+;o;;o;	;
+@
+;ißÑ;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iºÑ;"vtss_train_state_t ;@;"o;;o;	;
+@
+;iœÑ;"current_state;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i‚Ñ;"vtss_ber_stage_t ;@;"o;;o;	;
+@
+;iÛÑ;"ber_training_stage;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÖ;"vtss_kr_tap_t ;@;"o;;o;	;
+@
+;iÖ;"current_tap;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i*Ö;"
+BOOL ;@;"o;;o;	;
+@
+;i/Ö;"signal_detect;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iBÖ;"
+BOOL ;@;"o;;o;	;
+@
+;iGÖ;"training_started;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i]Ö;"
+BOOL ;@;"o;;o;	;
+@
+;ibÖ;"remote_rx_ready;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iwÖ;"
+BOOL ;@;"o;;o;	;
+@
+;i|Ö;"local_rx_ready;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iêÖ;"
+BOOL ;@;"o;;o;	;
+@
+;iïÖ;"dme_viol_handled;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i´Ö;"
+BOOL ;@;"o;;o;	;
+@
+;i∞Ö;"dme_viol;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iæÖ;"
+BOOL ;@;"o;;o;	;
+@
+;i√Ö;"ber_busy;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i—Ö;"
+BOOL ;@;"o;;o;	;
+@
+;i÷Ö;"tap_max_reached;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÎÖ;"
+BOOL ;@;"o;;o;	;
+@
+;iÖ;"receiver_ready_sent;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i	Ü;"
+BOOL ;@;"o;;o;	;
+@
+;iÜ;"kr_mw_done;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÜ;"
+BOOL ;@;"o;;o;	;
+@
+;i#Ü;"ignore_fail;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i4Ü;"vtss_port_speed_t ;@;"o;;o;	;
+@
+;iFÜ;"next_parallel_spd;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i]Ü;"
+u16  ;@;"o;;o;	;
+@
+;ibÜ;"lp_tap_max_cnt;@;[{;o;;o;	;
+@
+;iqÜ;"3;@;0{;{; {	;!o;;o;	;
+@
+;iyÜ;"
+u16  ;@;"o;;o;	;
+@
+;i~Ü;"lp_tap_end_cnt;@;[{;o;;o;	;
+@
+;içÜ;"3;@;0{;{; {	;!o;;o;	;
+@
+;iïÜ;"
+u32  ;@;"o;;o;	;
+@
+;iöÜ;"tap_idx;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ißÜ;"
+u16  ;@;"o;;o;	;
+@
+;i¨Ü;"ber_cnt;@;[{;o;;o;	;
+@
+;i¥Ü;"3;@{;o;;o;	;
+@
+;i∑Ü;"64;@;0{;{; {	;!o;;o;	;
+@
+;i¿Ü;"
+u16  ;@;"o;;o;	;
+@
+;i≈Ü;"eye_height;@;[{;o;;o;	;
+@
+;i–Ü;"3;@{;o;;o;	;
+@
+;i”Ü;"64;@;0{;{; {	;!o;;o;	;
+@
+;i‹Ü;"
+u16  ;@;"o;;o;	;
+@
+;i·Ü;"decr_cnt;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÔÜ;"
+u16  ;@;"o;;o;	;
+@
+;iÙÜ;"ber_coef_frm;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iá;"
+u16  ;@;"o;;o;	;
+@
+;iá;"ber_status_frm;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iá;"
+BOOL ;@;"o;;o;	;
+@
+;i$á;"test_mode;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i3á;"
+BOOL ;@;"o;;o;	;
+@
+;i8á;"test_repeat;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iIá;"vtss_kr_status_results_t ;@;"o;;o;	;
+@
+;ibá;"tr_res;@;[ ;0;o;;o;	;
+@
+;ilá;"vtss_port_kr_state_t;@;[ ;0{
+;o;;o;	;
+@
+;iüá;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i¥á;"	u32 ;@;"o;;o;	;
+@
+;i∏á;"height;@;[ ;0;o;;o;	;
+@
+;i¬á;"vtss_port_kr_eye_dim_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iÕà;"vtss_rc ;@;"o;;o;	;
+@
+;i’à;"vtss_port_kr_state_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iÏà;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i˛à;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i#â;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i8â;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i`â;"!vtss_port_kr_state_t *const ;@;"o;;o;	;
+@
+;i|â;"
+state;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iUä;"vtss_rc ;@;"o;;o;	;
+@
+;i]ä;"vtss_port_kr_irq_apply;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;itä;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iÜä;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i´ä;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i¿ä;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iËä;"const u32 *const ;@;"o;;o;	;
+@
+;i˘ä;"irq_vec;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i›ã;"vtss_rc ;@;"o;;o;	;
+@
+;iÂã;"vtss_port_kr_irq_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i˙ã;"vtss_inst_t ;@;"o;;o;	;
+@
+;iå;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i)å;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i>å;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;idå;"u32 *const ;@;"o;;o;	;
+@
+;ioå;"irq_vec;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i@ç;"vtss_rc ;@;"o;;o;	;
+@
+;iHç;"vtss_port_kr_irq_activity;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;ibç;"vtss_inst_t ;@;"o;;o;	;
+@
+;inç;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iñç;"u32 *const ;@;"o;;o;	;
+@
+;i°ç;"	mask;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iué;"vtss_rc ;@;"o;;o;	;
+@
+;i}é;"vtss_port_kr_event_enable;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;ióé;"const vtss_inst_t     ;@;"o;;o;	;
+@
+;i≠é;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i’é;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iÍé;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iè;"
+BOOL ;@;"o;;o;	;
+@
+;iè;"enable;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i˚è;"vtss_rc ;@;"o;;o;	;
+@
+;iê;"vtss_port_kr_eye_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iê;"vtss_inst_t ;@;"o;;o;	;
+@
+;i$ê;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iGê;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i\ê;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iÇê;"#vtss_port_kr_eye_dim_t *const ;@;"o;;o;	;
+@
+;i†ê;"eye;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i@ë;"vtss_rc ;@;"o;;o;	;
+@
+;iHë;"vtss_port_kr_ctle_adjust;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iaë;"vtss_inst_t ;@;"o;;o;	;
+@
+;imë;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iîë;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i©ë;"port_no;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iOí;"vtss_rc ;@;"o;;o;	;
+@
+;iWí;"vtss_port_kr_ctle_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;imí;"vtss_inst_t ;@;"o;;o;	;
+@
+;iyí;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iùí;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i≤í;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iªí;"vtss_port_ctle_t *const ;@;"o;;o;	;
+@
+;i”í;"	ctle;@;[ ;0;0{;o;;o;	;
+@
+;iπì;"2#endif // defined(VTSS_FEATURE_PORT_KR_IRQ)
+
+;@{
+;o;;o;	;
+@
+;iî;"typedef;@;{;o;;o;	;
+@
+;i
+î;"	enum;@;[
+{;{;o;;o;	;
+@
+;iî;"VTSS_PORT_LB_DISABLED;@;0{;{;o;;o;	;
+@
+;iJî;"VTSS_PORT_LB_NEAR_END;@;0{;{;o;;o;	;
+@
+;iî;"VTSS_PORT_LB_FAR_END;@;0{;{;o;;o;	;
+@
+;i≥î;"VTSS_PORT_LB_FACILITY;@;0{;{;o;;o;	;
+@
+;iËî;"VTSS_PORT_LB_EQUIPMENT ;@;0;o;;o;	;
+@
+;iï;"vtss_port_lb_t;@;[ ;0{
+;o;;o;	;
+@
+;i]ï;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;irï;"vtss_port_lb_t ;@;"o;;o;	;
+@
+;iÅï;"loopback;@;[ ;0;o;;o;	;
+@
+;i£ï;"vtss_port_test_conf_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iíñ;"vtss_rc ;@;"o;;o;	;
+@
+;iöñ;"vtss_port_test_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i≤ñ;"const vtss_inst_t      ;@;"o;;o;	;
+@
+;i…ñ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÔñ;"const vtss_port_no_t   ;@;"o;;o;	;
+@
+;ió;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i/ó;"#vtss_port_test_conf_t  *const ;@;"o;;o;	;
+@
+;iMó;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i,ò;"vtss_rc ;@;"o;;o;	;
+@
+;i4ò;"vtss_port_test_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iLò;""const vtss_inst_t            ;@;"o;;o;	;
+@
+;iiò;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;ièò;""const vtss_port_no_t         ;@;"o;;o;	;
+@
+;i¨ò;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i’ò;")const vtss_port_test_conf_t  *const ;@;"o;;o;	;
+@
+;i˘ò;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iô;"typedef;@;{;o;;o;	;
+@
+;i&ô;"	enum;@;[{;{;o;;o;	;
+@
+;i1ô;"VTSS_SERDES_PRE_CURSOR;@;0{;{;o;;o;	;
+@
+;iMô;"VTSS_SERDES_MAIN_CURSOR;@;0{;{;o;;o;	;
+@
+;ijô;"VTSS_SERDES_POST_CURSOR;@;0;o;;o;	;
+@
+;iÖô;" vtss_port_serdes_tap_enum_t;@;[ ;0{;o;;o;	;
+@
+;iRõ;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;iZõ;"vtss_rc ;@:fptr_nameo;;o;	;
+@
+;idõ;"vtss_port_serdes_tap_get_t;@;$[
+{; {	;!o;;o;	;
+@
+;iÄõ;"'const vtss_inst_t                 ;@;"o;;o;	;
+@
+;i¢õ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i÷õ;"'const vtss_port_no_t              ;@;"o;;o;	;
+@
+;i¯õ;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i/ú;"'const vtss_port_speed_t           ;@;"o;;o;	;
+@
+;iQú;"
+speed;@;[ ;0{; {	;!o;;o;	;
+@
+;iÜú;"'const vtss_port_serdes_tap_enum_t ;@;"o;;o;	;
+@
+;i®ú;"tap;@;[ ;0{; {	;!o;;o;	;
+@
+;i€ú;".u32                               *const ;@;"o;;o;	;
+@
+;iù;"
+value;@;[ ;0;0{
+;o;;o;	;
+@
+;i3ù;"typedef;@;{;o;;o;	;
+@
+;i;ù;"	enum;@;[{;{;o;;o;	;
+@
+;iFù;"VTSS_SERDES_DFE_PRM;@;0{;{;o;;o;	;
+@
+;iñù;"VTSS_SERDES_CTLE_PRM;@;0{;{;o;;o;	;
+@
+;i⁄ù;"VTSS_SERDES_TXEQ_PRM;@;0;o;;o;	;
+@
+;i0û;"vtss_serdes_debug_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i~û;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iìû;"vtss_serdes_debug_type_t ;@;"o;;o;	;
+@
+;i¨û;"debug_type;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iºû;"u32                      ;@;"o;;o;	;
+@
+;i’û;"serdes_prm;@;[{;o;;o;	;
+@
+;i‡û;"10;@;0;o;;o;	;
+@
+;iü;"vtss_port_serdes_debug_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;i˜ü;"vtss_rc ;@;"o;;o;	;
+@
+;iˇü;"vtss_port_serdes_debug_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i†;"$const vtss_inst_t              ;@;"o;;o;	;
+@
+;i9†;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;ib†;"$const vtss_port_no_t           ;@;"o;;o;	;
+@
+;iÅ†;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i≠†;"+const vtss_port_serdes_debug_t *const ;@;"o;;o;	;
+@
+;i”†;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iﬁ†;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;iÛ†;"#endif
+;@{;o;;o;	;
+@
+;i˙†;"$#endif /* _VTSS_PORT_API_H_ */
+;@

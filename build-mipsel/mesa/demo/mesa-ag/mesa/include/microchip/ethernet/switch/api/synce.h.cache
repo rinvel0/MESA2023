@@ -1,0 +1,402 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"k// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+#define _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+typedef uint32_t mesa_synce_clk_port_t;
+#define MESA_SYNCE_CLK_A 0   /**< Clock A output port */
+#define MESA_SYNCE_CLK_B 1   /**< Clock B output port */
+
+/** \brief Identification of a Clock dividing value used when selected input clock goes to output. */
+typedef enum
+{
+    MESA_SYNCE_DIVIDER_1,   /**< Divide input clock with one (no division) */
+    MESA_SYNCE_DIVIDER_4,   /**< Divide input clock with 4 */
+    MESA_SYNCE_DIVIDER_5,   /**< Divide input clock with 5 */
+    MESA_SYNCE_DIVIDER_2,   /**< Divide input clock with 2 */
+    MESA_SYNCE_DIVIDER_8,   /**< Divide input clock with 8 */
+    MESA_SYNCE_DIVIDER_16,   /**< Divide input clock with 16 */
+    MESA_SYNCE_DIVIDER_25   /**< Divide input clock with 25 */
+} mesa_synce_divider_t CAP(SYNCE);
+
+/** \brief Struct containing configuration for a recovered clock output port */
+typedef struct
+{
+    mesa_synce_divider_t divider; /**< Selection the clock division. This should be set to MESA_SYNCE_DIVIDER_1 if recovered clock is comming from internal PHY  */
+    mesa_bool_t          enable;  /**< Enable/disable of this output clock port */
+} mesa_synce_clock_out_t CAP(SYNCE);
+
+/**
+ * \brief Set the configuration of a selected output clock port - against external clock controller.
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (MESA_SYNCE_CLK_A or MESA_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a mesa_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_clock_out_set(const mesa_inst_t            inst,
+                                 const mesa_synce_clk_port_t  clk_port,
+                                 const mesa_synce_clock_out_t *const conf)
+    CAP(SYNCE);
+
+/**
+ * \brief Get the configuration of a selected output clock port - against external clock controller.
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (MESA_SYNCE_CLK_A or MESA_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a mesa_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_clock_out_get(const mesa_inst_t           inst,
+                                 const mesa_synce_clk_port_t clk_port,
+                                 mesa_synce_clock_out_t      *const conf)
+    CAP(SYNCE);
+
+
+/** \brief Identification of a clock oniut type. */
+typedef enum
+{
+    MESA_SYNCE_CLOCK_INTERFACE,   /**< Traffic interface port */
+    MESA_SYNCE_CLOCK_STATION_CLK, /**< Station clock input */
+    MESA_SYNCE_CLOCK_DIFF,        /**< Differential clock input */
+    MESA_SYNCE_CLOCK_AUX          /**< AUX Clock */
+} mesa_synce_clock_in_type_t CAP(SYNCE_IN_TYPE);
+
+/** \brief Struct containing configuration selecting the recovered input clock port, to be delivered to a selected output clock port */
+typedef struct
+{
+    mesa_port_no_t             port_no; /**< Selection of the input port number - must map to a SERDES port. If clk_in is VTSS_SYNCE_CLOCK_STATION_CLK this is station clock 0->3. If clk_in is VTSS_SYNCE_CLOCK_AUX this is AUX clock 0->3. */
+    mesa_bool_t                squelsh; /**< Enable/disable of automatic squelch */
+    mesa_bool_t                enable;  /**< Enable/disable of delivery of recovered clock to this selected output clock port */
+    mesa_synce_clock_in_type_t clk_in CAP(SYNCE_IN_TYPE); /**< Select clock input type (Traffic interface, station clock or diff clock input */
+} mesa_synce_clock_in_t CAP(SYNCE);
+
+/**
+ * \brief Set the configuration of input port for a selected output clock port
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (MESA_SYNCE_CLK_A or MESA_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a mesa_synce_clock_in_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_clock_in_set(const mesa_inst_t              inst,
+                                const mesa_synce_clk_port_t    clk_port,
+                                const mesa_synce_clock_in_t    *const conf)
+    CAP(SYNCE);
+
+/**
+ * \brief Get the configuration of input port for a selected output clock port
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (MESA_SYNCE_CLK_A or MESA_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a mesa_synce_clock_in_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_clock_in_get(const mesa_inst_t           inst,
+                                const mesa_synce_clk_port_t clk_port,
+                                mesa_synce_clock_in_t       *const conf)
+    CAP(SYNCE);
+
+/** \brief Struct containing configuration for a recovered clock output port */
+typedef struct
+{
+    mesa_synce_divider_t divider;     /**< Selection the clock division. This should be set to MESA_SYNCE_DIVIDER_1 if recovered clock is comming from internal PHY  */
+    mesa_bool_t          enable;      /**< Enable/disable of this output clock port */
+    uint32_t             dpll_out_no; /**< The DPLL output (Synthesizer) that is connected to the station clock output */
+} mesa_synce_station_clock_out_t CAP(SYNCE_OUT_STATION);
+
+/**
+ * \brief Set the configuration of a station clock output
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port
+ * \param conf [IN]     pointer to a mesa_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_synce_station_clk_out_set(const mesa_inst_t                    inst,
+                                             const mesa_synce_clk_port_t          clk_port,
+                                             const mesa_synce_station_clock_out_t *const conf)
+    CAP(SYNCE_OUT_STATION);
+
+/**
+ * \brief Get the configuration of a station clock output
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port
+ * \param conf [IN]     pointer to a mesa_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_synce_synce_station_clk_out_get(const mesa_inst_t              inst,
+                                             const mesa_synce_clk_port_t    clk_port,
+                                             mesa_synce_station_clock_out_t *const conf)
+    CAP(SYNCE_OUT_STATION);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+
+:@byteposir:	@str"3#ifndef _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[çiPipiqiriõi…i i˚iEiFinißi‡i·iGiTiVi§i‚i i^iúi‹ii>i?ièiûi†iDióiºiΩi¡i&iYiªiii+i/isiªiiiiiÄi≥i	ij	im	iÖ	iâ	iÃ	i
+i]
+im
+in
+io
+i£
+i∞
+i≤
+iÛ
+i1iti®iŸi⁄ibiqisici∑i8i»iÏiÌiÒi@isi’i)i,iDiHiçi÷i"i2i3i7iÜiπiioiriäiéi–ii_ioipi¿iœi—iyi–iJiÉiÑiài¬iıi0iÖiài†i§i¸iXi∑i”i‘iÿiiEiÄi’iÿiiÙiFiúiıiii:ijik:@last_line_endik{;o;;o;	;
+@
+;iõ;"4#define _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+
+;@{;o;;o;	;
+@
+;i ;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˚;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;iF;"typedef;@:type_aliaso;;o;	;
+@
+;iN;"uint32_t ;@:typedef_nameo;;o;	;
+@
+;iW;"mesa_synce_clk_port_t;@:
+array[ :cap0{;o;;o;	;
+@
+;in;">#define MESA_SYNCE_CLK_A 0   /**< Clock A output port */
+;@{;o;;o;	;
+@
+;iß;"?#define MESA_SYNCE_CLK_B 1   /**< Clock B output port */
+
+;@{
+;o;;o;	;
+@
+;iG;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iO;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iZ;"MESA_SYNCE_DIVIDER_1;@;0{;{;o;;o;	;
+@
+;i®;"MESA_SYNCE_DIVIDER_4;@;0{;{;o;;o;	;
+@
+;iÊ;"MESA_SYNCE_DIVIDER_5;@;0{;{;o;;o;	;
+@
+;i$;"MESA_SYNCE_DIVIDER_2;@;0{;{;o;;o;	;
+@
+;ib;"MESA_SYNCE_DIVIDER_8;@;0{;{;o;;o;	;
+@
+;i†;"MESA_SYNCE_DIVIDER_16;@;0{;{;o;;o;	;
+@
+;i‡;"MESA_SYNCE_DIVIDER_25   ;@;0;o;;o;	;
+@
+;i;"mesa_synce_divider_t ;@;[ ;o;;o;	;
+@
+;i2;"CAP(SYNCE);@{
+;o;;o;	;
+@
+;iè;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i§;"mesa_synce_divider_t ;@:	nameo;;o;	;
+@
+;iπ;"divider;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH;"mesa_bool_t          ;@; o;;o;	;
+@
+;i];"enable;@;[ ;0;o;;o;	;
+@
+;iô;"mesa_synce_clock_out_t ;@;[ ;o;;o;	;
+@
+;i∞;"CAP(SYNCE);@{:func_proto{;{	;o;;o;	;
+@
+;i/;"mesa_rc ;@; o;;o;	;
+@
+;i7;"mesa_synce_clock_out_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iP;""const mesa_inst_t            ;@; o;;o;	;
+@
+;im;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iî;""const mesa_synce_clk_port_t  ;@; o;;o;	;
+@
+;i±;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;i‹;")const mesa_synce_clock_out_t *const ;@; o;;o;	;
+@
+;i ;"	conf;@;[ ;0;o;;o;	;
+@
+;i
+;"CAP(SYNCE);@{;!{;{	;o;;o;	;
+@
+;iâ	;"mesa_rc ;@; o;;o;	;
+@
+;ië	;"mesa_synce_clock_out_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i™	;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;i∆	;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÌ	;"!const mesa_synce_clk_port_t ;@; o;;o;	;
+@
+;i	
+;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;i4
+;"(mesa_synce_clock_out_t      *const ;@; o;;o;	;
+@
+;iW
+;"	conf;@;[ ;0;o;;o;	;
+@
+;ia
+;"CAP(SYNCE);@{
+;o;;o;	;
+@
+;i£
+;"typedef;@;{;o;;o;	;
+@
+;i´
+;"	enum;@;[	{;{;o;;o;	;
+@
+;i∂
+;"MESA_SYNCE_CLOCK_INTERFACE;@;0{;{;o;;o;	;
+@
+;i˜
+;"!MESA_SYNCE_CLOCK_STATION_CLK;@;0{;{;o;;o;	;
+@
+;i5;"MESA_SYNCE_CLOCK_DIFF;@;0{;{;o;;o;	;
+@
+;ix;"#MESA_SYNCE_CLOCK_AUX          ;@;0;o;;o;	;
+@
+;i™;" mesa_synce_clock_in_type_t ;@;[ ;o;;o;	;
+@
+;i≈;"CAP(SYNCE_IN_TYPE);@{
+;o;;o;	;
+@
+;ib;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iw;" mesa_port_no_t             ;@; o;;o;	;
+@
+;ií;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig;" mesa_bool_t                ;@; o;;o;	;
+@
+;iÇ;"squelsh;@;[ ;0{;{;{	;o;;o;	;
+@
+;iª;" mesa_bool_t                ;@; o;;o;	;
+@
+;i÷;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i<;" mesa_synce_clock_in_type_t ;@; o;;o;	;
+@
+;iW;"clk_in ;@;[ ;o;;o;	;
+@
+;i^;"CAP(SYNCE_IN_TYPE);@;o;;o;	;
+@
+;i ;"mesa_synce_clock_in_t ;@;[ ;o;;o;	;
+@
+;i‡;"CAP(SYNCE);@{;!{;{	;o;;o;	;
+@
+;iH;"mesa_rc ;@; o;;o;	;
+@
+;iP;"mesa_synce_clock_in_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ih;"$const mesa_inst_t              ;@; o;;o;	;
+@
+;iá;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≠;"$const mesa_synce_clk_port_t    ;@; o;;o;	;
+@
+;iÃ;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;iˆ;"+const mesa_synce_clock_in_t    *const ;@; o;;o;	;
+@
+;i;"	conf;@;[ ;0;o;;o;	;
+@
+;i&;"CAP(SYNCE);@{;!{;{	;o;;o;	;
+@
+;ié;"mesa_rc ;@; o;;o;	;
+@
+;iñ;"mesa_synce_clock_in_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÆ;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;i ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"!const mesa_synce_clk_port_t ;@; o;;o;	;
+@
+;i;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;i6;"(mesa_synce_clock_in_t       *const ;@; o;;o;	;
+@
+;iY;"	conf;@;[ ;0;o;;o;	;
+@
+;ic;"CAP(SYNCE);@{
+;o;;o;	;
+@
+;i¿;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i’;"mesa_synce_divider_t ;@; o;;o;	;
+@
+;iÍ;"divider;@;[ ;0{;{;{	;o;;o;	;
+@
+;i};"mesa_bool_t          ;@; o;;o;	;
+@
+;ií;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‘;"uint32_t             ;@; o;;o;	;
+@
+;iÈ;"dpll_out_no;@;[ ;0;o;;o;	;
+@
+;iL;"$mesa_synce_station_clock_out_t ;@;[ ;o;;o;	;
+@
+;ik;"CAP(SYNCE_OUT_STATION);@{;!{;{	;o;;o;	;
+@
+;i§;"mesa_rc ;@; o;;o;	;
+@
+;i¨;")mesa_synce_synce_station_clk_out_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i—;"*const mesa_inst_t                    ;@; o;;o;	;
+@
+;iˆ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i);"*const mesa_synce_clk_port_t          ;@; o;;o;	;
+@
+;iN;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;iÖ;"1const mesa_synce_station_clock_out_t *const ;@; o;;o;	;
+@
+;i±;"	conf;@;[ ;0;o;;o;	;
+@
+;iª;"CAP(SYNCE_OUT_STATION);@{;!{;{	;o;;o;	;
+@
+;iÙ;"mesa_rc ;@; o;;o;	;
+@
+;i¸;")mesa_synce_synce_station_clk_out_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i!;"$const mesa_inst_t              ;@; o;;o;	;
+@
+;i@;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;is;"$const mesa_synce_clk_port_t    ;@; o;;o;	;
+@
+;ií;"clk_port;@;[ ;0{;{	;o;;o;	;
+@
+;i…;"+mesa_synce_station_clock_out_t *const ;@; o;;o;	;
+@
+;iÔ;"	conf;@;[ ;0;o;;o;	;
+@
+;i˘;"CAP(SYNCE_OUT_STATION);@{;o;;o;	;
+@
+;i;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i:;"6#endif // _MICROCHIP_ETHERNET_SWITCH_API_SYNCE_
+
+;@

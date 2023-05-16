@@ -1,0 +1,2007 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"ùg// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief Initialization API
+ * \details This header file describes functions used to create and initialize targets
+ */
+
+#ifndef _VTSS_INIT_API_H_
+#define _VTSS_INIT_API_H_
+
+#include <vtss/api/types.h>
+#include <vtss_misc_api.h>
+#include <vtss_port_api.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief Target chip type */
+typedef enum {
+    VTSS_TARGET_CU_PHY,                       /**< Cu PHY family */
+    VTSS_TARGET_10G_PHY,                      /**< 10G PHY family */
+    VTSS_TARGET_SPARX_III_10_UM    = 0x7420,  /**< SparxIII-10 unmanaged switch */
+    VTSS_TARGET_SPARX_III_17_UM    = 0x7421,  /**< SparxIII-17 unmanaged switch */
+    VTSS_TARGET_SPARX_III_25_UM    = 0x7422,  /**< SparxIII-25 unmanaged switch */
+    VTSS_TARGET_CARACAL_LITE       = 0x7423,  /**< Caracal-Lite CE switch */
+    VTSS_TARGET_SPARX_III_10       = 0x7424,  /**< SparxIII-10 switch */
+    VTSS_TARGET_SPARX_III_18       = 0x7425,  /**< SparxIII-18 switch */
+    VTSS_TARGET_SPARX_III_24       = 0x7426,  /**< SparxIII-24 switch */
+    VTSS_TARGET_SPARX_III_26       = 0x7427,  /**< SparxIII-26 switch */
+    VTSS_TARGET_SPARX_III_10_01    = 0x17424, /**< SparxIII-10-01 switch */
+    VTSS_TARGET_CARACAL_1          = 0x7428,  /**< Caracal-1 CE switch */
+    VTSS_TARGET_CARACAL_2          = 0x7429,  /**< Caracal-2 CE switch */
+    VTSS_TARGET_SPARX_IV_52        = 0x7442,  /**< Sparx-IV-52 switch */
+    VTSS_TARGET_SPARX_IV_44        = 0x7444,  /**< Sparx-IV-44 switch */
+    VTSS_TARGET_SPARX_IV_80        = 0x7448,  /**< Sparx-IV-80 switch */
+    VTSS_TARGET_SPARX_IV_90        = 0x7449,  /**< Sparx-IV-90 switch */
+    VTSS_TARGET_SERVAL_2           = 0x7438,  /**< Serval-2 CE switch */
+    VTSS_TARGET_LYNX_2             = 0x7464,  /**< LynX-2 CE switch */
+    VTSS_TARGET_JAGUAR_2           = 0x7468,  /**< Jaguar-2 CE switch */
+    VTSS_TARGET_SERVAL_T           = 0x7410,  /**< Serval-T switch */
+    VTSS_TARGET_SERVAL_TP          = 0x7415,  /**< Serval-TP switch */
+    VTSS_TARGET_SERVAL_TE          = 0x7430,  /**< Serval-TE switch */
+    VTSS_TARGET_SERVAL_TEP         = 0x7435,  /**< Serval-TEP switch */
+    VTSS_TARGET_SERVAL_2_LITE      = 0x7436,  /**< Serval-2 Lite switch */
+    VTSS_TARGET_SERVAL_TE10        = 0x7437,  /**< Serval-TE10 switch */
+    VTSS_TARGET_SPARX_IV_34        = 0x7440,  /**< Sparx-IV-34 switch */
+    VTSS_TARGET_7511               = 0x7511,  /**< VSC7511 unmanaged switch */
+    VTSS_TARGET_7512               = 0x7512,  /**< VSC7512 unmanaged switch */
+    VTSS_TARGET_7513               = 0x7513,  /**< VSC7513 switch */
+    VTSS_TARGET_7514               = 0x7514,  /**< VSC7514 switch */
+    VTSS_TARGET_7546               = 0x7546,  /**< SparX-5-64  Enterprise Switch */
+    VTSS_TARGET_7549               = 0x7549,  /**< SparX-5-90  Enterprise Switch */
+    VTSS_TARGET_7552               = 0x7552,  /**< SparX-5-128 Enterprise Switch */
+    VTSS_TARGET_7556               = 0x7556,  /**< SparX-5-160 Enterprise Switch */
+    VTSS_TARGET_7558               = 0x7558,  /**< SparX-5-200 Enterprise Switch */
+    VTSS_TARGET_7546TSN            = 0x47546, /**< SparX-5-64i Industrial Switch */
+    VTSS_TARGET_7549TSN            = 0x47549, /**< SparX-5-90i Industrial Switch */
+    VTSS_TARGET_7552TSN            = 0x47552, /**< SparX-5-128i Industrial Switch */
+    VTSS_TARGET_7556TSN            = 0x47556, /**< SparX-5-160i Industrial Switch */
+    VTSS_TARGET_7558TSN            = 0x47558, /**< SparX-5-200i Industrial Switch */
+    VTSS_TARGET_LAN9662            = 0x9662,  /**< LAN9662 switch */
+    VTSS_TARGET_LAN9668            = 0x9668,  /**< LAN9668 switch */
+} vtss_target_type_t;
+
+/** \brief Create structure */
+typedef struct {
+    vtss_target_type_t target; /**< Target type */
+} vtss_inst_create_t;
+
+/**
+ * \brief Initialize create structure for target.
+ *
+ * \param target [IN] Target name
+ * \param create [IN] Create structure
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_inst_get(const vtss_target_type_t target,
+                      vtss_inst_create_t       *const create);
+
+/**
+ * \brief Create target instance.
+ *
+ * \param create [IN] Create structure
+ * \param inst [OUT]  Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_inst_create(const vtss_inst_create_t *const create,
+                         vtss_inst_t              *const inst);
+
+/**
+ * \brief Destroy target instance.
+ *
+ * \param inst [IN] Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_inst_destroy(const vtss_inst_t inst);
+
+/**
+ * \brief Register read function
+ *
+ * \param chip_no [IN] Chip number, for targets with multiple chips
+ * \param addr [IN]    Register address
+ * \param value [OUT]  Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_reg_read_t)(const vtss_chip_no_t chip_no,
+                                   const u32            addr,
+                                   u32                  *const value);
+
+/**
+ * \brief Register write function
+ *
+ * \param chip_no [IN] Chip number, for targets with multiple chips
+ * \param addr [IN]    Register address
+ * \param value [IN]   Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_reg_write_t)(const vtss_chip_no_t chip_no,
+                                  const u32            addr,
+                                  const u32            value);
+
+
+/**
+ * \brief I2C read function
+ *
+ * \param port_no [IN] Port number
+ * \param i2c_addr [IN] I2C device address
+ * \param addr [IN]   Register address
+ * \param data [OUT]  Pointer the register(s) data value.
+ * \param cnt [IN]    Number of registers to read
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_i2c_read_t)(const vtss_port_no_t port_no,
+                                   const u8 i2c_addr,
+                                   const u8 addr,
+                                   u8 *const data,
+                                   const u8 cnt);
+
+/**
+ * \brief I2C write function
+ *
+ * \param port_no [IN] Port number
+ * \param i2c_addr [IN] I2C device address
+ * \param data [OUT]  Pointer the data to be written.
+ * \param cnt [IN]    Number of data bytes to write
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_i2c_write_t)(const vtss_port_no_t port_no,
+                                    const u8 i2c_addr,
+                                    u8 *const data,
+                                    const u8 cnt);
+
+#if defined(VTSS_FEATURE_CLOCK)
+/**
+ * \brief Register read function for clock chip
+ *
+ * \param addr  [IN]  Register address
+ * \param value [OUT] Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_clock_read_t)(const u32 addr, u32 *const value);
+#endif /* VTSS_FEATURE_CLOCK */
+
+#if defined(VTSS_FEATURE_CLOCK)
+/**
+ * \brief Register write function for clock chip
+ *
+ * \param addr  [IN] Register address
+ * \param value [IN] Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_clock_write_t)(const u32 addr, const u32 value);
+#endif /* VTSS_FEATURE_CLOCK */
+
+/**
+ * \brief SPI read/write function
+ *
+ * \param inst [IN] Vitesse API instance.
+ * \param port_no [IN] Port number.
+ * \param bitsize [IN] Size (in bytes) of bitstream following this parameter.
+ * \param data [IN|OUT] Pointer to the data to be written to SPI Slave, if doing write operation.
+ *                      Pointer to the data read from SPI Slave, if doing read operation.
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_spi_read_write_t)(const vtss_inst_t inst,
+                                       const vtss_port_no_t port_no,
+                                       const u8 bitsize,
+                                       u8 *const bitstream);
+
+/**
+ * \brief SPI 32 bit read/write function
+ *
+ * \param inst    [IN] Vitesse API instance.
+ * \param port_no [IN] Port number.
+ * \param read    [IN] Read/Write.
+ * \param dev     [IN] MMD device number.
+ * \param reg_num [IN] Register offset.
+ * \param data [IN|OUT] Pointer to the data to be written to SPI Slave, if doing write operation.
+ *                      Pointer to the data read from SPI Slave, if doing read operation.
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_spi_32bit_read_write_t)(const vtss_inst_t inst,
+                                               vtss_port_no_t port_no,
+                                               BOOL           read,
+                                               u8             dev,
+                                               u16            reg_num,
+                                               u32            *const data);
+
+/**
+ * \brief SPI 64 bit read/write function
+ *
+ * \param inst    [IN] Vitesse API instance.
+ * \param port_no [IN] Port number.
+ * \param read    [IN] Read/Write.
+ * \param dev     [IN] MMD device number.
+ * \param reg_num [IN] Register offset.
+ * \param data [IN|OUT] Pointer to the data to be written to SPI Slave, if doing write operation.
+ *                      Pointer to the data read from SPI Slave, if doing read operation.
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_spi_64bit_read_write_t)(const vtss_inst_t inst,
+                                               vtss_port_no_t port_no,
+                                               BOOL           read,
+                                               u8             dev,
+                                               u16            reg_num,
+                                               u64            *const data);
+
+/**
+ * \brief MII management read function (IEEE 802.3 clause 22)
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number
+ * \param addr [IN]    Register address (0-31)
+ * \param value [OUT]  Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_miim_read_t)(const vtss_inst_t    inst,
+                                    const vtss_port_no_t port_no,
+                                    const u8             addr,
+                                    u16                  *const value);
+
+/**
+ * \brief MII management write function (IEEE 802.3 clause 22)
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number
+ * \param addr [IN]    Register address (0-31)
+ * \param value [IN]   Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_miim_write_t)(const vtss_inst_t    inst,
+                                     const vtss_port_no_t port_no,
+                                     const u8             addr,
+                                     const u16            value);
+
+/**
+ * \brief MMD management read function (IEEE 802.3 clause 45)
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number
+ * \param mmd [IN]     MMD address (0-31)
+ * \param addr [IN]    Register address (0-65535)
+ * \param value [OUT]  Register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_mmd_read_t)(const vtss_inst_t    inst,
+                                   const vtss_port_no_t port_no,
+                                   const u8             mmd,
+                                   const u16            addr,
+                                   u16                  *const value);
+
+/**
+ * \brief MMD management read increment function (IEEE 802.3 clause 45)
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number
+ * \param mmd [IN]     MMD address (0-31)
+ * \param addr [IN]    Start register address (0-65535)
+ * \param buf [OUT]    The register values (pointer provided by user)
+ * \param count [IN]   Number of register reads (increment register reads)
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_mmd_read_inc_t)(const vtss_inst_t    inst,
+                                       const vtss_port_no_t port_no,
+                                       const u8             mmd,
+                                       const u16            addr,
+                                       u16                  *const buf,
+                                       u8                   count);
+
+/**
+ * \brief MMD management write function (IEEE 802.3 clause 45)
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number
+ * \param mmd [IN]     MMD address (0-31)
+ * \param addr [IN]    Start register address (0-65535)
+ * \param buf [IN]     The register value
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_mmd_write_t)(const vtss_inst_t    inst,
+                                    const vtss_port_no_t port_no,
+                                    const u8             mmd,
+                                    const u16            addr,
+                                    const u16            value);
+
+/** \brief PI data width */
+typedef enum {
+    VTSS_PI_WIDTH_16 = 0, /* 16 bit (default) */
+    VTSS_PI_WIDTH_8       /* 8 bit */
+} vtss_pi_width_t;
+
+/** \brief PI configuration */
+typedef struct {
+#if defined(VTSS_ARCH_LUTON26)
+    vtss_pi_width_t width;                  /**< Width */
+    BOOL            use_extended_bus_cycle; /**< Use extended bus cycle for slow registers */
+#endif /* VTSS_ARCH_LUTON26 */
+    u32             cs_wait_ns;             /**< Minimum CS wait time in nanoseconds */
+} vtss_pi_conf_t;
+
+#if defined(VTSS_FEATURE_PORT_MUX)
+/** \brief Port mux configuration */
+typedef enum {
+#if defined(VTSS_ARCH_LUTON26)
+    VTSS_PORT_MUX_MODE_0,       /**< Ports muxed to Serdes blocks: 3xQSGMII, 1x2G5, 1xSGMII */
+    VTSS_PORT_MUX_MODE_1,       /**< Ports muxed to Serdes blocks: 2x2G5, 10xSGMII          */
+    VTSS_PORT_MUX_MODE_2,       /**< Ports muxed to Serdes blocks: 2xQSGMII, 8xSGMII         */
+#endif /* VTSS_ARCH_LUTON26 */
+#if defined(VTSS_ARCH_JAGUAR_2)
+    VTSS_PORT_MUX_MODE_AUTO,    /**< Port mux mode autodetected (not possible for speeds close to 80Gb (aggregated)) */
+    VTSS_PORT_MUX_MODE_0,       /**< Ports muxed to Serdes blocks: 24x2G5, 4x10Gb, NPI, chip ports 8-23,48-53 */
+    VTSS_PORT_MUX_MODE_1,       /**< Ports muxed to Serdes blocks: 32x2G5, 2x10Gb, NPI, chip ports 8-31,48-50 */
+    VTSS_PORT_MUX_MODE_2,       /**< Supports 48x1G + 4x10G + NPI (JR2-RevC) */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+#if defined(VTSS_ARCH_OCELOT)
+    VTSS_PORT_MUX_MODE_0, /**< Conf:2 4x1G Dual + 2x1G SGMII + 2.5G NPI (+ 2x2.5G SGMII for VSC7514) */
+    VTSS_PORT_MUX_MODE_1, /**< Conf:b 4x1G Dual + 2x1G SGMII + PCIe (+ 2x2.5G SGMII for VSC7514) */
+    VTSS_PORT_MUX_MODE_2, /**< Conf:0 4x1G Dual + 1xQSGMII + 2.5G NPI (+ 1x1G SGMII + 1x2.5G SGMII for VSC7514) */
+    VTSS_PORT_MUX_MODE_3, /**< Conf:c 4x1G Dual + 1xQSGMII + PCIe (+ 1x1G SGMII + 1x2.5G SGMII for VSC7514) */
+    VTSS_PORT_MUX_MODE_4, /**< Conf:e 2x1G Dual + 2x1G CuPHY + 4x1G SGMII + 2x2.5G SGMII + 2.5G NPI */
+    VTSS_PORT_MUX_MODE_5, /**< Conf:f 2x1G Dual + 2x1G CuPHY + 4x1G SGMII + 2x2.5G SGMII + PCIe */
+#endif  /* VTSS_ARCH_OCELOT */
+#if defined(VTSS_ARCH_LAN966X)
+    VTSS_PORT_MUX_MODE_0, /**< 2xQSGMII (LAN9668) */
+    VTSS_PORT_MUX_MODE_1, /**< 2xCu + 2x2.5G (+ 1xQSGMII for LAN9668) */
+    VTSS_PORT_MUX_MODE_2, /**< 2xCu + 1x2.5G + 2xRGMII */
+    VTSS_PORT_MUX_MODE_3, /**< Not currently used */
+    VTSS_PORT_MUX_MODE_4, /**< Not currently used */
+    VTSS_PORT_MUX_MODE_5, /**< 2xCu + 3x1G (LAN9668) */
+#endif
+} vtss_port_mux_mode_t;
+#endif /* VTSS_FEATURE_PORT_MUX */
+
+#if defined(VTSS_FEATURE_SERDES_MACRO_SETTINGS)
+/** \brief Serdes fields */
+typedef struct {
+    u32        ob_post0;                  /**< Trace length */
+    u32        ob_sr;                     /**< Slew Rate */
+} vtss_serdes_fields_t;
+
+/** \brief Backward compatibility */
+typedef vtss_serdes_fields_t serdes_fields_t;
+
+/** \brief Serdes macro configuration */
+typedef struct {
+    vtss_vdd_t           serdes1g_vdd; /**< Serdes1g supply */
+    vtss_vdd_t           serdes6g_vdd; /**< Serdes6g supply */
+    BOOL                 ib_cterm_ena; /**< AC(0)/DC(1) coupled */
+    vtss_serdes_fields_t qsgmii;       /**< Appl/Board specific fields for QSGMII */
+} vtss_serdes_macro_conf_t;
+#endif /* VTSS_FEATURE_SERDES_MACRO_SETTINGS */
+
+#if defined(VTSS_FEATURE_WARM_START)
+/** \brief Restart information source */
+typedef enum {
+    VTSS_RESTART_INFO_SRC_NONE,   /* Restart information not stored in PHYs */
+    VTSS_RESTART_INFO_SRC_CU_PHY, /* Restart information stored in 1G PHY */
+    VTSS_RESTART_INFO_SRC_10G_PHY /* Restart information stored in 10G PHY */
+} vtss_restart_info_src_t;
+#endif /* VTSS_FEATURE_WARM_START */
+
+#if defined(VTSS_ARCH_JAGUAR_2_CE)
+/** \brief Queue System modes */
+typedef enum {
+    VTSS_QS_MODE_DEFAULT,   /**< Defaults settings are used */
+    VTSS_QS_MODE_QUEUE_LIM  /**< Queue Limitiation settings are enabled. */
+} vtss_qs_mode_t;
+
+/** \brief Queue System settings */
+typedef struct {
+    vtss_qs_mode_t mode;   /**< The mode of the queue system   */
+    u32            wm1;    /**< Generic Watermark parameter 1  */
+    u32            wm2;    /**< Generic Watermark parameter 2  */
+} vtss_qs_conf_t;
+#endif /* VTSS_ARCH_JAGUAR_2_CE */
+
+#if defined(VTSS_FEATURE_CORE_CLOCK)
+/** \brief Core clock frequency */
+typedef enum {
+    VTSS_CORE_CLOCK_DEFAULT,  /**< Defaults to the highest supported frequency */
+    VTSS_CORE_CLOCK_250MHZ,   /**< 250MHZ core clock frequency */
+    VTSS_CORE_CLOCK_500MHZ,   /**< 500MHZ core clock frequency */
+    VTSS_CORE_CLOCK_625MHZ,   /**< 625MHZ core clock frequency */
+} vtss_core_clock_freq_t;
+
+/** \brief Core clock configuration */
+typedef struct {
+    vtss_core_clock_freq_t freq;   /**< The frequency of the core clock (LC-PLL) */
+} vtss_core_clock_conf_t;
+#endif /* VTSS_FEATURE_CORE_CLOCK */
+
+/** \brief Initialization configuration. */
+typedef struct {
+    /* Register access function are not used for VTSS_TARGET_CU_PHY */
+    vtss_reg_read_t   reg_read;     /**< Register read function */
+    vtss_reg_write_t  reg_write;    /**< Register write function */
+
+#if defined(VTSS_FEATURE_CLOCK)
+    vtss_clock_read_t  clock_read;  /**< Clock-chip read function  */
+    vtss_clock_write_t clock_write; /**< Clock-chip write function */
+#endif /* VTSS_FEATURE_CLOCK */
+
+    /* MII management access must be setup for VTSS_TARGET_CU_PHY */
+    vtss_miim_read_t  miim_read;    /**< MII management read function */
+    vtss_miim_write_t miim_write;   /**< MII management write function */
+
+    /* MMD management access must be setup for 10G phys */
+    vtss_mmd_read_t     mmd_read;     /**< MMD management read function */
+    vtss_mmd_read_inc_t mmd_read_inc; /**< MMD management read increment function */
+    vtss_mmd_write_t    mmd_write;    /**< MMD management write function */
+
+    vtss_spi_read_write_t   spi_read_write;/**< Board specific SPI read/write callout function */
+
+    vtss_spi_32bit_read_write_t   spi_32bit_read_write;/**< Board specific SPI read/write callout function for 32 bit data */
+    vtss_spi_64bit_read_write_t   spi_64bit_read_write;/**< Board specific SPI read/write callout function for 64 bit data*/
+
+#if defined(VTSS_GPIOS)
+    vtss_gpio_func_info_get_t gpio_func_info_get;       /**< GPIO functionallity information get callout function */
+#endif
+
+    vtss_port_serdes_tap_get_t serdes_tap_get;  /**< Serdes tap get callout function */
+
+    /** Do not reset the switch core when calling vtss_init_conf_set. This
+     * assumes someone else is doing the reset.
+     *
+     * NOTE: Only the JR2 family supports resetting. This setting has no effect
+     * on non-JR2 designs. */
+    BOOL                    skip_switch_reset;
+
+    BOOL                    spi_bus;           /**< Using SPI bus interface for reg_read/reg_write */
+#if defined(VTSS_FEATURE_WARM_START)
+    BOOL                    warm_start_enable; /**< Allow warm start */
+    vtss_restart_info_src_t restart_info_src;  /**< Source of restart information */
+    vtss_port_no_t          restart_info_port; /**< Port used to store PHY restart information */
+#endif /* VTSS_FEATURE_WARM_START */
+
+#if defined(VTSS_FEATURE_PORT_MUX)
+    vtss_port_mux_mode_t mux_mode;         /**< Mux mode (port connection to Serdes Macroes) */
+#endif /* VTSS_FEATURE_PORT_MUX */
+
+    vtss_pi_conf_t    pi;           /**< Parallel Interface configuration */
+
+#if defined(VTSS_FEATURE_SERDES_MACRO_SETTINGS)
+    vtss_serdes_macro_conf_t serdes; /**< Serdes macro configuration */
+#endif /* VTSS_FEATURE_SERDES_MACRO_SETTINGS */
+
+    BOOL using_ufdma; /**< Set to TRUE if using the uFDMA driver to Rx and Tx frames (typically used under Linux) */
+
+    /**
+     * Reserve bandwidth for Up-MEPs and service activation tests.
+     * Example: To get support for 10Gbps Y.1564, set loopback_bw_mbps
+     * to 10000.
+     */
+    u32 loopback_bw_mbps;
+
+#if defined(VTSS_ARCH_JAGUAR_2_CE)
+    vtss_qs_conf_t      qs_conf; /**< Queue system configuration*/
+#endif /* VTSS_ARCH_JAGUAR_2_CE */
+
+#if defined(VTSS_FEATURE_VLAN_COUNTERS)
+    BOOL vlan_counters_disable; /**< Disable VLAN counters (OAM uses the counter resources) */
+#endif
+#if defined(VTSS_FEATURE_PSFP)
+    BOOL psfp_counters_enable;  /**< Enable PSFP counter mode for ingress counters */
+#endif
+#if defined(VTSS_FEATURE_CORE_CLOCK)
+    vtss_core_clock_conf_t core_clock; /**< Core clock (LCPLL) configuration */
+#endif
+#if defined(VTSS_ARCH_LUTON26)
+    BOOL packet_init_disable; /**< Skip initilization of packet interface (no CPU packet support, L26/MESA-354/BZ24450) */
+#endif
+} vtss_init_conf_t;
+
+/**
+ * \brief Get default initialization configuration
+ *
+ * \param inst [IN]  Target instance reference
+ * \param conf [OUT] Initialization configuration
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_init_conf_get(const vtss_inst_t inst,
+                           vtss_init_conf_t  *const conf);
+
+/**
+ * \brief Set initialization configuration.
+ *
+ * \param inst [IN] Target instance reference
+ * \param conf [IN] Initialization configuration
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_init_conf_set(const vtss_inst_t      inst,
+                           const vtss_init_conf_t *const conf);
+
+/**
+ * \brief Change access interface to either use SPI or another interface.
+ *
+ * Registers in the VCore register space are not directly accessible when using
+ * the SPI interface, so multiple chip-accesses are required in order to read
+ * and write registers in that space when using SPI, whereas such registers are
+ * directly accessible when using PCI-E or the internal CPU.
+ *
+ * When this function is invoked with \p spi_bus set to TRUE, the API will
+ * detect register accesses to the VCore register space and make the required
+ * indirect access through multiple calls to the application-installed register
+ * read/write functions.
+ *
+ * When \p spi_bus is set to FALSE, the API will perform any type of access in
+ * one single call to the application-installed register read/write functions.
+ *
+ * Normally, you will control the access mode once at API instantiation time
+ * through the vtss_init_conf_t::spi_bus member, but in certain applications
+ * it might be desirable to be able to change it dynamically - hence this
+ * function.
+ *
+ * \param inst    [IN] Target instance reference
+ * \param spi_bus [IN] Control the access mode.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_register_access_mode_set(const vtss_inst_t inst, BOOL spi_bus);
+
+/**
+ * \brief Get current way of accessing registers.
+ *
+ * See vtss_register_access_mode_set() for details.
+ *
+ * \param inst    [IN]  Target instance reference
+ * \param spi_bus [OUT] Pointer to a BOOL receiving current access mode.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_register_access_mode_get(const vtss_inst_t inst, BOOL *spi_bus);
+
+/** \brief SPI slave endian configuration */
+typedef enum {
+    VTSS_SPI_ENDIAN_LITTLE, /**< Use little endian */
+    VTSS_SPI_ENDIAN_BIG,    /**< Use big endian */
+} vtss_spi_endian_t;
+
+/** \brief SPI slave bit order configuration */
+typedef enum {
+    VTSS_SPI_BIT_ORDER_MSB_FIRST, /**< Transfer MSB first */
+    VTSS_SPI_BIT_ORDER_LSB_FIRST, /**< Transfer LSB first */
+} vtss_spi_bit_order_t;
+
+/** \brief SPI slave initialization configuration. */
+typedef struct {
+    vtss_reg_write_t     reg_write; /**< Register write function */
+    vtss_reg_read_t      reg_read;  /**< Register read function */
+    vtss_spi_endian_t    endian;    /**< Endian configuration */
+    vtss_spi_bit_order_t bit_order; /**< Bit order configuration */
+    u8                   padding;   /**< Number of padding bytes to insert before read-data is shifted out */
+} vtss_spi_slave_init_t;
+
+/**
+ * \brief Initialize SPI slave interface when using an external CPU.
+ * This must always be the first call into the API.
+ *
+ * \param conf [IN] Initialization configuration
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_spi_slave_init(const vtss_spi_slave_init_t *const conf);
+
+#if defined(VTSS_FEATURE_WARM_START)
+/**
+ * \brief Indicate configuration end.
+ * If a warm start has been done, the stored configuration will be applied.
+ *
+ * \param inst [IN] Target instance reference
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_restart_conf_end(const vtss_inst_t inst);
+
+/** \brief API version */
+typedef u16 vtss_version_t;
+
+/** \brief Restart type */
+typedef enum {
+    VTSS_RESTART_COLD, /**< Cold: Chip and CPU restart, e.g. power cycling */
+    VTSS_RESTART_COOL, /**< Cool: Chip and CPU restart done by CPU */
+    VTSS_RESTART_WARM  /**< Warm: CPU restart only */
+} vtss_restart_t;
+
+/** \brief Restart status */
+typedef struct {
+    vtss_restart_t restart;      /**< Previous restart mode */
+    vtss_version_t prev_version; /**< Previous API version */
+    vtss_version_t cur_version;  /**< Current API version */
+} vtss_restart_status_t;
+
+/**
+ * \brief Get restart status
+ *
+ * \param inst [IN]    Target instance reference
+ * \param status [OUT] Restart status
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_restart_status_get(const vtss_inst_t inst,
+                                vtss_restart_status_t *const status);
+
+/**
+ * \brief Get restart configuration (next restart mode)
+ *
+ * \param inst [IN]     Target instance reference
+ * \param restart [OUT] Restart mode
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_restart_conf_get(const vtss_inst_t inst,
+                              vtss_restart_t *const restart);
+
+/**
+ * \brief Set restart configuration (next restart mode)
+ *
+ * \param inst [IN]    Target instance reference
+ * \param restart [IN] Restart mode
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_restart_conf_set(const vtss_inst_t inst,
+                              const vtss_restart_t restart);
+
+#endif /* VTSS_FEATURE_WARM_START */
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* _VTSS_INIT_API_H_ */
+:@byteposiÛ:	@str"#ifndef _VTSS_INIT_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[°iPipiqiriviióiÓiÚiÛii'i(iDi_iziçiöi°i¢i¡i–iiYi¨iˇiRiüiËi1izi√iiYi£iÏi5i~i«iiWi†iÊi-itiºi	iP	iô	iË	i7
+i|
+i¡
+iiiiΩiieiπiibi∑iiQiñi¨i≠iÃi›ii&i'i+i]i`iÇi©i¨iƒi…i i?i@iDifiiiêi¡iƒi‹i·i"ibicigiäiçiºiøi◊i‹iiii5i8i|i§i iÕiÂiÍi+iii∞i±iµi◊i⁄iiFilioiáiåiŒiiJiKiLiPilioiíiΩi‰iiPiSikipi±iÁiiLi~iiÉi†i£i∆iÒi'i[i^ivi{iΩiÙi(i[i\i|iÄi∞i≥i⁄iˇiiiigiáiài®i¨i›i‡ii*i-iEiJiíi≤i≥i∑iŸi‹ii*ixi⁄i4i7iOiTiïi⁄iiPiQiUi~iÅiÆi“iıiiGi©i i i i# ij i± iı i8!i!iÀ!iÃ!i–!i˘!i¸!i)"iM"ip"iö"i¬"i$#i~#iÅ#iô#iû#iÂ#i,$ip$i≥$i˙$iF%iG%iK%iâ%iå%iæ%i·%i&i6&i9&iQ&iV&iï&i◊&i'i^'i_'ic'i¢'i•'i◊'i˙'i)(iO(iR(ij(io(iØ(iÚ(i2)it)iu)iy)i∑)i∫)iÏ)i*i9*ik*ië*iî*i¨*i±*iÔ*i0+im+i´+iÚ+iÛ+i˜+i?,iB,it,ió,i¡,i˘,i?-iä-iç-i•-i™-iÏ-i1.ir.i¥.i¸.i@/iA/iE/iÑ/iá/iπ/i‹/i0i>0ih0ik0iÉ0ià0i«0i	1iG1iÜ1i«1i»1i‰1iÛ1i$2iJ2i]2i^2i}2ié2i≠2iÁ2iE3id3iº3iŒ3iœ3iÚ3i4i&4iE4i§4i5ic5iÇ5i¢5i6iã6i¸6iL7il7iä7iÚ7iV8i…8i89iü9i:i!:i@:iu:iæ:i¯:i-;ib;iö;i°;iπ;i‹;i›;i<i)<i:<iy<iµ<iÕ<iŒ<iÛ<i!=i"=iK=i\=iõ=i⁄=i>ir>ié>iæ>iø>i‰>i?i?ik?i∏?i@i!@iF@iG@ij@iã@iö@iŸ@i%Ai7Ai8Ai\AimAiØAiÒAi3BiEBihBiiBiéBi±Bi¿BiCiTCiñCiÿCiÚCiÛCiDi+DiDiôDiæDiøDiÎDi¸DiCEiÜEi EiÀEiÎEi1FiwFióFiòFi›Fi&GipGiqGi¨Gi˜GiLHiòHiôHi˚Hi¸HizIi˜Ii¯IiJiÖJiåJiçJiÂJiÊJi1KiaKihKi∏Ki÷KiLiLilLiëLiŸLi.MiêMiµMi∂MiŸMi9Ni\Ni]Ni™Ni´Ni€Ni#OiSOiTOi…Oi Oi“OiPi\PimPiuPièPiêPi≥PiˆPiQiQiBQi°Qi®Qi«QiRi$RiIRiôRi†RiøRi:SiASiUSiVSiZSiçSiêSiøSiÒSiÙSiTiTiDTiTiÄTiÑTi∞Ti≥Ti·TiUiUi-Ui2UijUi™Ui´UiØUi˘Ui¸UiLViöViÍVi'Wi*WiuWi√WiXi,Xi/Xi~XiÕXi–XiYijYi¥Yi¡YiƒYiıYi%Zi(Zi@ZiDZiëZiíZiñZi»ZiÀZiˇZi[i4[i}[iÄ[iò[iú[iÍ[iÎ[i\i'\i]\iê\i•\i¶\i÷\iÂ\i"]i_]iw]ix]iÆ]iø]i^iF^iá^iÀ^i9_iR_iS_iW_iú_i–_i”_i`i`i`i$`ij`ik`iê`iî`i∫`iai	ai7ai:aiRaiWaiéaièai©ai≈ai∆ai·aiai>biÑbi∫biÃbiÕbiÍbi˚bi:cixciµciŒciœci”ciciÛci$diJdiMdiedijdi¢diËdiÈdiÌdi%ei(eiZeieiÇeiöeiüei’eifififiPfiSfiÑfi®fi´fi√fi»fi˛fi;gi<giagibgiugiwgi~giùg:@last_line_endiùg{;o;;o;	;
+@
+;i;" #define _VTSS_INIT_API_H_
+
+;@{;o;;o;	;
+@
+;i(;"!#include <vtss/api/types.h>
+;@{;o;;o;	;
+@
+;iD;" #include <vtss_misc_api.h>
+;@{;o;;o;	;
+@
+;i_;" #include <vtss_port_api.h>
+;@{;o;;o;	;
+@
+;iz;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;iç;"extern;@:stringo;;o;	;
+@
+;iî;""C";@; [E{;o;;o;	;
+@
+;iö;"#endif
+
+;@{
+;o;;o;	;
+@
+;i¡;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i…;"	enum;@:
+enums[0{:	enum{:enum_nameo;;o;	;
+@
+;i‘;"VTSS_TARGET_CU_PHY;@:cap0{;{;o;;o;	;
+@
+;i;"VTSS_TARGET_10G_PHY;@;0{;{	;o;;o;	;
+@
+;i];"$VTSS_TARGET_SPARX_III_10_UM    ;@:operatoro;;o;	;
+@
+;i|;"=;@:	expro;;o;	;
+@
+;i~;"0x7420;@;0{;{	;o;;o;	;
+@
+;i∞;"$VTSS_TARGET_SPARX_III_17_UM    ;@;o;;o;	;
+@
+;iœ;"=;@;o;;o;	;
+@
+;i—;"0x7421;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_SPARX_III_25_UM    ;@;o;;o;	;
+@
+;i";"=;@;o;;o;	;
+@
+;i$;"0x7422;@;0{;{	;o;;o;	;
+@
+;iV;"$VTSS_TARGET_CARACAL_LITE       ;@;o;;o;	;
+@
+;iu;"=;@;o;;o;	;
+@
+;iw;"0x7423;@;0{;{	;o;;o;	;
+@
+;i£;"$VTSS_TARGET_SPARX_III_10       ;@;o;;o;	;
+@
+;i¬;"=;@;o;;o;	;
+@
+;iƒ;"0x7424;@;0{;{	;o;;o;	;
+@
+;iÏ;"$VTSS_TARGET_SPARX_III_18       ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"0x7425;@;0{;{	;o;;o;	;
+@
+;i5;"$VTSS_TARGET_SPARX_III_24       ;@;o;;o;	;
+@
+;iT;"=;@;o;;o;	;
+@
+;iV;"0x7426;@;0{;{	;o;;o;	;
+@
+;i~;"$VTSS_TARGET_SPARX_III_26       ;@;o;;o;	;
+@
+;iù;"=;@;o;;o;	;
+@
+;iü;"0x7427;@;0{;{	;o;;o;	;
+@
+;i«;"$VTSS_TARGET_SPARX_III_10_01    ;@;o;;o;	;
+@
+;iÊ;"=;@;o;;o;	;
+@
+;iË;"0x17424;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_CARACAL_1          ;@;o;;o;	;
+@
+;i2;"=;@;o;;o;	;
+@
+;i4;"0x7428;@;0{;{	;o;;o;	;
+@
+;i];"$VTSS_TARGET_CARACAL_2          ;@;o;;o;	;
+@
+;i|;"=;@;o;;o;	;
+@
+;i~;"0x7429;@;0{;{	;o;;o;	;
+@
+;iß;"$VTSS_TARGET_SPARX_IV_52        ;@;o;;o;	;
+@
+;i∆;"=;@;o;;o;	;
+@
+;i»;"0x7442;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_SPARX_IV_44        ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"0x7444;@;0{;{	;o;;o;	;
+@
+;i9;"$VTSS_TARGET_SPARX_IV_80        ;@;o;;o;	;
+@
+;iX;"=;@;o;;o;	;
+@
+;iZ;"0x7448;@;0{;{	;o;;o;	;
+@
+;iÇ;"$VTSS_TARGET_SPARX_IV_90        ;@;o;;o;	;
+@
+;i°;"=;@;o;;o;	;
+@
+;i£;"0x7449;@;0{;{	;o;;o;	;
+@
+;iÀ;"$VTSS_TARGET_SERVAL_2           ;@;o;;o;	;
+@
+;iÍ;"=;@;o;;o;	;
+@
+;iÏ;"0x7438;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_LYNX_2             ;@;o;;o;	;
+@
+;i3;"=;@;o;;o;	;
+@
+;i5;"0x7464;@;0{;{	;o;;o;	;
+@
+;i[;"$VTSS_TARGET_JAGUAR_2           ;@;o;;o;	;
+@
+;iz;"=;@;o;;o;	;
+@
+;i|;"0x7468;@;0{;{	;o;;o;	;
+@
+;i§;"$VTSS_TARGET_SERVAL_T           ;@;o;;o;	;
+@
+;i√;"=;@;o;;o;	;
+@
+;i≈;"0x7410;@;0{;{	;o;;o;	;
+@
+;iÍ;"$VTSS_TARGET_SERVAL_TP          ;@;o;;o;	;
+@
+;i	;"=;@;o;;o;	;
+@
+;i;"0x7415;@;0{;{	;o;;o;	;
+@
+;i1;"$VTSS_TARGET_SERVAL_TE          ;@;o;;o;	;
+@
+;iP;"=;@;o;;o;	;
+@
+;iR;"0x7430;@;0{;{	;o;;o;	;
+@
+;ix;"$VTSS_TARGET_SERVAL_TEP         ;@;o;;o;	;
+@
+;ió;"=;@;o;;o;	;
+@
+;iô;"0x7435;@;0{;{	;o;;o;	;
+@
+;i¿;"$VTSS_TARGET_SERVAL_2_LITE      ;@;o;;o;	;
+@
+;iﬂ;"=;@;o;;o;	;
+@
+;i·;"0x7436;@;0{;{	;o;;o;	;
+@
+;i	;"$VTSS_TARGET_SERVAL_TE10        ;@;o;;o;	;
+@
+;i*	;"=;@;o;;o;	;
+@
+;i,	;"0x7437;@;0{;{	;o;;o;	;
+@
+;iT	;"$VTSS_TARGET_SPARX_IV_34        ;@;o;;o;	;
+@
+;is	;"=;@;o;;o;	;
+@
+;iu	;"0x7440;@;0{;{	;o;;o;	;
+@
+;iù	;"$VTSS_TARGET_7511               ;@;o;;o;	;
+@
+;iº	;"=;@;o;;o;	;
+@
+;iæ	;"0x7511;@;0{;{	;o;;o;	;
+@
+;iÏ	;"$VTSS_TARGET_7512               ;@;o;;o;	;
+@
+;i
+;"=;@;o;;o;	;
+@
+;i
+;"0x7512;@;0{;{	;o;;o;	;
+@
+;i;
+;"$VTSS_TARGET_7513               ;@;o;;o;	;
+@
+;iZ
+;"=;@;o;;o;	;
+@
+;i\
+;"0x7513;@;0{;{	;o;;o;	;
+@
+;iÄ
+;"$VTSS_TARGET_7514               ;@;o;;o;	;
+@
+;iü
+;"=;@;o;;o;	;
+@
+;i°
+;"0x7514;@;0{;{	;o;;o;	;
+@
+;i≈
+;"$VTSS_TARGET_7546               ;@;o;;o;	;
+@
+;i‰
+;"=;@;o;;o;	;
+@
+;iÊ
+;"0x7546;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_7549               ;@;o;;o;	;
+@
+;i8;"=;@;o;;o;	;
+@
+;i:;"0x7549;@;0{;{	;o;;o;	;
+@
+;im;"$VTSS_TARGET_7552               ;@;o;;o;	;
+@
+;iå;"=;@;o;;o;	;
+@
+;ié;"0x7552;@;0{;{	;o;;o;	;
+@
+;i¡;"$VTSS_TARGET_7556               ;@;o;;o;	;
+@
+;i‡;"=;@;o;;o;	;
+@
+;i‚;"0x7556;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_7558               ;@;o;;o;	;
+@
+;i4;"=;@;o;;o;	;
+@
+;i6;"0x7558;@;0{;{	;o;;o;	;
+@
+;ii;"$VTSS_TARGET_7546TSN            ;@;o;;o;	;
+@
+;ià;"=;@;o;;o;	;
+@
+;iä;"0x47546;@;0{;{	;o;;o;	;
+@
+;iΩ;"$VTSS_TARGET_7549TSN            ;@;o;;o;	;
+@
+;i‹;"=;@;o;;o;	;
+@
+;iﬁ;"0x47549;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_7552TSN            ;@;o;;o;	;
+@
+;i0;"=;@;o;;o;	;
+@
+;i2;"0x47552;@;0{;{	;o;;o;	;
+@
+;if;"$VTSS_TARGET_7556TSN            ;@;o;;o;	;
+@
+;iÖ;"=;@;o;;o;	;
+@
+;iá;"0x47556;@;0{;{	;o;;o;	;
+@
+;iª;"$VTSS_TARGET_7558TSN            ;@;o;;o;	;
+@
+;i⁄;"=;@;o;;o;	;
+@
+;i‹;"0x47558;@;0{;{	;o;;o;	;
+@
+;i;"$VTSS_TARGET_LAN9662            ;@;o;;o;	;
+@
+;i/;"=;@;o;;o;	;
+@
+;i1;"0x9662;@;0{;{	;o;;o;	;
+@
+;iU;"$VTSS_TARGET_LAN9668            ;@;o;;o;	;
+@
+;it;"=;@;o;;o;	;
+@
+;iv;"0x9668;@;0:typedef_nameo;;o;	;
+@
+;iò;"vtss_target_type_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;iÃ;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i·;"vtss_target_type_t ;@:	nameo;;o;	;
+@
+;iÙ;"target;@;[ ;0;o;;o;	;
+@
+;i;"vtss_inst_create_t;@;[ ;0{:func_proto{; {	;!o;;o;	;
+@
+;i…;"vtss_rc ;@;"o;;o;	;
+@
+;i—;"vtss_inst_get;@;[ ;0:	args[{; {	;!o;;o;	;
+@
+;iﬂ;"const vtss_target_type_t ;@;"o;;o;	;
+@
+;i¯;"target;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"%vtss_inst_create_t       *const ;@;"o;;o;	;
+@
+;i6;"create;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i·;"vtss_rc ;@;"o;;o;	;
+@
+;iÈ;"vtss_inst_create;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i˙;"%const vtss_inst_create_t *const ;@;"o;;o;	;
+@
+;i;"create;@;[ ;0{; {	;!o;;o;	;
+@
+;i;;"%vtss_inst_t              *const ;@;"o;;o;	;
+@
+;i[;"	inst;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i‹;"vtss_rc ;@;"o;;o;	;
+@
+;i‰;"vtss_inst_destroy;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iˆ;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;iÍ;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;iÚ;"vtss_rc ;@:fptr_nameo;;o;	;
+@
+;i¸;"vtss_reg_read_t;@;$[{; {	;!o;;o;	;
+@
+;i;"const vtss_chip_no_t ;@;"o;;o;	;
+@
+;i";"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iN;"const u32            ;@;"o;;o;	;
+@
+;ic;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iå;"!u32                  *const ;@;"o;;o;	;
+@
+;i®;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iå;"typedef;@;%{	;&o;;o;	;
+@
+;iî;"vtss_rc ;@;'o;;o;	;
+@
+;iû;"vtss_reg_write_t;@;$[{; {	;!o;;o;	;
+@
+;i∞;"const vtss_chip_no_t ;@;"o;;o;	;
+@
+;i≈;"chip_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"const u32            ;@;"o;;o;	;
+@
+;i;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i-;"const u32            ;@;"o;;o;	;
+@
+;iB;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;ip;"typedef;@;%{	;&o;;o;	;
+@
+;ix;"vtss_rc ;@;'o;;o;	;
+@
+;iÇ;"vtss_i2c_read_t;@;$[
+{; {	;!o;;o;	;
+@
+;iì;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i®;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i‘;"const u8 ;@;"o;;o;	;
+@
+;i›;"i2c_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i
+;"const u8 ;@;"o;;o;	;
+@
+;i;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i<;"u8 *const ;@;"o;;o;	;
+@
+;iF;"	data;@;[ ;0{; {	;!o;;o;	;
+@
+;io;"const u8 ;@;"o;;o;	;
+@
+;ix;"cnt;@;[ ;0;0{;o;;o;	;
+@
+;i{;"typedef;@;%{	;&o;;o;	;
+@
+;iÉ;"vtss_rc ;@;'o;;o;	;
+@
+;iç;"vtss_i2c_write_t;@;$[	{; {	;!o;;o;	;
+@
+;iü;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i¥;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i·;"const u8 ;@;"o;;o;	;
+@
+;iÍ;"i2c_addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"u8 *const ;@;"o;;o;	;
+@
+;i";"	data;@;[ ;0{; {	;!o;;o;	;
+@
+;iL;"const u8 ;@;"o;;o;	;
+@
+;iU;"cnt;@;[ ;0;0{;o;;o;	;
+@
+;i\;"%#if defined(VTSS_FEATURE_CLOCK)
+;@{;o;;o;	;
+@
+;i;"typedef;@;%{	;&o;;o;	;
+@
+;i';"vtss_rc ;@;'o;;o;	;
+@
+;i1;"vtss_clock_read_t;@;$[{; {	;!o;;o;	;
+@
+;iD;"const u32 ;@;"o;;o;	;
+@
+;iN;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iT;"u32 *const ;@;"o;;o;	;
+@
+;i_;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;ig;"&#endif /* VTSS_FEATURE_CLOCK */
+
+;@{;o;;o;	;
+@
+;ià;"%#if defined(VTSS_FEATURE_CLOCK)
+;@{;o;;o;	;
+@
+;iJ;"typedef;@;%{	;&o;;o;	;
+@
+;iR;"vtss_rc ;@;'o;;o;	;
+@
+;i\;"vtss_clock_write_t;@;$[{; {	;!o;;o;	;
+@
+;ip;"const u32 ;@;"o;;o;	;
+@
+;iz;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iÄ;"const u32 ;@;"o;;o;	;
+@
+;iä;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;ií;"&#endif /* VTSS_FEATURE_CLOCK */
+
+;@{;o;;o;	;
+@
+;iT;"typedef;@;%{	;&o;;o;	;
+@
+;i\;"vtss_rc ;@;'o;;o;	;
+@
+;if;"vtss_spi_read_write_t;@;$[	{; {	;!o;;o;	;
+@
+;i};"const vtss_inst_t ;@;"o;;o;	;
+@
+;iè;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iº;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i—;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"const u8 ;@;"o;;o;	;
+@
+;i
+;"bitsize;@;[ ;0{; {	;!o;;o;	;
+@
+;i:;"u8 *const ;@;"o;;o;	;
+@
+;iD;"bitstream;@;[ ;0;0{;o;;o;	;
+@
+;i# ;"typedef;@;%{	;&o;;o;	;
+@
+;i+ ;"vtss_rc ;@;'o;;o;	;
+@
+;i5 ;" vtss_spi_32bit_read_write_t;@;$[{; {	;!o;;o;	;
+@
+;iR ;"const vtss_inst_t ;@;"o;;o;	;
+@
+;id ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iô ;"vtss_port_no_t ;@;"o;;o;	;
+@
+;i® ;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i‡ ;"BOOL           ;@;"o;;o;	;
+@
+;iÔ ;"	read;@;[ ;0{; {	;!o;;o;	;
+@
+;i$!;"u8             ;@;"o;;o;	;
+@
+;i3!;"dev;@;[ ;0{; {	;!o;;o;	;
+@
+;ig!;"u16            ;@;"o;;o;	;
+@
+;iv!;"reg_num;@;[ ;0{; {	;!o;;o;	;
+@
+;iÆ!;"u32            *const ;@;"o;;o;	;
+@
+;iƒ!;"	data;@;[ ;0;0{;o;;o;	;
+@
+;iû#;"typedef;@;%{	;&o;;o;	;
+@
+;i¶#;"vtss_rc ;@;'o;;o;	;
+@
+;i∞#;" vtss_spi_64bit_read_write_t;@;$[{; {	;!o;;o;	;
+@
+;iÕ#;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iﬂ#;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i$;"vtss_port_no_t ;@;"o;;o;	;
+@
+;i#$;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i[$;"BOOL           ;@;"o;;o;	;
+@
+;ij$;"	read;@;[ ;0{; {	;!o;;o;	;
+@
+;iü$;"u8             ;@;"o;;o;	;
+@
+;iÆ$;"dev;@;[ ;0{; {	;!o;;o;	;
+@
+;i‚$;"u16            ;@;"o;;o;	;
+@
+;iÒ$;"reg_num;@;[ ;0{; {	;!o;;o;	;
+@
+;i)%;"u64            *const ;@;"o;;o;	;
+@
+;i?%;"	data;@;[ ;0;0{;o;;o;	;
+@
+;iV&;"typedef;@;%{	;&o;;o;	;
+@
+;i^&;"vtss_rc ;@;'o;;o;	;
+@
+;ih&;"vtss_miim_read_t;@;$[	{; {	;!o;;o;	;
+@
+;iz&;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;iè&;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iπ&;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iŒ&;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i˚&;"const u8             ;@;"o;;o;	;
+@
+;i';"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i:';"!u16                  *const ;@;"o;;o;	;
+@
+;iV';"
+value;@;[ ;0;0{;o;;o;	;
+@
+;io(;"typedef;@;%{	;&o;;o;	;
+@
+;iw(;"vtss_rc ;@;'o;;o;	;
+@
+;iÅ(;"vtss_miim_write_t;@;$[	{; {	;!o;;o;	;
+@
+;iî(;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;i©(;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i‘(;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;iÈ(;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i);"const u8             ;@;"o;;o;	;
+@
+;i,);"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iW);"const u16            ;@;"o;;o;	;
+@
+;il);"
+value;@;[ ;0;0{;o;;o;	;
+@
+;i±*;"typedef;@;%{	;&o;;o;	;
+@
+;iπ*;"vtss_rc ;@;'o;;o;	;
+@
+;i√*;"vtss_mmd_read_t;@;$[
+{; {	;!o;;o;	;
+@
+;i‘*;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;iÈ*;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i+;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i'+;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iS+;"const u8             ;@;"o;;o;	;
+@
+;ih+;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;iê+;"const u16            ;@;"o;;o;	;
+@
+;i•+;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;iŒ+;"!u16                  *const ;@;"o;;o;	;
+@
+;iÍ+;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;i™-;"typedef;@;%{	;&o;;o;	;
+@
+;i≤-;"vtss_rc ;@;'o;;o;	;
+@
+;iº-;"vtss_mmd_read_inc_t;@;$[{; {	;!o;;o;	;
+@
+;i—-;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;iÊ-;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i.;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i(.;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;iX.;"const u8             ;@;"o;;o;	;
+@
+;im.;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;iô.;"const u16            ;@;"o;;o;	;
+@
+;iÆ.;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i€.;"!u16                  *const ;@;"o;;o;	;
+@
+;i˜.;"buf;@;[ ;0{; {	;!o;;o;	;
+@
+;i#/;"u8                   ;@;"o;;o;	;
+@
+;i8/;"
+count;@;[ ;0;0{;o;;o;	;
+@
+;ià0;"typedef;@;%{	;&o;;o;	;
+@
+;iê0;"vtss_rc ;@;'o;;o;	;
+@
+;iö0;"vtss_mmd_write_t;@;$[
+{; {	;!o;;o;	;
+@
+;i¨0;"const vtss_inst_t    ;@;"o;;o;	;
+@
+;i¡0;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÎ0;"const vtss_port_no_t ;@;"o;;o;	;
+@
+;i 1;"port_no;@;[ ;0{; {	;!o;;o;	;
+@
+;i-1;"const u8             ;@;"o;;o;	;
+@
+;iB1;"mmd;@;[ ;0{; {	;!o;;o;	;
+@
+;ik1;"const u16            ;@;"o;;o;	;
+@
+;iÄ1;"	addr;@;[ ;0{; {	;!o;;o;	;
+@
+;i™1;"const u16            ;@;"o;;o;	;
+@
+;iø1;"
+value;@;[ ;0;0{
+;o;;o;	;
+@
+;i‰1;"typedef;@;{;o;;o;	;
+@
+;iÏ1;"	enum;@;[{;{	;o;;o;	;
+@
+;i˜1;"VTSS_PI_WIDTH_16 ;@;o;;o;	;
+@
+;i2;"=;@;o;;o;	;
+@
+;i
+2;"0;@;0{;{;o;;o;	;
+@
+;i(2;"VTSS_PI_WIDTH_8       ;@;0;o;;o;	;
+@
+;iL2;"vtss_pi_width_t;@;[ ;0{
+;o;;o;	;
+@
+;i}2;"typedef;@;{;[
+{;o;;o;	;
+@
+;ié2;"$#if defined(VTSS_ARCH_LUTON26)
+;@{;{; {	;!o;;o;	;
+@
+;i±2;"vtss_pi_width_t ;@;"o;;o;	;
+@
+;i¡2;"
+width;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÎ2;"BOOL            ;@;"o;;o;	;
+@
+;i˚2;"use_extended_bus_cycle;@;[ ;0{;o;;o;	;
+@
+;iE3;"$#endif /* VTSS_ARCH_LUTON26 */
+;@{;{; {	;!o;;o;	;
+@
+;ih3;"u32             ;@;"o;;o;	;
+@
+;ix3;"cs_wait_ns;@;[ ;0;o;;o;	;
+@
+;iæ3;"vtss_pi_conf_t;@;[ ;0{;o;;o;	;
+@
+;iœ3;"(#if defined(VTSS_FEATURE_PORT_MUX)
+;@{
+;o;;o;	;
+@
+;i4;"typedef;@;{;o;;o;	;
+@
+;i4;"	enum;@;[ {;o;;o;	;
+@
+;i&4;"$#if defined(VTSS_ARCH_LUTON26)
+;@{;{;o;;o;	;
+@
+;iI4;"VTSS_PORT_MUX_MODE_0;@;0{;{;o;;o;	;
+@
+;i®4;"VTSS_PORT_MUX_MODE_1;@;0{;{;o;;o;	;
+@
+;i5;"VTSS_PORT_MUX_MODE_2;@;0{;o;;o;	;
+@
+;ic5;"$#endif /* VTSS_ARCH_LUTON26 */
+;@{;o;;o;	;
+@
+;iÇ5;"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;{;o;;o;	;
+@
+;i¶5;"VTSS_PORT_MUX_MODE_AUTO;@;0{;{;o;;o;	;
+@
+;i6;"VTSS_PORT_MUX_MODE_0;@;0{;{;o;;o;	;
+@
+;iè6;"VTSS_PORT_MUX_MODE_1;@;0{;{;o;;o;	;
+@
+;i 7;"VTSS_PORT_MUX_MODE_2;@;0{;o;;o;	;
+@
+;iL7;"%#endif /* VTSS_ARCH_JAGUAR_2 */
+;@{;o;;o;	;
+@
+;il7;"##if defined(VTSS_ARCH_OCELOT)
+;@{;{;o;;o;	;
+@
+;ié7;"VTSS_PORT_MUX_MODE_0;@;0{;{;o;;o;	;
+@
+;iˆ7;"VTSS_PORT_MUX_MODE_1;@;0{;{;o;;o;	;
+@
+;iZ8;"VTSS_PORT_MUX_MODE_2;@;0{;{;o;;o;	;
+@
+;iÕ8;"VTSS_PORT_MUX_MODE_3;@;0{;{;o;;o;	;
+@
+;i<9;"VTSS_PORT_MUX_MODE_4;@;0{;{;o;;o;	;
+@
+;i£9;"VTSS_PORT_MUX_MODE_5;@;0{;o;;o;	;
+@
+;i:;"$#endif  /* VTSS_ARCH_OCELOT */
+;@{;o;;o;	;
+@
+;i!:;"$#if defined(VTSS_ARCH_LAN966X)
+;@{;{;o;;o;	;
+@
+;iD:;"VTSS_PORT_MUX_MODE_0;@;0{;{;o;;o;	;
+@
+;iy:;"VTSS_PORT_MUX_MODE_1;@;0{;{;o;;o;	;
+@
+;i¬:;"VTSS_PORT_MUX_MODE_2;@;0{;{;o;;o;	;
+@
+;i¸:;"VTSS_PORT_MUX_MODE_3;@;0{;{;o;;o;	;
+@
+;i1;;"VTSS_PORT_MUX_MODE_4;@;0{;{;o;;o;	;
+@
+;if;;"VTSS_PORT_MUX_MODE_5;@;0{;o;;o;	;
+@
+;iö;;"#endif
+;@;o;;o;	;
+@
+;i£;;"vtss_port_mux_mode_t;@;[ ;0{;o;;o;	;
+@
+;iπ;;")#endif /* VTSS_FEATURE_PORT_MUX */
+
+;@{;o;;o;	;
+@
+;i›;;"5#if defined(VTSS_FEATURE_SERDES_MACRO_SETTINGS)
+;@{
+;o;;o;	;
+@
+;i)<;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i><;"u32        ;@;"o;;o;	;
+@
+;iI<;"ob_post0;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i}<;"u32        ;@;"o;;o;	;
+@
+;ià<;"
+ob_sr;@;[ ;0;o;;o;	;
+@
+;i∑<;"vtss_serdes_fields_t;@;[ ;0{
+;o;;o;	;
+@
+;iÛ<;"typedef;@:type_aliaso;;o;	;
+@
+;i˚<;"vtss_serdes_fields_t ;@;o;;o;	;
+@
+;i=;"serdes_fields_t;@;[ ;0{
+;o;;o;	;
+@
+;iK=;"typedef;@;{;[	{;{; {	;!o;;o;	;
+@
+;i`=;"vtss_vdd_t           ;@;"o;;o;	;
+@
+;iu=;"serdes1g_vdd;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iü=;"vtss_vdd_t           ;@;"o;;o;	;
+@
+;i¥=;"serdes6g_vdd;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iﬁ=;"BOOL                 ;@;"o;;o;	;
+@
+;iÛ=;"ib_cterm_ena;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i!>;"vtss_serdes_fields_t ;@;"o;;o;	;
+@
+;i6>;"qsgmii;@;[ ;0;o;;o;	;
+@
+;it>;"vtss_serdes_macro_conf_t;@;[ ;0{;o;;o;	;
+@
+;ié>;"6#endif /* VTSS_FEATURE_SERDES_MACRO_SETTINGS */
+
+;@{;o;;o;	;
+@
+;iø>;"*#if defined(VTSS_FEATURE_WARM_START)
+;@{
+;o;;o;	;
+@
+;i?;"typedef;@;{;o;;o;	;
+@
+;i?;"	enum;@;[{;{;o;;o;	;
+@
+;i ?;"VTSS_RESTART_INFO_SRC_NONE;@;0{;{;o;;o;	;
+@
+;io?;"!VTSS_RESTART_INFO_SRC_CU_PHY;@;0{;{;o;;o;	;
+@
+;iº?;"#VTSS_RESTART_INFO_SRC_10G_PHY ;@;0;o;;o;	;
+@
+;i@;"vtss_restart_info_src_t;@;[ ;0{;o;;o;	;
+@
+;i!@;"+#endif /* VTSS_FEATURE_WARM_START */
+
+;@{;o;;o;	;
+@
+;iG@;"(#if defined(VTSS_ARCH_JAGUAR_2_CE)
+;@{
+;o;;o;	;
+@
+;iã@;"typedef;@;{;o;;o;	;
+@
+;iì@;"	enum;@;[{;{;o;;o;	;
+@
+;iû@;"VTSS_QS_MODE_DEFAULT;@;0{;{;o;;o;	;
+@
+;i›@;"VTSS_QS_MODE_QUEUE_LIM  ;@;0;o;;o;	;
+@
+;i'A;"vtss_qs_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i\A;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iqA;"vtss_qs_mode_t ;@;"o;;o;	;
+@
+;iÄA;"	mode;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i≥A;"u32            ;@;"o;;o;	;
+@
+;i¬A;"wm1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iıA;"u32            ;@;"o;;o;	;
+@
+;iB;"wm2;@;[ ;0;o;;o;	;
+@
+;i5B;"vtss_qs_conf_t;@;[ ;0{;o;;o;	;
+@
+;iEB;")#endif /* VTSS_ARCH_JAGUAR_2_CE */
+
+;@{;o;;o;	;
+@
+;iiB;"*#if defined(VTSS_FEATURE_CORE_CLOCK)
+;@{
+;o;;o;	;
+@
+;i±B;"typedef;@;{;o;;o;	;
+@
+;iπB;"	enum;@;[	{;{;o;;o;	;
+@
+;iƒB;"VTSS_CORE_CLOCK_DEFAULT;@;0{;{;o;;o;	;
+@
+;iC;"VTSS_CORE_CLOCK_250MHZ;@;0{;{;o;;o;	;
+@
+;iXC;"VTSS_CORE_CLOCK_500MHZ;@;0{;{;o;;o;	;
+@
+;iöC;"VTSS_CORE_CLOCK_625MHZ;@;0;o;;o;	;
+@
+;i⁄C;"vtss_core_clock_freq_t;@;[ ;0{
+;o;;o;	;
+@
+;iD;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i/D;"vtss_core_clock_freq_t ;@;"o;;o;	;
+@
+;iFD;"	freq;@;[ ;0;o;;o;	;
+@
+;iÅD;"vtss_core_clock_conf_t;@;[ ;0{;o;;o;	;
+@
+;iôD;"+#endif /* VTSS_FEATURE_CORE_CLOCK */
+
+;@{
+;o;;o;	;
+@
+;iÎD;"typedef;@;{;[6{;{; {	;!o;;o;	;
+@
+;iGE;"vtss_reg_read_t   ;@;"o;;o;	;
+@
+;iYE;"reg_read;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iäE;"vtss_reg_write_t  ;@;"o;;o;	;
+@
+;iúE;"reg_write;@;[ ;0{;o;;o;	;
+@
+;iÀE;"%#if defined(VTSS_FEATURE_CLOCK)
+;@{;{; {	;!o;;o;	;
+@
+;iÔE;"vtss_clock_read_t  ;@;"o;;o;	;
+@
+;iF;"clock_read;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i5F;"vtss_clock_write_t ;@;"o;;o;	;
+@
+;iHF;"clock_write;@;[ ;0{;o;;o;	;
+@
+;iwF;"&#endif /* VTSS_FEATURE_CLOCK */
+
+;@{;{; {	;!o;;o;	;
+@
+;i·F;"vtss_miim_read_t  ;@;"o;;o;	;
+@
+;iÛF;"miim_read;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i*G;"vtss_miim_write_t ;@;"o;;o;	;
+@
+;i<G;"miim_write;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i∞G;"vtss_mmd_read_t     ;@;"o;;o;	;
+@
+;iƒG;"mmd_read;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i˚G;"vtss_mmd_read_inc_t ;@;"o;;o;	;
+@
+;iH;"mmd_read_inc;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iPH;"vtss_mmd_write_t    ;@;"o;;o;	;
+@
+;idH;"mmd_write;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iùH;"vtss_spi_read_write_t   ;@;"o;;o;	;
+@
+;iµH;"spi_read_write;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i I;"#vtss_spi_32bit_read_write_t   ;@;"o;;o;	;
+@
+;iI;"spi_32bit_read_write;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i~I;"#vtss_spi_64bit_read_write_t   ;@;"o;;o;	;
+@
+;iúI;"spi_64bit_read_write;@;[ ;0{;o;;o;	;
+@
+;i¯I;"#if defined(VTSS_GPIOS)
+;@{;{; {	;!o;;o;	;
+@
+;iJ;"vtss_gpio_func_info_get_t ;@;"o;;o;	;
+@
+;i.J;"gpio_func_info_get;@;[ ;0{;o;;o;	;
+@
+;iÖJ;"#endif
+
+;@{;{; {	;!o;;o;	;
+@
+;iëJ;" vtss_port_serdes_tap_get_t ;@;"o;;o;	;
+@
+;i¨J;"serdes_tap_get;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i⁄K;"BOOL                    ;@;"o;;o;	;
+@
+;iÚK;"skip_switch_reset;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i
+L;"BOOL                    ;@;"o;;o;	;
+@
+;i"L;"spi_bus;@;[ ;0{;o;;o;	;
+@
+;ilL;"*#if defined(VTSS_FEATURE_WARM_START)
+;@{;{; {	;!o;;o;	;
+@
+;iïL;"BOOL                    ;@;"o;;o;	;
+@
+;i≠L;"warm_start_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i›L;"vtss_restart_info_src_t ;@;"o;;o;	;
+@
+;iıL;"restart_info_src;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i2M;"vtss_port_no_t          ;@;"o;;o;	;
+@
+;iJM;"restart_info_port;@;[ ;0{;o;;o;	;
+@
+;iêM;"+#endif /* VTSS_FEATURE_WARM_START */
+
+;@{;o;;o;	;
+@
+;i∂M;"(#if defined(VTSS_FEATURE_PORT_MUX)
+;@{;{; {	;!o;;o;	;
+@
+;i›M;"vtss_port_mux_mode_t ;@;"o;;o;	;
+@
+;iÚM;"mux_mode;@;[ ;0{;o;;o;	;
+@
+;i9N;")#endif /* VTSS_FEATURE_PORT_MUX */
+
+;@{;{; {	;!o;;o;	;
+@
+;iaN;"vtss_pi_conf_t    ;@;"o;;o;	;
+@
+;isN;"pi;@;[ ;0{;o;;o;	;
+@
+;i´N;"5#if defined(VTSS_FEATURE_SERDES_MACRO_SETTINGS)
+;@{;{; {	;!o;;o;	;
+@
+;iﬂN;"vtss_serdes_macro_conf_t ;@;"o;;o;	;
+@
+;i¯N;"serdes;@;[ ;0{;o;;o;	;
+@
+;i#O;"6#endif /* VTSS_FEATURE_SERDES_MACRO_SETTINGS */
+
+;@{;{; {	;!o;;o;	;
+@
+;iXO;"
+BOOL ;@;"o;;o;	;
+@
+;i]O;"using_ufdma;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iyP;"	u32 ;@;"o;;o;	;
+@
+;i}P;"loopback_bw_mbps;@;[ ;0{;o;;o;	;
+@
+;iêP;"(#if defined(VTSS_ARCH_JAGUAR_2_CE)
+;@{;{; {	;!o;;o;	;
+@
+;i∑P;"vtss_qs_conf_t      ;@;"o;;o;	;
+@
+;iÀP;"qs_conf;@;[ ;0{;o;;o;	;
+@
+;iˆP;")#endif /* VTSS_ARCH_JAGUAR_2_CE */
+
+;@{;o;;o;	;
+@
+;iQ;"-#if defined(VTSS_FEATURE_VLAN_COUNTERS)
+;@{;{; {	;!o;;o;	;
+@
+;iFQ;"
+BOOL ;@;"o;;o;	;
+@
+;iKQ;"vlan_counters_disable;@;[ ;0{;o;;o;	;
+@
+;i°Q;"#endif
+;@{;o;;o;	;
+@
+;i®Q;"$#if defined(VTSS_FEATURE_PSFP)
+;@{;{; {	;!o;;o;	;
+@
+;iÀQ;"
+BOOL ;@;"o;;o;	;
+@
+;i–Q;"psfp_counters_enable;@;[ ;0{;o;;o;	;
+@
+;iR;"#endif
+;@{;o;;o;	;
+@
+;i$R;"*#if defined(VTSS_FEATURE_CORE_CLOCK)
+;@{;{; {	;!o;;o;	;
+@
+;iMR;"vtss_core_clock_conf_t ;@;"o;;o;	;
+@
+;idR;"core_clock;@;[ ;0{;o;;o;	;
+@
+;iôR;"#endif
+;@{;o;;o;	;
+@
+;i†R;"$#if defined(VTSS_ARCH_LUTON26)
+;@{;{; {	;!o;;o;	;
+@
+;i√R;"
+BOOL ;@;"o;;o;	;
+@
+;i»R;"packet_init_disable;@;[ ;0{;o;;o;	;
+@
+;i:S;"#endif
+;@;o;;o;	;
+@
+;iCS;"vtss_init_conf_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;iT;"vtss_rc ;@;"o;;o;	;
+@
+;iT;"vtss_init_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i,T;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i>T;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i_T;"vtss_init_conf_t  *const ;@;"o;;o;	;
+@
+;ixT;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i2U;"vtss_rc ;@;"o;;o;	;
+@
+;i:U;"vtss_init_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iMU;"const vtss_inst_t      ;@;"o;;o;	;
+@
+;idU;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÖU;"#const vtss_init_conf_t *const ;@;"o;;o;	;
+@
+;i£U;"	conf;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iDZ;"vtss_rc ;@;"o;;o;	;
+@
+;iLZ;""vtss_register_access_mode_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;ijZ;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i|Z;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÇZ;"
+BOOL ;@;"o;;o;	;
+@
+;iáZ;"spi_bus;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iú[;"vtss_rc ;@;"o;;o;	;
+@
+;i§[;""vtss_register_access_mode_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i¬[;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i‘[;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i⁄[;"BOOL *;@;"o;;o;	;
+@
+;i‡[;"spi_bus;@;[ ;0;0{
+;o;;o;	;
+@
+;i\;"typedef;@;{;o;;o;	;
+@
+;i \;"	enum;@;[{;{;o;;o;	;
+@
+;i+\;"VTSS_SPI_ENDIAN_LITTLE;@;0{;{;o;;o;	;
+@
+;ia\;"VTSS_SPI_ENDIAN_BIG;@;0;o;;o;	;
+@
+;ií\;"vtss_spi_endian_t;@;[ ;0{
+;o;;o;	;
+@
+;i÷\;"typedef;@;{;o;;o;	;
+@
+;iﬁ\;"	enum;@;[{;{;o;;o;	;
+@
+;iÈ\;"!VTSS_SPI_BIT_ORDER_MSB_FIRST;@;0{;{;o;;o;	;
+@
+;i&];"!VTSS_SPI_BIT_ORDER_LSB_FIRST;@;0;o;;o;	;
+@
+;ia];"vtss_spi_bit_order_t;@;[ ;0{
+;o;;o;	;
+@
+;iÆ];"typedef;@;{;[
+{;{; {	;!o;;o;	;
+@
+;i√];"vtss_reg_write_t     ;@;"o;;o;	;
+@
+;iÿ];"reg_write;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i^;"vtss_reg_read_t      ;@;"o;;o;	;
+@
+;i^;"reg_read;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iJ^;"vtss_spi_endian_t    ;@;"o;;o;	;
+@
+;i_^;"endian;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iã^;"vtss_spi_bit_order_t ;@;"o;;o;	;
+@
+;i†^;"bit_order;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iœ^;"u8                   ;@;"o;;o;	;
+@
+;i‰^;"padding;@;[ ;0;o;;o;	;
+@
+;i;_;"vtss_spi_slave_init_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;i$`;"vtss_rc ;@;"o;;o;	;
+@
+;i,`;"vtss_spi_slave_init;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i@`;"(const vtss_spi_slave_init_t *const ;@;"o;;o;	;
+@
+;ic`;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;ik`;"*#if defined(VTSS_FEATURE_WARM_START)
+;@{;#{; {	;!o;;o;	;
+@
+;iWa;"vtss_rc ;@;"o;;o;	;
+@
+;i_a;"vtss_restart_conf_end;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iua;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iáa;"	inst;@;[ ;0;0{
+;o;;o;	;
+@
+;i©a;"typedef;@;(o;;o;	;
+@
+;i±a;"	u16 ;@;o;;o;	;
+@
+;iµa;"vtss_version_t;@;[ ;0{
+;o;;o;	;
+@
+;i·a;"typedef;@;{;o;;o;	;
+@
+;iÈa;"	enum;@;[{;{;o;;o;	;
+@
+;iÙa;"VTSS_RESTART_COLD;@;0{;{;o;;o;	;
+@
+;iBb;"VTSS_RESTART_COOL;@;0{;{;o;;o;	;
+@
+;iàb;"VTSS_RESTART_WARM  ;@;0;o;;o;	;
+@
+;iºb;"vtss_restart_t;@;[ ;0{
+;o;;o;	;
+@
+;iÍb;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iˇb;"vtss_restart_t ;@;"o;;o;	;
+@
+;ic;"restart;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i>c;"vtss_version_t ;@;"o;;o;	;
+@
+;iMc;"prev_version;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i|c;"vtss_version_t ;@;"o;;o;	;
+@
+;iãc;"cur_version;@;[ ;0;o;;o;	;
+@
+;i∑c;"vtss_restart_status_t;@;[ ;0{;#{; {	;!o;;o;	;
+@
+;ijd;"vtss_rc ;@;"o;;o;	;
+@
+;ird;"vtss_restart_status_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iäd;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iúd;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i¬d;""vtss_restart_status_t *const ;@;"o;;o;	;
+@
+;iﬂd;"status;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;iüe;"vtss_rc ;@;"o;;o;	;
+@
+;iße;"vtss_restart_conf_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iΩe;"const vtss_inst_t ;@;"o;;o;	;
+@
+;iœe;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÛe;"vtss_restart_t *const ;@;"o;;o;	;
+@
+;i	f;"restart;@;[ ;0;0{;#{; {	;!o;;o;	;
+@
+;i»f;"vtss_rc ;@;"o;;o;	;
+@
+;i–f;"vtss_restart_conf_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iÊf;"const vtss_inst_t ;@;"o;;o;	;
+@
+;i¯f;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;ig;"const vtss_restart_t ;@;"o;;o;	;
+@
+;i1g;"restart;@;[ ;0;0{;o;;o;	;
+@
+;i<g;"+#endif /* VTSS_FEATURE_WARM_START */
+
+;@{;o;;o;	;
+@
+;ibg;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;iwg;"#endif
+;@{;o;;o;	;
+@
+;i~g;"$#endif /* _VTSS_INIT_API_H_ */
+;@

@@ -1,0 +1,1080 @@
+{:	root[6{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"á9// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+#ifndef _MSCC_ETHERNET_SWITCH_API_MRP_
+#define _MSCC_ETHERNET_SWITCH_API_MRP_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// MRP ring role.
+typedef enum {
+    MESA_MRP_RING_ROLE_DISABLED,
+    MESA_MRP_RING_ROLE_CLIENT,
+    MESA_MRP_RING_ROLE_MANAGER,
+} mesa_mrp_ring_role_t  CAP(MRP);
+
+// MRP instance create configuration.
+typedef struct {
+    mesa_mrp_ring_role_t ring_role;    // MRP ring role
+    mesa_mrp_ring_role_t in_ring_role; // MRP Interconnect ring role
+    mesa_bool_t          mra;          // MRP is MRA. The actual role is given by 'ring_role' and can be changed with mesa_mrp_ring_role_set()
+    uint32_t             mra_priority; // MRA priority
+    mesa_bool_t          in_rc_mode;   // Is interconnection in RC-mode (TRUE) or LC-mode (FALSE)?
+    mesa_port_no_t       p_port;       // Port with Primary port role
+    mesa_port_no_t       s_port;       // Port with Secondary port role
+    mesa_port_no_t       i_port;       // Port with Interconnect port role
+    mesa_mac_t           mac;          // MAC address used to determine whether own or other MRP_Test/MRP_InTest PDU is received
+} mesa_mrp_conf_t CAP(MRP);
+
+// Add an MRP instance with configuration.
+// Resources in HW are allocated.
+// The ring state is defaulted to MESA_MRP_RING_STATE_OPEN.
+// All the MRP frames are forwarded according to IEC 62439-2 depending on ring role.
+// MRP PDUs required for protocol processing are copied to CPU.
+// Test and ITest Loss Of Continuity is calculated according to IEC 62439-2.
+//
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// conf     [IN] Configuration parameters for MRP.
+mesa_rc mesa_mrp_add(const mesa_inst_t     inst,
+                     const mesa_mrp_idx_t  mrp_idx,
+                     const mesa_mrp_conf_t *const conf)  CAP(MRP);
+
+mesa_rc mesa_mrp_get(const mesa_inst_t    inst,
+                     const mesa_mrp_idx_t mrp_idx,
+                     mesa_mrp_conf_t      *const conf)  CAP(MRP);
+
+// Delete an MRP instance.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the deleted MRP instance.
+mesa_rc mesa_mrp_del(const mesa_inst_t    inst,
+                     const mesa_mrp_idx_t mrp_idx)  CAP(MRP);
+
+// Set an MRP instance ring role. Requires MRP instance is configured as MRA.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// role     [IN] The MRP ring role.
+mesa_rc mesa_mrp_ring_role_set(const mesa_inst_t          inst,
+                               const mesa_mrp_idx_t       mrp_idx,
+                               const mesa_mrp_ring_role_t role)  CAP(MRP);
+
+mesa_rc mesa_mrp_ring_role_get(const mesa_inst_t    inst,
+                               const mesa_mrp_idx_t mrp_idx,
+                               mesa_mrp_ring_role_t *const role)  CAP(MRP);
+
+// Set the port number of the primary port. This is used to swap the port roles
+// of the two ring ports.
+// After swapping ports, mesa_mrp_port_state_set() must be called with updated
+// port state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// port_no  [IN] The new primary port. Must be one of the already configured ports.
+mesa_rc mesa_mrp_primary_port_set(const mesa_inst_t    inst,
+                                  const mesa_mrp_idx_t mrp_idx,
+                                  const mesa_port_no_t port_no)  CAP(MRP);
+
+mesa_rc mesa_mrp_primary_port_get(const mesa_inst_t    inst,
+                                  const mesa_mrp_idx_t mrp_idx,
+                                  mesa_port_no_t       *const port_no) CAP(MRP);
+
+// MRP ring state.
+typedef enum {
+    MESA_MRP_RING_STATE_CLOSED,
+    MESA_MRP_RING_STATE_OPEN
+} mesa_mrp_ring_state_t  CAP(MRP);
+
+// Set an MRP instance ring state. This is the ring state inserted in the transmitted TST frames
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// state    [IN] The ring state.
+mesa_rc mesa_mrp_ring_state_set(const mesa_inst_t           inst,
+                                const mesa_mrp_idx_t        mrp_idx,
+                                const mesa_mrp_ring_state_t state)  CAP(MRP);
+
+mesa_rc mesa_mrp_ring_state_get(const mesa_inst_t     inst,
+                                const mesa_mrp_idx_t  mrp_idx,
+                                mesa_mrp_ring_state_t *const state)  CAP(MRP);
+
+// Set an MRP instance Interconnected ring state. This is the ring state inserted in the transmitted INTST frames
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// state    [IN] The ring state.
+mesa_rc mesa_mrp_in_ring_state_set(const mesa_inst_t           inst,
+                                   const mesa_mrp_idx_t        mrp_idx,
+                                   const mesa_mrp_ring_state_t state)  CAP(MRP);
+
+mesa_rc mesa_mrp_in_ring_state_get(const mesa_inst_t     inst,
+                                   const mesa_mrp_idx_t  mrp_idx,
+                                   mesa_mrp_ring_state_t *const state)  CAP(MRP);
+
+// MRP instance best MRM information.
+typedef struct {
+    mesa_mac_t  mac;  // Best MAC address
+    uint32_t    prio; // Best priority
+} mesa_mrp_best_mrm_t CAP(MRP);
+
+// Set an MRP instance's best received priority and MAC.
+// This information can be received by MRP_TestMgrNAck or MRP_TestPropagate.
+// It is used to check for TST reception from current best MRM.
+// Can only be called if configured as an MRA.
+//
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// best     [IN] Best parameters for MRP.
+mesa_rc mesa_mrp_best_mrm_set(const mesa_inst_t         inst,
+                              const mesa_mrp_idx_t      mrp_idx,
+                              const mesa_mrp_best_mrm_t *const best)  CAP(MRP);
+
+mesa_rc mesa_mrp_best_mrm_get(const mesa_inst_t    inst,
+                              const mesa_mrp_idx_t mrp_idx,
+                              mesa_mrp_best_mrm_t  *const best)  CAP(MRP);
+
+// MRP port state.
+typedef enum {
+    MESA_MRP_PORT_STATE_DISABLED,
+    MESA_MRP_PORT_STATE_BLOCKED,
+    MESA_MRP_PORT_STATE_FORWARDING
+} mesa_mrp_port_state_t  CAP(MRP);
+
+// Set an MRP instance ring port state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// port     [IN] The port.
+// state    [IN] The port state.
+mesa_rc mesa_mrp_port_state_set(const mesa_inst_t           inst,
+                                const mesa_mrp_idx_t        mrp_idx,
+                                const mesa_port_no_t        port,
+                                const mesa_mrp_port_state_t state)  CAP(MRP);
+
+mesa_rc mesa_mrp_port_state_get(const mesa_inst_t     inst,
+                                const mesa_mrp_idx_t  mrp_idx,
+                                const mesa_port_no_t  port,
+                                mesa_mrp_port_state_t *const state)  CAP(MRP);
+
+// MRP TST LOC configuration.
+typedef struct {
+    uint32_t  tst_interval;    // The expected TST frame reception interval in microseconds
+    uint32_t  tst_mon_count;   // The TST monitoring count of intervals without TST generating TST LOC
+
+    uint32_t  itst_interval;   // The expected ITST frame reception interval in microseconds
+    uint32_t  itst_mon_count;  // The ITST monitoring count of intervals without ITST generating ITST LOC
+} mesa_mrp_tst_loc_conf_t CAP(MRP);
+
+// Set an MRP instance TST LOC configuration.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// conf     [IN] The TST LOC configuration.
+mesa_rc mesa_mrp_tst_loc_conf_set(const mesa_inst_t             inst,
+                                  const mesa_mrp_idx_t          mrp_idx,
+                                  const mesa_mrp_tst_loc_conf_t *const conf)  CAP(MRP);
+
+mesa_rc mesa_mrp_tst_loc_conf_get(const mesa_inst_t       inst,
+                                  const mesa_mrp_idx_t    mrp_idx,
+                                  mesa_mrp_tst_loc_conf_t *const conf)  CAP(MRP);
+
+// This function causes the next MRP_Test PDU that causes the LoC miss counter
+// to be cleared to be copied to the CPU.
+// This is needed after a LoC interrupt, to indicate to the application software
+// that valid MRP_Test PDUs are arriving again.
+// This only works for MIM-RC instances.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+mesa_rc mesa_mrp_tst_hitme_once(const mesa_inst_t    inst,
+                                const mesa_mrp_idx_t mrp_idx);
+
+// This function causes the next MRP_InTest PDU that causes the LoC miss counter
+// to be cleared to be copied to the CPU.
+// This is needed after a LoC interrupt, to indicate to the application software
+// that valid MRP_InTest PDUs are arriving again.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+mesa_rc mesa_mrp_itst_hitme_once(const mesa_inst_t   inst,
+                                 const mesa_mrp_idx_t mrp_idx);
+
+// Copy of remote MRP_Test/MRP_InTest PDUs to the CPU.
+typedef struct {
+    mesa_bool_t tst_to_cpu;  // Copy MRP_Test PDUs from remote MRM to CPU if we are currently MRM.
+    mesa_bool_t itst_to_cpu; // Copy MRP_InTest PDUs from remote MIM to CPU if we are MIM-RC.
+} mesa_mrp_tst_copy_conf_t;
+
+// Configure copying of MRP_Test and MRP_InTest PDUs from remote MRMs and/or
+// MIMs to the CPU.
+// This is usually needed if the application wishes to detect multiple MRMs/MIMs
+// on the (interconnection) ring if it's currently operating as an MRM/MIM
+// itself. In order not to be overwhelmed with remote MRP_[In]Test PDUs this can
+// be turned on and off periodically. It does not affect H/W-based forwarding in
+// any way.
+// It only takes effect if operating as an MRM/MIM.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// copy     [IN] The copy configuration.
+mesa_rc mesa_mrp_tst_copy_conf_set(const mesa_inst_t              inst,
+                                   const mesa_mrp_idx_t           mrp_idx,
+                                   const mesa_mrp_tst_copy_conf_t *const copy);
+
+mesa_rc mesa_mrp_tst_copy_conf_get(const mesa_inst_t        inst,
+                                   const mesa_mrp_idx_t     mrp_idx,
+                                   mesa_mrp_tst_copy_conf_t *const copy);
+// MRP status.
+// xxx_seen are indications cleared during _get() call
+typedef struct {
+    mesa_bool_t  tst_loc;       // The TST LOC state.
+    mesa_bool_t  itst_loc;      // The ITST LOC state.
+
+    mesa_bool_t  mrp_seen;      // MRP frame received
+    mesa_bool_t  mrp_proc_seen; // MRP frame received and processed
+    mesa_bool_t  dmac_err_seen; // MRP frame received with DMAC error
+    mesa_bool_t  vers_err_seen; // MRP frame received with version error
+} mesa_mrp_port_status_t CAP(MRP);
+
+typedef struct {
+    mesa_mrp_port_status_t p_status;
+    mesa_mrp_port_status_t s_status;
+    mesa_mrp_port_status_t i_status;
+} mesa_mrp_status_t CAP(MRP);
+
+// Get an MRP instance status.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// status   [IN] The MRP status.
+mesa_rc mesa_mrp_status_get(const mesa_inst_t    inst,
+                            const mesa_mrp_idx_t mrp_idx,
+                            mesa_mrp_status_t    *const status)  CAP(MRP);
+
+// MRP counters.
+typedef struct {
+    uint64_t tst_rx_count; // Number of received valid MRP_Test frames subject to MRP_Test processing.
+    uint64_t itst_rx_count;// Number of received valid MRP_InTest frames subject to MRP_InTest processing.
+} mesa_mrp_port_counters_t;
+
+typedef struct {
+    mesa_mrp_port_counters_t p_counters;
+    mesa_mrp_port_counters_t s_counters;
+    mesa_mrp_port_counters_t i_counters;
+} mesa_mrp_counters_t;
+
+// Get an MRP instance counters.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// counters [IN] The MRP counters.
+mesa_rc mesa_mrp_counters_get(const mesa_inst_t    inst,
+                              const mesa_mrp_idx_t mrp_idx,
+                              mesa_mrp_counters_t  *const counters);
+
+// Clear the MRP instance status counters.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+mesa_rc mesa_mrp_counters_clear(const mesa_inst_t    inst,
+                                const mesa_mrp_idx_t mrp_idx)  CAP(MRP);
+
+// MRP Event indication flags.
+// Different events can be enabled/disabled and polled.
+// The events are represented by a bit in an event mask.
+// MESA_CAP(MESA_CAP_MRP_EVENT_SUPPORTED) will return an event mask with the
+// events supported on a given platform.
+#define MESA_MRP_EVENT_MASK_NONE      0x00
+// Change in TST frame Loss of Continuity (LOC) state
+#define MESA_MRP_EVENT_MASK_TST_LOC   0x01
+// Change in ITST frame Loss of Continuity (LOC) state
+#define MESA_MRP_EVENT_MASK_ITST_LOC  0x02
+#define MESA_MRP_EVENT_MASK_ALL       0x0F
+
+// MRP event generation enable/disable.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRPE instance.
+// mask     [IN] Mask of events to either enable or disable.
+// enable   [IN] Whether to enable or disable the events specified in the mask.
+mesa_rc mesa_mrp_event_mask_set(const mesa_inst_t    inst,
+                                const mesa_mrp_idx_t mrp_idx,
+                                const uint32_t       mask,
+                                const mesa_bool_t    enable)  CAP(MRP);
+
+mesa_rc mesa_mrp_event_mask_get(const mesa_inst_t    inst,
+                                const mesa_mrp_idx_t mrp_idx,
+                                uint32_t             *const mask)  CAP(MRP);
+
+// MRP events
+typedef struct {
+    uint32_t p_mask;
+    uint32_t s_mask;
+    uint32_t i_mask;
+} mesa_mrp_event_t;
+
+// MRP event polling.
+// Mask is returned indicating pending events. Pending event are cleared after
+// get.
+// Notice that both LoC and clear of a LoC condition (through reception of
+// MRP_Test/MRP_InTest PDUs) cause events.
+// inst      [IN]  Target instance reference.
+// mrp_idx   [IN]  Index of polled MRPE instance.
+// mask      [OUT] Mask of detected pending events during get.
+mesa_rc mesa_mrp_event_get(const mesa_inst_t     inst,
+                           const mesa_mrp_idx_t  mrp_idx,
+                           mesa_mrp_event_t      *const events)  CAP(MRP);
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MSCC_ETHERNET_SWITCH_API_MRP_
+
+:@byteposiq:	@str",#ifndef _MSCC_ETHERNET_SWITCH_API_MRP_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[=iPipiqiìi∫iªiÏi6i7iIiXiyiòi∏i⁄i€iiiJièiiUi∏i˛iFiëii.i/iZi|i∏iiMiöiùi…i i3idiòi€i‹ii?iÅiÇiùi…i˝i-	ik	il	i∫	iÊ	i
+iA
+iÅ
+iƒ
+iiiJiái”i‘i$i>içiúi»iˇiSiêi–iiiYiôiÍiÎi˛ii-iJiminiœi˚i2iSiïi⁄i(i)iei§iÛiÙifiíi…iÍi/iwi»i…iiJiúiùi√i‘i˛i%iEiFiiÃii;i>iji°iÀi	iJiöiõi‘ii[i\ioi~i†i¡i‰iii0i\iìiÆiœiiViòiÊiÁi#ibiûiÌiÓiiiyi‡i·i>i®iÃiÕi˚i'i^iäi–iiqiri≤iıiG iH ió i¡ i!iB!ik!ió!iŒ!i	"iH"iI"iö"iƒ"i#iG#is#i™#iÂ#i%$i&$i]$in$i—$i/%iK%iL%iô%i≠%i˛%iI&iö&iÎ&i˜&i+'iW'ié'i∑'iˇ'iJ(iö(iõ(i›(i")il)i{)i≤)i√)i˘)i0*i1*ig*i´*iÒ*i:+i]+i^+io+iî+iπ+iﬁ+i¸+i˝+i,iH,i,i†,i◊,i-i\-i]-in-i-iÊ-iQ.im.in.i.i®.i—.i˙.i/i/i3/i_/iñ/iπ/iÚ/i.0is0it0iü0iÀ0i1i=1iÜ1iá1i¶1iﬁ1i2id2iç2i∏2iÓ2i3iP3i{3i¶3iß3iœ3i˚3i34ip4i¿4i˚4i95it5iº5iΩ5i¯5i66iÉ6iÑ6ií6i£6i∏6iÕ6i‚6iˆ6i˜6i7i\7id7iØ7i⁄7i8i:8iy8i∞8iÍ8i59i]9iÜ9iá9:@last_line_endiá9{;o;;o;	;
+@
+;iì;"-#define _MSCC_ETHERNET_SWITCH_API_MRP_
+
+;@{;o;;o;	;
+@
+;iª;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;iÏ;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;iI;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iQ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i\;" MESA_MRP_RING_ROLE_DISABLED;@:cap0{;{;o;;o;	;
+@
+;i};"MESA_MRP_RING_ROLE_CLIENT;@;0{;{;o;;o;	;
+@
+;iú;"MESA_MRP_RING_ROLE_MANAGER;@;0:typedef_nameo;;o;	;
+@
+;i∫;"mesa_mrp_ring_role_t  ;@:
+array[ ;o;;o;	;
+@
+;i–;"CAP(MRP);@{
+;o;;o;	;
+@
+;i;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i;"mesa_mrp_ring_role_t ;@:	nameo;;o;	;
+@
+;i+;"ring_role;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN;"mesa_mrp_ring_role_t ;@;o;;o;	;
+@
+;ic;"in_ring_role;@;[ ;0{;{;{	;o;;o;	;
+@
+;iì;"mesa_bool_t          ;@;o;;o;	;
+@
+;i®;"mra;@;[ ;0{;{;{	;o;;o;	;
+@
+;i";"uint32_t             ;@;o;;o;	;
+@
+;i7;"mra_priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;iY;"mesa_bool_t          ;@;o;;o;	;
+@
+;in;"in_rc_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;iº;"mesa_port_no_t       ;@;o;;o;	;
+@
+;i—;"p_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_port_no_t       ;@;o;;o;	;
+@
+;i;"s_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJ;"mesa_port_no_t       ;@;o;;o;	;
+@
+;i_;"i_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iï;"mesa_mac_t           ;@;o;;o;	;
+@
+;i™;"mac;@;[ ;0;o;;o;	;
+@
+;i;"mesa_mrp_conf_t ;@;[ ;o;;o;	;
+@
+;i$;"CAP(MRP);@{:func_proto{;{	;o;;o;	;
+@
+;i3;"mesa_rc ;@;o;;o;	;
+@
+;i;;"mesa_mrp_add;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iH;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iy;"const mesa_mrp_idx_t  ;@;o;;o;	;
+@
+;iè;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i≠;""const mesa_mrp_conf_t *const ;@;o;;o;	;
+@
+;i ;"	conf;@;[ ;0;o;;o;	;
+@
+;i—;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i‹;"mesa_rc ;@;o;;o;	;
+@
+;i‰;"mesa_mrp_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÒ;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i!;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i6;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iT;"!mesa_mrp_conf_t      *const ;@;o;;o;	;
+@
+;ip;"	conf;@;[ ;0;o;;o;	;
+@
+;iw;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i˝;"mesa_rc ;@;o;;o;	;
+@
+;i	;"mesa_mrp_del;@;[ ;0;![{;{	;o;;o;	;
+@
+;i	;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i'	;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iB	;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;iW	;"mrp_idx;@;[ ;0;o;;o;	;
+@
+;ia	;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iA
+;"mesa_rc ;@;o;;o;	;
+@
+;iI
+;"mesa_mrp_ring_role_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i`
+;" const mesa_inst_t          ;@;o;;o;	;
+@
+;i{
+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i†
+;" const mesa_mrp_idx_t       ;@;o;;o;	;
+@
+;iª
+;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i„
+;" const mesa_mrp_ring_role_t ;@;o;;o;	;
+@
+;i˛
+;"	role;@;[ ;0;o;;o;	;
+@
+;i;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_mrp_ring_role_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i/;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iD;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ii;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i~;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i¶;"!mesa_mrp_ring_role_t *const ;@;o;;o;	;
+@
+;i¬;"	role;@;[ ;0;o;;o;	;
+@
+;i…;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iS;"mesa_rc ;@;o;;o;	;
+@
+;i[;"mesa_mrp_primary_port_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;iu;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iä;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≤;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i«;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i;"port_no;@;[ ;0;o;;o;	;
+@
+;i;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i;"mesa_rc ;@;o;;o;	;
+@
+;i$;"mesa_mrp_primary_port_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i>;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iS;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i{;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;iê;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iª;"!mesa_port_no_t       *const ;@;o;;o;	;
+@
+;i◊;"port_no;@;[ ;0;o;;o;	;
+@
+;i‡;"CAP(MRP);@{
+;o;;o;	;
+@
+;i˛;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@;[{;{;o;;o;	;
+@
+;i;"MESA_MRP_RING_STATE_CLOSED;@;0{;{;o;;o;	;
+@
+;i1;"MESA_MRP_RING_STATE_OPEN
+;@;0;o;;o;	;
+@
+;iL;"mesa_mrp_ring_state_t  ;@;[ ;o;;o;	;
+@
+;ic;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iS;"mesa_rc ;@;o;;o;	;
+@
+;i[;"mesa_mrp_ring_state_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;is;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iè;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iµ;"!const mesa_mrp_idx_t        ;@;o;;o;	;
+@
+;i—;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i˙;"!const mesa_mrp_ring_state_t ;@;o;;o;	;
+@
+;i;"
+state;@;[ ;0;o;;o;	;
+@
+;i;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i);"mesa_rc ;@;o;;o;	;
+@
+;i1;"mesa_mrp_ring_state_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iI;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i_;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÖ;"const mesa_mrp_idx_t  ;@;o;;o;	;
+@
+;iõ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iƒ;""mesa_mrp_ring_state_t *const ;@;o;;o;	;
+@
+;i·;"
+state;@;[ ;0;o;;o;	;
+@
+;iÈ;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iÍ;"mesa_rc ;@;o;;o;	;
+@
+;iÚ;"mesa_mrp_in_ring_state_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;i);"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iR;"!const mesa_mrp_idx_t        ;@;o;;o;	;
+@
+;in;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iö;"!const mesa_mrp_ring_state_t ;@;o;;o;	;
+@
+;i∂;"
+state;@;[ ;0;o;;o;	;
+@
+;iæ;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i…;"mesa_rc ;@;o;;o;	;
+@
+;i—;"mesa_mrp_in_ring_state_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÏ;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i+;"const mesa_mrp_idx_t  ;@;o;;o;	;
+@
+;iA;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;im;""mesa_mrp_ring_state_t *const ;@;o;;o;	;
+@
+;iä;"
+state;@;[ ;0;o;;o;	;
+@
+;ií;"CAP(MRP);@{
+;o;;o;	;
+@
+;i√;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÿ;"mesa_mac_t  ;@;o;;o;	;
+@
+;i‰;"mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t    ;@;o;;o;	;
+@
+;i;"	prio;@;[ ;0;o;;o;	;
+@
+;i';"mesa_mrp_best_mrm_t ;@;[ ;o;;o;	;
+@
+;i;;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iÀ;"mesa_rc ;@;o;;o;	;
+@
+;i”;"mesa_mrp_best_mrm_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÈ;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i';"const mesa_mrp_idx_t      ;@;o;;o;	;
+@
+;iA;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;ih;"&const mesa_mrp_best_mrm_t *const ;@;o;;o;	;
+@
+;iâ;"	best;@;[ ;0;o;;o;	;
+@
+;iê;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iõ;"mesa_rc ;@;o;;o;	;
+@
+;i£;"mesa_mrp_best_mrm_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iπ;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iŒ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i.;"!mesa_mrp_best_mrm_t  *const ;@;o;;o;	;
+@
+;iJ;"	best;@;[ ;0;o;;o;	;
+@
+;iQ;"CAP(MRP);@{
+;o;;o;	;
+@
+;io;"typedef;@;{;o;;o;	;
+@
+;iw;"	enum;@;[{;{;o;;o;	;
+@
+;iÇ;"!MESA_MRP_PORT_STATE_DISABLED;@;0{;{;o;;o;	;
+@
+;i§;" MESA_MRP_PORT_STATE_BLOCKED;@;0{;{;o;;o;	;
+@
+;i≈;"$MESA_MRP_PORT_STATE_FORWARDING
+;@;0;o;;o;	;
+@
+;iÊ;"mesa_mrp_port_state_t  ;@;[ ;o;;o;	;
+@
+;i˝;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iœ;"mesa_rc ;@;o;;o;	;
+@
+;i◊;"mesa_mrp_port_state_set;@;[ ;0;![	{;{	;o;;o;	;
+@
+;iÔ;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1;"!const mesa_mrp_idx_t        ;@;o;;o;	;
+@
+;iM;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iv;"!const mesa_port_no_t        ;@;o;;o;	;
+@
+;ií;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i∏;"!const mesa_mrp_port_state_t ;@;o;;o;	;
+@
+;i‘;"
+state;@;[ ;0;o;;o;	;
+@
+;i‹;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iÁ;"mesa_rc ;@;o;;o;	;
+@
+;iÔ;"mesa_mrp_port_state_get;@;[ ;0;![	{;{	;o;;o;	;
+@
+;i;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iC;"const mesa_mrp_idx_t  ;@;o;;o;	;
+@
+;iY;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÇ;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iò;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iæ;""mesa_mrp_port_state_t *const ;@;o;;o;	;
+@
+;i€;"
+state;@;[ ;0;o;;o;	;
+@
+;i„;"CAP(MRP);@{
+;o;;o;	;
+@
+;i;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i!;"uint32_t  ;@;o;;o;	;
+@
+;i+;"tst_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;i};"uint32_t  ;@;o;;o;	;
+@
+;iá;"tst_mon_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÂ;"uint32_t  ;@;o;;o;	;
+@
+;iÔ;"itst_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;iB;"uint32_t  ;@;o;;o;	;
+@
+;iL;"itst_mon_count;@;[ ;0;o;;o;	;
+@
+;i™;"mesa_mrp_tst_loc_conf_t ;@;[ ;o;;o;	;
+@
+;i¬;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iä;"mesa_rc ;@;o;;o;	;
+@
+;ií;"mesa_mrp_tst_loc_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¨;"#const mesa_inst_t             ;@;o;;o;	;
+@
+;i ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ;"#const mesa_mrp_idx_t          ;@;o;;o;	;
+@
+;i;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i;;"*const mesa_mrp_tst_loc_conf_t *const ;@;o;;o;	;
+@
+;i`;"	conf;@;[ ;0;o;;o;	;
+@
+;ig;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;ir;"mesa_rc ;@;o;;o;	;
+@
+;iz;"mesa_mrp_tst_loc_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iî;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i¨;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‘;"const mesa_mrp_idx_t    ;@;o;;o;	;
+@
+;iÏ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i ;"$mesa_mrp_tst_loc_conf_t *const ;@;o;;o;	;
+@
+;i6 ;"	conf;@;[ ;0;o;;o;	;
+@
+;i= ;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iŒ!;"mesa_rc ;@;o;;o;	;
+@
+;i÷!;"mesa_mrp_tst_hitme_once;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÓ!;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i";"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i)";"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i>";"mrp_idx;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i™#;"mesa_rc ;@;o;;o;	;
+@
+;i≤#;"mesa_mrp_itst_hitme_once;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÀ#;"const mesa_inst_t   ;@;o;;o;	;
+@
+;iﬂ#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i$;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i$;"mrp_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;i]$;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ir$;"mesa_bool_t ;@;o;;o;	;
+@
+;i~$;"tst_to_cpu;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’$;"mesa_bool_t ;@;o;;o;	;
+@
+;i·$;"itst_to_cpu;@;[ ;0;o;;o;	;
+@
+;i1%;"mesa_mrp_tst_copy_conf_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i∑';"mesa_rc ;@;o;;o;	;
+@
+;iø';"mesa_mrp_tst_copy_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i⁄';"$const mesa_inst_t              ;@;o;;o;	;
+@
+;i˘';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i"(;"$const mesa_mrp_idx_t           ;@;o;;o;	;
+@
+;iA(;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;im(;"+const mesa_mrp_tst_copy_conf_t *const ;@;o;;o;	;
+@
+;iì(;"	copy;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iõ(;"mesa_rc ;@;o;;o;	;
+@
+;i£(;"mesa_mrp_tst_copy_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iæ(;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i◊(;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i );"const mesa_mrp_idx_t     ;@;o;;o;	;
+@
+;i);"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iE);"%mesa_mrp_tst_copy_conf_t *const ;@;o;;o;	;
+@
+;ie);"	copy;@;[ ;0;0{
+;o;;o;	;
+@
+;i≤);"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i«);"mesa_bool_t  ;@;o;;o;	;
+@
+;i‘);"tst_loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝);"mesa_bool_t  ;@;o;;o;	;
+@
+;i
+*;"itst_loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5*;"mesa_bool_t  ;@;o;;o;	;
+@
+;iB*;"mrp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;ik*;"mesa_bool_t  ;@;o;;o;	;
+@
+;ix*;"mrp_proc_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØ*;"mesa_bool_t  ;@;o;;o;	;
+@
+;iº*;"dmac_err_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı*;"mesa_bool_t  ;@;o;;o;	;
+@
+;i+;"vers_err_seen;@;[ ;0;o;;o;	;
+@
+;i<+;"mesa_mrp_port_status_t ;@;[ ;o;;o;	;
+@
+;iS+;"CAP(MRP);@{
+;o;;o;	;
+@
+;i^+;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;is+;"mesa_mrp_port_status_t ;@;o;;o;	;
+@
+;iä+;"p_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;iò+;"mesa_mrp_port_status_t ;@;o;;o;	;
+@
+;iØ+;"s_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;iΩ+;"mesa_mrp_port_status_t ;@;o;;o;	;
+@
+;i‘+;"i_status;@;[ ;0;o;;o;	;
+@
+;i‡+;"mesa_mrp_status_t ;@;[ ;o;;o;	;
+@
+;iÚ+;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;i†,;"mesa_rc ;@;o;;o;	;
+@
+;i®,;"mesa_mrp_status_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iº,;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i—,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÛ,;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i-;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i--;"!mesa_mrp_status_t    *const ;@;o;;o;	;
+@
+;iI-;"status;@;[ ;0;o;;o;	;
+@
+;iR-;"CAP(MRP);@{
+;o;;o;	;
+@
+;in-;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÉ-;"uint64_t ;@;o;;o;	;
+@
+;iå-;"tst_rx_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍ-;"uint64_t ;@;o;;o;	;
+@
+;iÛ-;"itst_rx_count;@;[ ;0;o;;o;	;
+@
+;iS.;"mesa_mrp_port_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;in.;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÉ.;"mesa_mrp_port_counters_t ;@;o;;o;	;
+@
+;iú.;"p_counters;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¨.;"mesa_mrp_port_counters_t ;@;o;;o;	;
+@
+;i≈.;"s_counters;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’.;"mesa_mrp_port_counters_t ;@;o;;o;	;
+@
+;iÓ.;"i_counters;@;[ ;0;o;;o;	;
+@
+;i¸.;"mesa_mrp_counters_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iπ/;"mesa_rc ;@;o;;o;	;
+@
+;i¡/;"mesa_mrp_counters_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i◊/;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iÏ/;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i0;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i%0;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iL0;"!mesa_mrp_counters_t  *const ;@;o;;o;	;
+@
+;ih0;"counters;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i1;"mesa_rc ;@;o;;o;	;
+@
+;i
+1;"mesa_mrp_counters_clear;@;[ ;0;![{;{	;o;;o;	;
+@
+;i"1;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i71;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i]1;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;ir1;"mrp_idx;@;[ ;0;o;;o;	;
+@
+;i|1;"CAP(MRP);@{;o;;o;	;
+@
+;iç2;"0#define MESA_MRP_EVENT_MASK_NONE      0x00
+;@{;o;;o;	;
+@
+;iÓ2;"0#define MESA_MRP_EVENT_MASK_TST_LOC   0x01
+;@{;o;;o;	;
+@
+;iP3;"0#define MESA_MRP_EVENT_MASK_ITST_LOC  0x02
+;@{;o;;o;	;
+@
+;i{3;"1#define MESA_MRP_EVENT_MASK_ALL       0x0F
+
+;@{; {;{	;o;;o;	;
+@
+;i¿4;"mesa_rc ;@;o;;o;	;
+@
+;i»4;"mesa_mrp_event_mask_set;@;[ ;0;![	{;{	;o;;o;	;
+@
+;i‡4;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iı4;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i5;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i05;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iY5;"const uint32_t       ;@;o;;o;	;
+@
+;in5;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;iî5;"const mesa_bool_t    ;@;o;;o;	;
+@
+;i©5;"enable;@;[ ;0;o;;o;	;
+@
+;i≤5;"CAP(MRP);@{; {;{	;o;;o;	;
+@
+;iΩ5;"mesa_rc ;@;o;;o;	;
+@
+;i≈5;"mesa_mrp_event_mask_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i›5;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iÚ5;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i6;"const mesa_mrp_idx_t ;@;o;;o;	;
+@
+;i-6;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iV6;"!uint32_t             *const ;@;o;;o;	;
+@
+;ir6;"	mask;@;[ ;0;o;;o;	;
+@
+;iy6;"CAP(MRP);@{
+;o;;o;	;
+@
+;ií6;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iß6;"uint32_t ;@;o;;o;	;
+@
+;i∞6;"p_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;iº6;"uint32_t ;@;o;;o;	;
+@
+;i≈6;"s_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;i—6;"uint32_t ;@;o;;o;	;
+@
+;i⁄6;"i_mask;@;[ ;0;o;;o;	;
+@
+;i‰6;"mesa_mrp_event_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iy8;"mesa_rc ;@;o;;o;	;
+@
+;iÅ8;"mesa_mrp_event_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iî8;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i™8;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÀ8;"const mesa_mrp_idx_t  ;@;o;;o;	;
+@
+;i·8;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i9;""mesa_mrp_event_t      *const ;@;o;;o;	;
+@
+;i"9;"events;@;[ ;0;o;;o;	;
+@
+;i+9;"CAP(MRP);@{;o;;o;	;
+@
+;i59;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i]9;"/#endif // _MSCC_ETHERNET_SWITCH_API_MRP_
+
+;@

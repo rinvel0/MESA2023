@@ -1,0 +1,2594 @@
+{:	root[b{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"=±// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+#define _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// ***************************************************************************
+//
+//  DPLL interface
+//
+// ***************************************************************************
+
+/**
+ * \brief clock global enable state. Will switch off system clock for omega IP if false
+ **/
+typedef mesa_bool_t mesa_clock_global_enable_t;
+
+/**
+ * \brief parameter describing the DPLL instance.
+ *  In ES6514 Instance A = 0, Instance B = 1.
+ **/
+typedef uint8_t mesa_clock_dpll_inst_t;
+
+/**
+ * \brief parameter describing the DPLL selection mode.
+ **/
+typedef enum
+{
+    MESA_CLOCK_SELECTION_MODE_DISABLED,                 /**< Controller / DPLL is disabled */
+    MESA_CLOCK_SELECTION_MODE_MANUEL,                   /**< Manually select an input */
+    MESA_CLOCK_SELECTION_MODE_AUTOMATIC_NONREVERTIVE,   /**< Automatic selection mode non revertive */
+    MESA_CLOCK_SELECTION_MODE_AUTOMATIC_REVERTIVE,      /**< Automatic selection mode revertive */
+    MESA_CLOCK_SELECTION_MODE_FORCED_HOLDOVER,          /**< Manually selection mode forced to holdover */
+    MESA_CLOCK_SELECTION_MODE_FORCED_FREE_RUN,          /**< Manually selection mode forced to free-run */
+    MESA_CLOCK_SELECTION_MODE_FORCED_DCO,               /**< Selection mode Digitally Controlled Oscillator (DCO) */
+} mesa_clock_selection_mode_t CAP(CLOCK);
+
+/**
+ * \brief parameter setting up the DPLL selection mode.
+ **/
+typedef struct {
+    mesa_clock_selection_mode_t mode;           /**< selection mode */
+    uint8_t                     clock_input;    /**< selected input id manual mode */
+} mesa_clock_selection_conf_t CAP(CLOCK);
+
+
+/**
+ * \brief parameter describing the DPLL selectior state.
+ **/
+typedef enum
+{
+    MESA_CLOCK_SELECTOR_STATE_LOCKED,     /**< the dpll is locked to an input */
+    MESA_CLOCK_SELECTOR_STATE_HOLDOVER,   /**< the dpll is in holdover state */
+    MESA_CLOCK_SELECTOR_STATE_FREERUN,    /**< the dpll is in free-run state */
+    MESA_CLOCK_SELECTOR_STATE_DCO,        /**< the dpll is controlled by SW (DCO mode) */
+    MESA_CLOCK_SELECTOR_STATE_REF_FAILED, /**< the selected reference failed */
+    MESA_CLOCK_SELECTOR_STATE_ACQUIRING,  /**< acquiring lock to the selected reference */
+} mesa_clock_selector_state_t CAP(CLOCK);
+
+/**
+ * \brief parameter describing the DPLL operation mode.
+ **/
+typedef enum
+{
+    MESA_CLOCK_OPERATION_MODE_DISABLED, /**< the dpll is DISABLED */
+    MESA_CLOCK_OPERATION_MODE_ENABLED,  /**< the dpll is ENABLED */
+} mesa_clock_operation_mode_t CAP(CLOCK);
+
+
+/**
+ * \brief parameter for setting up the phase slope limiter.
+ */
+typedef struct mesa_clock_psl_conf_t {
+    uint32_t    limit_ppb;           /**< maximum phase slope in ppb [1..524000], 0 Disables the feature */
+    mesa_bool_t phase_build_out_ena; /**< If true, limited phase information is dismissed */
+    mesa_bool_t ho_based;            /**< If true, slope limit is with respect to frequency offset stored in holdover stack*/
+} mesa_clock_psl_conf_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting the dpll configuration.
+ */
+typedef struct mesa_clock_dpll_conf_t {
+    mesa_clock_operation_mode_t mode;     /**< clock operation mode. Enable / Disable */
+    uint16_t                    holdoff;  /**< holdoff time in ms (0 => holdoff disabled); the actual holdoff is in steps of 1 ms; i.e. values are trunkated to 1 ms multipla HW: 16 bit*/
+    uint32_t                    holdover; /**< holdover time in ms [0..84600]       HW:17 bit*/
+    uint16_t                    wtr;      /**< wait-to-restore time in sec [0..720] HW:10 bit*/
+} mesa_clock_dpll_conf_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting the holdover stack configuration.
+ */
+typedef struct mesa_clock_ho_stack_conf_t {
+    uint32_t ho_post_filtering_bw; /**< holdover stack post filtering bandwidth im mHz [23 ... 1.46e9] es6514: Bugzilla #15547 [741 ... 1.46e9]*/
+    uint8_t  ho_qual_time_conf;    /**< holdover qulification time configuration. time in s = 2^ho_qual_time_conf conf. range: [0..11] => time: [1..2048]s */
+} mesa_clock_ho_stack_conf_t CAP(CLOCK);
+
+#define MESA_CLOCK_HO_STACK_SIZE 12 /**< Size of the holdover stack */
+/**
+ * \brief parameter for getting the holdover stack content.
+ */
+typedef struct mesa_clock_ho_stack_content_t {
+    uint64_t    stack_value[MESA_CLOCK_HO_STACK_SIZE]; /**< HO-stack read data got all 12 stack levels */
+    uint8_t     ho_sel;           /**< Select ho-value to take in hold-over state. */
+    uint8_t     ho_min_fill_lvl;  /**< Minimum fill level before ho-stack considered full */
+    mesa_bool_t ho_filled;        /**< TRUE if stack is full */
+} mesa_clock_ho_stack_content_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting the priority for dpll source selection
+ */
+typedef struct mesa_clock_priority_selector_t {
+    uint8_t     priority; /**< Priority - 0 is highest */
+    mesa_bool_t enable;   /**< Enable for the respective priority */
+} mesa_clock_priority_selector_t CAP(CLOCK);
+
+/**
+ * \brief parameter for defining a ratio when selecting a frequency that is a rational number
+ */
+typedef struct mesa_clock_ratio_t {
+    uint32_t num; /**< numerator of a rational value */
+    uint32_t den; /**< denominator of a rational value */
+} mesa_clock_ratio_t CAP(CLOCK);
+
+/**
+ * \brief parameter for selecting the type of the clock input
+ */
+typedef enum
+{
+    MESA_CLOCK_INPUT_TYPE_DPLL,     /**< a dpll output is selected as output */
+    MESA_CLOCK_INPUT_TYPE_IN,       /**< a input signal is directly selected as output */
+    MESA_CLOCK_INPUT_TYPE_PURE_DCO, /**< output is running purely on LC-PLL plus optional DCO */
+} mesa_clock_input_type_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting the clock output selector.
+ */
+typedef struct mesa_clock_input_selector_t {
+    mesa_clock_input_type_t input_type; /**< Defines if it is clock input or a DPLL outpus that drives the clock output */
+    uint8_t                 input_inst; /**< defines the clock input or DPLL instance */
+} mesa_clock_input_selector_t CAP(CLOCK);
+
+/**
+ * \brief parameter for returning the dpll state.
+ */
+typedef struct mesa_clock_dpll_state_t {
+    mesa_bool_t pll_freq_lock;    /**< PLL is stabilized to the selected frequency */
+    mesa_bool_t pll_phase_lock;   /**< PLL is phase locked to incoming clock */
+    mesa_bool_t pll_losx;         /**< PLL the currently selected reference input fails */
+    mesa_bool_t pll_lol;          /**< PLL loss of lock */
+    mesa_bool_t pll_dig_hold_vld; /**< PLL Hold-over stack is filled with enough samples*/
+} mesa_clock_dpll_state_t CAP(CLOCK);
+
+/**
+ * \brief parameter for returning the clock input state.
+ */
+typedef struct mesa_clock_input_state_t {
+    mesa_bool_t los; /**< External Loss Of Signal */
+    mesa_bool_t pfm; /**< Precise frequency out of range */
+    mesa_bool_t cfm; /**< Coarse frequency out of range */
+    mesa_bool_t scm; /**< Single Cycle missed */
+    mesa_bool_t lol; /**< Loss of Lock */
+} mesa_clock_input_state_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting the alarm enables which control the input selection
+ */
+typedef struct mesa_clock_input_alarm_ena_t {
+  mesa_bool_t los; /**< Set to TRUE when Loss Of Signal alarm should influence the source selection */
+  mesa_bool_t pfm; /**< Set to TRUE when Precise frequency monitor alarm should influence the source selection */
+  mesa_bool_t cfm; /**< Set to TRUE when Coarse frequency monitor alarm should influence the source selection */
+  mesa_bool_t scm; /**< Set to TRUE when Single Cycle monitor alarm should influence the source selection */
+  mesa_bool_t gst; /**< Set to TRUE when Guard Soak timer alarm should influence the source selection */
+  mesa_bool_t lol; /**< Set to TRUE when Loss of Lock alarm should influence the source selection */
+} mesa_clock_input_alarm_ena_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting input selection parameters
+ */
+typedef struct mesa_clock_input_conf_t {
+  mesa_bool_t                  los_active_high; /**< Set to TRUE when Loss Of Signal input is active high.*/
+  mesa_clock_input_alarm_ena_t alarm_ena;       /**< Collection of alarm enables */
+} mesa_clock_input_conf_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting up the Coarse Frequency Monitor (CFM)
+ */
+typedef struct mesa_clock_cfm_conf_t {
+  uint32_t cfm_set_ppb; /**< Maximum frequency offset in ppb detected by the CFM before CFM alarm is issued. [0..200000] */
+  uint32_t cfm_clr_ppb; /**< Minimum frequency offset in ppb detected by the CFM before CFM alarm is cleared. [0..200000] */
+} mesa_clock_cfm_conf_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting up the Precise Frequency Monitor (PFM)
+ */
+typedef struct mesa_clock_pfm_conf_t {
+  uint32_t pfm_set_ppb; /**< Maximum frequency offset in ppb detected by the PFM before PFM alarm is issued. [0..200000] */
+  uint32_t pfm_clr_ppb; /**< Minimum frequency offset in ppb detected by the PFM before PFM alarm is cleared. [0..200000] */
+} mesa_clock_pfm_conf_t CAP(CLOCK);
+
+/**
+ * \brief parameter for setting up the GST
+ */
+typedef struct mesa_clock_gst_conf_t {
+  uint32_t disqualification_time_us; /**< Disqualification time in micro seconds [1 us .. 1500s] */
+  uint32_t qualification_time_us;    /**< Qualification time in micro seconds    [1 us .. 1500s] */
+                                /**< 1/255 <= (diqualification_time_us/qualification_time_us) <= 255 */
+  mesa_bool_t los; /**< Set to TRUE when Loss Of Signal alarm should be source for GST */
+  mesa_bool_t pfm; /**< Set to TRUE when Precise frequency monitor alarm should be source for GST */
+  mesa_bool_t cfm; /**< Set to TRUE when Coarse frequency monitor alarm should be source for GST */
+  mesa_bool_t scm; /**< Set to TRUE when Single Cycle monitor alarm should be source for GST */
+  mesa_bool_t lol; /**< Set to TRUE when Loss of Lock alarm should be source for GST */
+} mesa_clock_gst_conf_t CAP(CLOCK);
+
+// ***************************************************************************
+//
+//  Direct register access functions to be used for testing
+//
+// ***************************************************************************
+
+/**
+ * \brief Directly read from a HW register
+ * \param inst [IN]         Handle to an API instance.
+ * \param addr [IN]         Address
+ * \param value [OUT]       Read value
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_rd(const mesa_inst_t inst,
+                      const uint32_t    addr,
+                      uint32_t          *const value)
+    CAP(CLOCK);
+
+/**
+ * \brief Directly write to a HW register
+ * \param inst [IN]         Handle to an API instance.
+ * \param addr [IN]         Address
+ * \param value [IN]        Write value
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_wr(const mesa_inst_t inst,
+                      const uint32_t    addr,
+                      const uint32_t    value)
+    CAP(CLOCK);
+
+/**
+ * \brief Directly write to field(s) of a HW register (Read-Modify-Write)
+ * \param inst [IN]         Handle to an API instance.
+ * \param addr [IN]         Address
+ * \param value [IN]        Write value
+ * \param mask [IN]         Mask value, defines which bits can be changed
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_wrm(const mesa_inst_t inst,
+                       const uint32_t    addr,
+                       const uint32_t    value,
+                       const uint32_t    mask)
+    CAP(CLOCK);
+
+// ***************************************************************************
+//
+//  Configuration API
+//
+// ***************************************************************************
+
+
+/**
+ * \brief Set global enable state
+ * \param inst [IN]        Handle to an API instance.
+ * \param ena [IN]         Enable/Disable flag
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_global_enable_set(const mesa_inst_t                inst,
+                                     const mesa_clock_global_enable_t ena)
+    CAP(CLOCK);
+
+/**
+ * \brief Get global enable state
+ * \param inst [IN]        Handle to an API instance.
+ * \param ena [OUT]        Enable/Disable flag
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_global_enable_get(const mesa_inst_t          inst,
+                                     mesa_clock_global_enable_t *ena)
+    CAP(CLOCK);
+
+/**
+ * \brief Global SW Reset for the clock. Resets logic but not the configuration
+ * \param inst [IN]        Handle to an API instance.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_global_sw_reset(const mesa_inst_t inst)
+    CAP(CLOCK);
+
+/**
+ * \brief Shut down the clock HW. Called before a sw reset. Sets the Internal core clock back to default
+ * \param inst [IN]        Handle to an API instance.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_shutdown(const mesa_inst_t inst)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock selection mode.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [IN]         Mode of clock selection and selected Clock input in manual mode [0..x].
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_selection_mode_set(const mesa_inst_t                 inst,
+                                      const mesa_clock_dpll_inst_t      dpll,
+                                      const mesa_clock_selection_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock selection mode.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [OUT]        Mode of clock selection and selected Clock input in manual mode [0..x].
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_selection_mode_get(const mesa_inst_t            inst,
+                                      const mesa_clock_dpll_inst_t dpll,
+                                      mesa_clock_selection_conf_t  *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock operation mode.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [IN]         Mode of clock operation.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_operation_conf_set(const mesa_inst_t            inst,
+                                      const mesa_clock_dpll_inst_t dpll,
+                                      const mesa_clock_dpll_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock operation mode.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [OUT]        Mode of clock operation.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_operation_conf_get(const mesa_inst_t            inst,
+                                      const mesa_clock_dpll_inst_t dpll,
+                                      mesa_clock_dpll_conf_t       *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Holdover stack configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [IN]         configuration values
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_ho_stack_conf_set(const mesa_inst_t                inst,
+                                     const mesa_clock_dpll_inst_t     dpll,
+                                     const mesa_clock_ho_stack_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Holdover stack configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param conf [IN]         configuration values
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_ho_stack_conf_get(const mesa_inst_t            inst,
+                                     const mesa_clock_dpll_inst_t dpll,
+                                     mesa_clock_ho_stack_conf_t   *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Holdover stack content (for debug purpose)
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param cont [IN]         Ho stack content
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_ho_stack_content_get(const mesa_inst_t             inst,
+                                        const mesa_clock_dpll_inst_t  dpll,
+                                        mesa_clock_ho_stack_content_t *const cont)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock dpll frequency adjustment in DCO mode (directly influence the controller).
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param offset [IN]       Clock ratio frequency offset in units of scaled ppb (parts per billion) i.e. ppb*2**-16.
+ *                          ratio > 0 => clock runs faster.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_dco_frequency_offset_set(const mesa_inst_t            inst,
+                                            const mesa_clock_dpll_inst_t dpll,
+                                            const int64_t                offset)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock dpll frequency adjustment in DCO mode (directly influence the controller).
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param offset [OUT]      Clock ratio frequency offset in units of scaled ppb (parts per billion) i.e. ppb*2**-16.
+ *                          ratio > 0 => clock runs faster.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_dco_frequency_offset_get(const mesa_inst_t            inst,
+                                            const mesa_clock_dpll_inst_t dpll,
+                                            int64_t                      *const offset)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Output Filter Bandwidth.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param bw_100uhz [IN]    Filtering bandwidth in untis of 100uHz the lowest limit is 300 uHz
+ *                          A value of 0 disables the filter (Power down).
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_filter_bw_set(const mesa_inst_t inst,
+                                        const uint8_t     clock_output,
+                                        const uint32_t    bw_100uhz)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Output Filter Bandwidth.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param bw_100uhz [OUT]   Filtering bandwidth in untis of 100uHz
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_filter_bw_get(const mesa_inst_t inst,
+                                        const uint8_t     clock_output,
+                                        uint32_t          *bw_100uhz)
+    CAP(CLOCK);
+
+/**
+ * \brief Trigger Output Filter to immediately lock to current frequency offset without low-pass filtering
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_filter_lock_fast_set(const mesa_inst_t inst,
+                                               const uint8_t     clock_output)
+    CAP(CLOCK);
+
+/**
+ * \brief Check if fast lock has completed.
+ * \param inst [IN]             Handle to an API instance.
+ * \param clock_output [IN]     Clock output port number
+ * \param lock_completed [OUT]  fast lock has completed
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_filter_lock_fast_get(const mesa_inst_t inst,
+                                               const uint8_t     clock_output,
+                                               mesa_bool_t       *lock_completed)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Output Filter Phase Slope Limiter (PSL) configuration
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param conf [IN]         configuration values
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_psl_conf_set(const mesa_inst_t           inst,
+                                       const uint8_t               clock_output,
+                                       const mesa_clock_psl_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Output Filter Phase Slope Limiter (PSL) configuration
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param conf [OUT]        Filtering bandwidth in untis of 100uHz
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_psl_conf_get(const mesa_inst_t     inst,
+                                       const uint8_t         clock_output,
+                                       mesa_clock_psl_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock dpll frequency adjustment (influence the respective output filter).
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param adj [IN]          Clock ratio frequency offset in units of scaled ppb (parts per billion) i.e. ppb*2**-16.
+ *                          ratio > 0 => clock runs faster.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_adj_frequency_set(const mesa_inst_t inst,
+                                     const uint8_t     clock_output,
+                                     const int64_t     adj)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock dpll frequency adjustment (influence the respective output filter).
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param adj [OUT]         Clock ratio frequency offset in units of scaled ppb (parts pr billion) i.e. ppb*2**-16.
+ *                          ratio > 0 => clock runs faster.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_adj_frequency_get(const mesa_inst_t inst,
+                                     const uint8_t     clock_output,
+                                     int64_t           *const adj)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock dpll phase adjustment.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port mask, i.e. setting bit x enables phase adjustment on output x
+ * \param adj [IN]          Clock phase offset in units of scaled ns i.e. ns*2**-16.
+ *                          ratio > 0 => clock phase is advanced.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_adj_phase_set(const mesa_inst_t inst,
+                                 const uint8_t     clock_output,
+                                 const int32_t     adj)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock dpll phase adjustment.
+ * \param inst [IN]         Handle to an API instance.
+ * \param adj_ongoing [OUT] TRUE if the phase adjust is ongoing, FALSE otherwise.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_adj_phase_get(const mesa_inst_t inst,
+                                 mesa_bool_t       *const adj_ongoing)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input priority.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         configuration values, Priority - 0 is highest priority
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_priority_set(const mesa_inst_t                    inst,
+                                const mesa_clock_dpll_inst_t         dpll,
+                                const uint8_t                        clock_input,
+                                const mesa_clock_priority_selector_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input priority.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [OUT]        configuration values, Priority - 0 is highest priority
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_priority_get(const mesa_inst_t              inst,
+                                const mesa_clock_dpll_inst_t   dpll,
+                                const uint8_t                  clock_input,
+                                mesa_clock_priority_selector_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input frequency.
+ * \param inst [IN]                   Handle to an API instance.
+ * \param clock_input [IN]            Clock input port number
+ * \param freq_khz [IN]               frequency in KHz, the frequency is rounded to the closest multiple of 8 KHz.
+ *                                    freq_khz < 8 => clock input qualifier is disabled
+ * \param use_internal_clock_src [IN] If TRUE, select an internally provided clock as source
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_frequency_set(const mesa_inst_t inst,
+                                       const uint8_t     clock_input,
+                                       const uint32_t    freq_khz,
+                                       const mesa_bool_t use_internal_clock_src)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input frequency.
+ * \param inst [IN]                    Handle to an API instance.
+ * \param clock_input [IN]             Clock input port number
+ * \param freq_khz [OUT]               frequency in KHz, freq_khz < 8 => clock input qualifier is disabled
+ * \param use_internal_clock_src [OUT] An internally provided clock is used as source, if TRUE
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_frequency_get(const mesa_inst_t inst,
+                                       const uint8_t     clock_input,
+                                       uint32_t          *const freq_khz,
+                                       mesa_bool_t       *const use_internal_clock_src)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input frequency with ratio.
+ * \param inst [IN]                   Handle to an API instance.
+ * \param clock_input [IN]            Clock input port number
+ * \param freq_khz [IN]               frequency in KHz, the frequency is rounded to the closest multiple of 8 KHz.
+ *                                    freq_khz < 8 => clock input qualifier is disabled
+ * \param ratio [IN]                  A ratio the freq_khz will be mutiplied with.e.g. 66/64. I order to allow rational values for the frequency
+ * \param use_internal_clock_src [IN] If TRUE, select an internally provided clock as source
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_frequency_ratio_set(const mesa_inst_t        inst,
+                                             const uint8_t            clock_input,
+                                             const uint32_t           freq_khz,
+                                             const mesa_clock_ratio_t *const ratio,
+                                             const mesa_bool_t        use_internal_clock_src)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input frequency with ratio.
+ * \param inst [IN]                    Handle to an API instance.
+ * \param clock_input [IN]             Clock input port number
+ * \param freq_khz [OUT]               frequency in KHz, freq_khz < 8 => clock input qualifier is disabled
+ * \param ratio [OUT]                  A ratio the freq_khz was mutiplied with.e.g. 66/64. I order to allow rational values for the frequency
+ * \param use_internal_clock_src [OUT] An internally provided clock is used as source, if TRUE
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_frequency_ratio_get(const mesa_inst_t  inst,
+                                             const uint8_t      clock_input,
+                                             uint32_t           *const freq_khz,
+                                             mesa_clock_ratio_t *const ratio,
+                                             mesa_bool_t        *const use_internal_clock_src)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock output frequency.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param freq_khz [IN]     frequency in KHz.
+ *                          freq_khz = 0 disables the clock
+ * \param par_freq_khz [IN] parallel frequency in KHz. With parallel frequency the clock output of the
+ *                          DF2F for the parallel data towards the core is ment.
+ *                          Maximum parallel frequency is 400 MHz, minimum parallel frequency is 31.25 MHz.
+ *                          Higher frequencies provide better jitter performance.
+ *                          par_freq_khz = 0 disables the clock
+ *
+ *                          Note: Only one of the clocks can be active. Either freq_khz or par_freq_khz must be 0.
+ *                          For selected frequencies there is a possibility that both clocks can be used.
+ *                          The possible combinations can be looked up in DS1009-DPLL-Freq-Calc.xlsm and implemented on request.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_frequency_set(const mesa_inst_t inst,
+                                        const uint8_t     clock_output,
+                                        const uint32_t    freq_khz,
+                                        const uint32_t    par_freq_khz)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock output frequency.
+ * \param inst [IN]          Handle to an API instance.
+ * \param clock_output [IN]  Clock output port number
+ * \param freq_khz [OUT]     frequency in KHz, freq_khz = 0, clock is disbaled
+ * \param par_freq_khz [OUT] parallel frequency in KHz, par_freq_khz = 0, clock is disbaled
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_frequency_get(const mesa_inst_t inst,
+                                        const uint8_t     clock_output,
+                                        uint32_t          *const freq_khz,
+                                        uint32_t          *const par_freq_khz)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock output frequency.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param freq_khz [IN]     frequency in KHz.
+ *                          freq_khz = 0 disables the clock
+ * \param par_freq_khz [IN] parallel frequency in KHz. With parallel frequency the clock output of the
+ *                          DF2F for the parallel data towards the core is ment.
+ *                          Maximum parallel frequency is 400 MHz, minimum parallel frequency is 31.25 MHz.
+ *                          Higher frequencies provide better jitter performance.
+ *                          par_freq_khz = 0 disables the clock
+ *
+ *                          Note: Only one of the clocks can be active. Either freq_khz or par_freq_khz must be 0.
+ *                          For selected frequencies there is a possibility that both clocks can be used.
+ *                          The possible combinations can be looked up in DS1009-DPLL-Freq-Calc.xlsm and implemented on request.
+ * \param ratio [IN]        A ratio the freq_khz will be mutiplied with.e.g. 66/64. I order to allow rational values for the frequency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_frequency_ratio_set(const mesa_inst_t        inst,
+                                              const uint8_t            clock_output,
+                                              const uint32_t           freq_khz,
+                                              const uint32_t           par_freq_khz,
+                                              const mesa_clock_ratio_t *const ratio)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock output frequency.
+ * \param inst [IN]          Handle to an API instance.
+ * \param clock_output [IN]  Clock output port number
+ * \param freq_khz [OUT]     frequency in KHz, freq_khz = 0, clock is disbaled
+ * \param par_freq_khz [OUT] parallel frequency in KHz, par_freq_khz = 0, clock is disbaled
+ * \param ratio [OUT]        A ratio the freq_khz was mutiplied with.e.g. 66/64. I order to allow rational values for the frequency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_frequency_ratio_get(const mesa_inst_t  inst,
+                                              const uint8_t      clock_output,
+                                              uint32_t           *const freq_khz,
+                                              uint32_t           *const par_freq_khz,
+                                              mesa_clock_ratio_t *const ratio)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock output Voltage level.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param level_mv [IN]     Output Voltage in mV range [300..1275], 25 mV steps [Output level of es6514 is limited due to bug in a coil in the OB]
+ *
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_level_set(const mesa_inst_t inst,
+                                    const uint8_t     clock_output,
+                                    const uint16_t    level_mv)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock output Voltage level.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param level_mv [OUT]    Output Voltage in mV range [300..1275], 25 mV steps
+ *
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_level_get(const mesa_inst_t inst,
+                                    const uint8_t     clock_output,
+                                    uint16_t          *const level_mv)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock output selector.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param input [IN]     input selector.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_selector_set(const mesa_inst_t                 inst,
+                                       const uint8_t                     clock_output,
+                                       const mesa_clock_input_selector_t *const input)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock output selector.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_output [IN] Clock output port number
+ * \param input [OUT]       input selector.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_output_selector_get(const mesa_inst_t           inst,
+                                       const uint8_t               clock_output,
+                                       mesa_clock_input_selector_t *const input)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input alarm configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Alarm enable for various qualifier arlarms and LOS active level
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_alarm_conf_set(const mesa_inst_t             inst,
+                                        const uint8_t                 clock_input,
+                                        const mesa_clock_input_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input alarm configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [OUT]        Alarm enable for various qualifier arlarms and LOS active level
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_alarm_conf_get(const mesa_inst_t       inst,
+                                        const uint8_t           clock_input,
+                                        mesa_clock_input_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input Coarse Frequency Monitor configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Coarse Frequency Monitor Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_cfm_conf_set(const mesa_inst_t           inst,
+                                      const uint8_t               clock_input,
+                                      const mesa_clock_cfm_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input Coarse Frequency Monitor configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Coarse Frequency Monitor Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_cfm_conf_get(const mesa_inst_t     inst,
+                                      const uint8_t         clock_input,
+                                      mesa_clock_cfm_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Set Clock input Precise Frequency Monitor configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Precise Frequency Monitor Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_pfm_conf_set(const mesa_inst_t           inst,
+                                      const uint8_t               clock_input,
+                                      const mesa_clock_pfm_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input Precise Frequency Monitor configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Precise Frequency Monitor Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_pfm_conf_get(const mesa_inst_t     inst,
+                                      const uint8_t         clock_input,
+                                      mesa_clock_pfm_conf_t *const conf)
+    CAP(CLOCK);
+/**
+ * \brief Set Clock input guard soak timer configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [IN]         Guard Soak Timer Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_gst_conf_set(const mesa_inst_t           inst,
+                                      const uint8_t               clock_input,
+                                      const mesa_clock_gst_conf_t *const conf)
+    CAP(CLOCK);
+
+/**
+ * \brief Get Clock input guard soak timer configuration.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param conf [OUT]        Guard Soak Timer Configurations
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_gst_conf_get(const mesa_inst_t     inst,
+                                      const uint8_t         clock_input,
+                                      mesa_clock_gst_conf_t *const conf)
+    CAP(CLOCK);
+
+// ***************************************************************************
+//
+//  Status API
+//
+// ***************************************************************************
+
+/**
+ * \brief get Clock selector state.
+ * \param inst [IN]             Handle to an API instance.
+ * \param dpll [IN]             DPLL instance number [0..x].
+ * \param selector_state [OUT]  selector state
+ * \param clock_input [OUT]     Clock input port number - if in locked state
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_selector_state_get(const mesa_inst_t            inst,
+                                      const mesa_clock_dpll_inst_t dpll,
+                                      mesa_clock_selector_state_t  *const selector_state,
+                                      uint8_t                      *const clock_input)
+    CAP(CLOCK);
+
+/**
+ * \brief get Clock pll state.
+ * \param inst [IN]         Handle to an API instance.
+ * \param dpll [IN]         DPLL instance number [0..x].
+ * \param pll_state [OUT]   pll state
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_dpll_state_get(const mesa_inst_t            inst,
+                                  const mesa_clock_dpll_inst_t dpll,
+                                  mesa_clock_dpll_state_t      *const pll_state)
+    CAP(CLOCK);
+
+/**
+ * \brief get Clock frequency offset stored in ho stack
+ * \param inst [IN]       Handle to an API instance.
+ * \param dpll [IN]       DPLL instance number [0..x].
+ * \param offset [OUT]    Current frequency offset stored in the holdover stack in units of scaled ppb (parts per billion) i.e. ppb*2**-16.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_ho_stack_frequency_offset_get(const mesa_inst_t            inst,
+                                                 const mesa_clock_dpll_inst_t dpll,
+                                                 int64_t                      *const offset)
+    CAP(CLOCK);
+
+/**
+ * \brief get Clock input state.
+ * \param inst [IN]         Handle to an API instance.
+ * \param clock_input [IN]  Clock input port number
+ * \param input_state [OUT] input state
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_clock_input_state_get(const mesa_inst_t       inst,
+                                  const uint8_t            clock_input,
+                                  mesa_clock_input_state_t *const input_state)
+    CAP(CLOCK);
+
+// ***************************************************************************
+//
+//  Event (interrupt) handling API
+//
+// ***************************************************************************
+
+/**
+ * \brief Define event (interrupt) types related to the Vitesse Synce Clock inputs.
+ **/
+#define MESA_CLOCK_INPUT_LOS_EV     (1 << 0)  /**< External Loss Of Signal event */
+#define MESA_CLOCK_INPUT_PFM_EV     (1 << 1)  /**< Precise frequency monitor event */
+#define MESA_CLOCK_INPUT_CFM_EV     (1 << 2)  /**< Coarse frequency monitor event */
+#define MESA_CLOCK_INPUT_SCM_EV     (1 << 3)  /**< Single Cycle monitor event */
+#define MESA_CLOCK_INPUT_GST_EV     (1 << 4)  /**< Guard Soak timer event */
+#define MESA_CLOCK_INPUT_LOL_EV     (1 << 5)  /**< Loss of Lock event */
+typedef uint32_t mesa_clock_input_event_type_t; /**< Int events: Single event or 'OR' multiple events above */
+
+/**
+ * \brief Clock input event polling function called by interrupt or periodicly
+ *
+ * \param inst        [IN]  Target instance reference.
+ * \param clock_input [IN]  Clock input port number
+ * \param ev_mask     [OUT] Event type mask of active events
+ *
+ * \note The \e ev_mask parameter can be either a single event_type or
+ * multiple event types. If invoked by a
+ * processor interrupt signal, the type of event to check for may be
+ * narrowed in to specific events.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_clock_input_event_poll(const mesa_inst_t             inst,
+                                    const uint8_t                 clock_input,
+                                    mesa_clock_input_event_type_t *const ev_mask)
+    CAP(CLOCK);
+
+/**
+ * \brief Enable clock input event generation for a specific event type
+ *
+ * \param inst        [IN]  Target instance reference.
+ * \param clock_input [IN]  Clock input port number
+ * \param ev_mask     [IN]  Event type(s) to control (mask)
+ * \param enable      [IN]  Enable or disable events
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_clock_input_event_enable(const mesa_inst_t                   inst,
+                                      const uint8_t                       clock_input,
+                                      const mesa_clock_input_event_type_t ev_mask,
+                                      const mesa_bool_t                   enable)
+    CAP(CLOCK);
+
+/**
+ * \brief Define event (interrupt) types related to the Vitesse Synce Clock dpll's.
+ *
+ **/
+//    MESA_CLOCK_DPLL_FREQ_LOCK_EV =      (1 << 0), /**< Loss Of Frequency lock event */
+//    MESA_CLOCK_DPLL_PH_LOCK_EV   =      (1 << 1), /**< Loss Of Phase lock event */
+//    MESA_CLOCK_DPLL_LOSX         =      (1 << 2), /**< PLL the currently selected reference input fails event */
+//    MESA_CLOCK_DPLL_LOL          =      (1 << 3), /**< PLL loss of lock event */
+#define MESA_CLOCK_DPLL_STATE_CHANGE_EV   (1 << 0) /**< State change event in EEC FSM */
+typedef uint32_t mesa_clock_dpll_event_type_t; /**< Int events: Currently only Single event */
+
+/**
+ * \brief Clock dpll event polling function called by interrupt or periodicly
+ *
+ * \param inst        [IN]  Target instance reference.
+ * \param dpll        [IN]  DPLL instance number [0..x].
+ * \param ev_mask     [OUT] Event type mask of active events
+ *
+ * \note The \e ev_mask parameter can be either a single event_type or
+ * multiple event types. If invoked by a
+ * processor interrupt signal, the type of event to check for may be
+ * narrowed in to specific events.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_clock_dpll_event_poll(const mesa_inst_t            inst,
+                                   const mesa_clock_dpll_inst_t dpll,
+                                   mesa_clock_dpll_event_type_t *const ev_mask)
+    CAP(CLOCK);
+
+/**
+ * \brief Enable clock dpll event generation for a specific event type
+ *
+ * \param inst        [IN]  Target instance reference.
+ * \param dpll        [IN]  DPLL instance number [0..x].
+ * \param ev_mask     [IN]  Event type(s) to control (mask)
+ * \param enable      [IN]  Enable or disable events
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_clock_dpll_event_enable(const mesa_inst_t                  inst,
+                                     const mesa_clock_dpll_inst_t       dpll,
+                                     const mesa_clock_dpll_event_type_t ev_mask,
+                                     const mesa_bool_t                  enable)
+    CAP(CLOCK);
+
+#include <microchip/ethernet/hdr_end.h>  // ALL INCLUDE ABOVE THIS LINE
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+:@byteposir:	@str"3#ifndef _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[iPipiqiriõi…i i˚iEiFiïiòi´iÆi˝i˛iiZi_ièiêiîi∆iÙi˘i!i"i&i^icipiri–i)iêiÛi^i…i>ihiiimi•i™iªiiXiÇiÉiÑiài¡i∆i”i’i&ivi∆i 	ip	iÀ	iı	iˆ	i˙	i2
+i7
+iD
+iF
+iã
+iœ
+i˘
+i˙
+i˚
+iˇ
+i;i?ifi“i/i≠i—i“i÷iii:iìiNiÆii3i4i8izi~i™i<i⁄iiiKiOiãièiæi(i~i€iiGiHiLiìiói«iiFisitixi÷i⁄i˛i6ipiëiíiñi‘iÿiÂiÁi7iëiÚiiiiXi\iâii]iáiàiåiæi¬iÎiAiëiÏi'iÇi®i©i≠iÊiÍiiIiÖi¿iÒiiBiCiGiõiüiÕi4i¶iiÑiÌiRi}i~iÇiΩi¡iÍiW i´ i— i“ i÷ i!i !iG!i√!i@"id"ie"ii"i∞"i¥"i€"iW#i‘#i¯#i˘#i˝#i($i,$iS$i∑$i%iÉ%i›%iB&i¶&i'i^'iÇ'iÉ'i“'i’'i(i(ic(id(ih(iì(i (iÓ(i)i)i0)i4)ib)iê)i∆)i÷)i◊)i€)i*i<*i`*ià*iã*i£*iß*i’*i+i2+iB+iC+iG+ië+i»+iÏ+i,i^,ia,iy,i},i¨,i€,i-i:-iJ-iK-iö-iù-i≥-i∂-i.i.i.i.i-.ic.ií.iï.i≠.i±.i˝.iH/iX/iY/i]/i/iµ/i‰/iÁ/iˇ/i0iI0iè0iü0i†0i§0iÙ0i*1i-1iE1iI1iÑ1iî1iï1iô1i2i82i;2iS2iW2iã2iõ2iú2i†2iƒ2i˚2i43iò3iõ3i≥3i∑3i4iS4i®4i∏4iπ4iΩ4i·4i5iQ5iµ5i∏5i–5i‘5i6if6i∂6i∆6i«6iÀ6iÔ6i&7i_7iî7ió7iØ7i≥7i¸7iE8iï8i•8i¶8i™8iŒ8i9i>9is9iv9ié9ií9i€9i$:it:iÑ:iÖ:iâ:iµ:iÏ:i%;iV;iY;iq;iu;i¡;i<i`<ip<iq<iu<i°<iÿ<i=iB=iE=i]=ia=i©=iÒ=i@>iP>iQ>iU>ié>i≈>i˛>i+?i.?iF?iJ?iñ?i‚?i5@iE@iF@iJ@i©@i‡@iAiéAi AiÕAiÂAiÈAi8BiáBiÿBiËBiÈBiÌBiLCiÉCiºCi1DimDipDiàDiåDi€Di*EiÇEiíEiìEióEiæEiıEi*FiâFi‘Fi◊FiÔFiÛFi3Gi{Gi¿Gi–Gi—Gi’Gi¸Gi3HihHi´HiÆHi∆Hi Hi
+IiRIiòIi®Ii©Ii≠IiJiOJiÑJiáJiüJi£JiÍJi9KiIKiJKiNKizKiµKiÓKi&Li)LiALiELiåLi€Li-Mi=Mi>MiBMiÜMiΩMiÚMi#Ni&Ni>NiBNiãNi‹Ni,Oi<Oi=OiAOiÖOiºOiÒOi4Pi7PiOPiSPiñPi·Pi+Qi;Qi<Qi@QiòQiœQiRiyRiµRi∏Ri–Ri‘RiSiVSiíSi¢Si£SißSiˇSi6TikTiﬂTiUiUi6Ui:UiwUiºUiˇUiViViVi?VivVi‚Vi7WiyWi|WiîWiòWi—WiXiJXiZXi[Xi_XiäXi¡XiYiYi.Yi2YikYi≤Yi¬Yi√Yi«YiÎYi"Zi[ZièZi‚ZiÂZi˝Zi[iL[ió[iÈ[i;\iK\iL\iP\it\i´\i‰\i]ik]in]iÜ]iä]iœ]i^i`^i¨^iº^iΩ^i¡^iÊ^i'_ie_iÿ_i0`iç`iê`i®`i¨`iÎ`i1aitai≈ai’ai÷ai⁄aiˇaiAbiÄbiÎbiJciMcieciici®ciÓci8diêdi†di°di•di’dieiTei«eifi∞figigi(gi,gixgiÀgihiohiÕhi›hiﬁhi‚hiiiTiiìii˛iiåjiÎjiÓjiki
+kiPkiùkiÓki<liõli´li¨li∞li÷limiBmipmi¨minidni–ni"oiboieoiÿoiBpi√pi∆piﬁpi‚pi"qijqiÆqiˆqiririri1riiriüriÓriJsiMsiesiisi©siÒsi<tiãtiõtiúti†ti∆ti˝ti2ui`uiúuiviTvi¿viwiRwiUwi»wi2xi≥xi:yi=yiUyiYyi¶yi˚yiLzi°ziˆzi{i{i{i1{ii{iü{iÓ{iJ|iŒ|i—|iÈ|iÌ|i4}iÉ}i’}i+~iz~iä~iã~iè~iπ~i~i%i∏iªiæi÷i⁄iÄiZÄiöÄi™Äi´ÄiØÄiŸÄiÅiEÅiïÅiòÅiõÅi≥Åi∑ÅiÛÅi7Çi~ÇiéÇièÇiìÇi∏ÇiÔÇi$ÉiMÉiPÉihÉilÉiªÉiÑiiÑiyÑizÑi~Ñi£Ñi⁄ÑiÖi;Öi>ÖiVÖiZÖi£ÖiÙÖiEÜiUÜiVÜiZÜiâÜi¿ÜiÙÜiPáiSáikáioáiªáiàiaàiqàiràivài•ài‹àiâilâioâiáâiãâi—âiäikäi{äi|äiÄäi¬äi˘äi-ãiqãitãiåãiêãiÿãi'åivåiÜåiáåiãåiÕåiçi8çi|çiçióçiõçi›çi&éioéiéiÄéiÑéi«éi˛éi2èiwèizèiíèiñèiﬁèi-êi|êiåêiçêiëêi‘êiëi?ëiÑëiáëiüëi£ëiÂëi.íiwíiáíiãíi≈íi¸íi0ìilìioìiáìiãìi”ìi"îiqîiÅîiÇîiÜîi¿îi˜îi+ïigïijïiÇïiÜïi»ïiñiZñijñikñi∫ñiΩñiÃñiœñióiói#óiGóiÇóiøóiÓói;òi>òiVòiZòi£òiÏòiFôiùôi≠ôiÆôi≤ôi—ôiöiAöigöijöiÇöiÜöiÀöiõiaõiqõirõivõiÆõi„õiúi¶úi©úi¡úi≈úiùimùi ùi⁄ùi€ùiﬂùi ûi7ûikûiìûiñûiÆûi≤ûiÛûi;üiäüiöüiõüiÍüiÌüi†i†ib†ic†ig†iª†i¿†i°ij°iø°i¢i]¢i¶¢i£i£i£ii£il£i££i◊£i§i§i^§iá§iÃ§iÔ§iÚ§i
+•i•iW•i¶•i¯•i¶i	¶i¶iU¶iX¶iè¶i√¶iˇ¶i4ßi7ßiOßiTßi§ßi˚ßiN®i†®i∞®i±®iµ®i	©i©i©ij©iø©i2™iÖ™iﬁ™i=´i>´iB´iê´iì´i ´i¨i@¨iC¨iä¨i≥¨i¯¨i≠i≠i6≠i;≠iÅ≠i«≠iÆi'Æi(Æi,ÆisÆivÆi≠ÆiÊÆi"ØiWØiZØirØiwØi≈Øi∞id∞i¥∞iƒ∞i≈∞i±i=±:@last_line_endi=±{;o;;o;	;
+@
+;iõ;"4#define _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+
+;@{;o;;o;	;
+@
+;i ;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˚;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;i_;"typedef;@:type_aliaso;;o;	;
+@
+;ig;"mesa_bool_t ;@:typedef_nameo;;o;	;
+@
+;is;"mesa_clock_global_enable_t;@:
+array[ :cap0{
+;o;;o;	;
+@
+;i˘;"typedef;@;o;;o;	;
+@
+;i;"uint8_t ;@;o;;o;	;
+@
+;i	;"mesa_clock_dpll_inst_t;@;[ ;0{
+;o;;o;	;
+@
+;ic;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;ik;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iv;"'MESA_CLOCK_SELECTION_MODE_DISABLED;@;0{;{;o;;o;	;
+@
+;i‘;"%MESA_CLOCK_SELECTION_MODE_MANUEL;@;0{;{;o;;o;	;
+@
+;i-;"5MESA_CLOCK_SELECTION_MODE_AUTOMATIC_NONREVERTIVE;@;0{;{;o;;o;	;
+@
+;iî;"2MESA_CLOCK_SELECTION_MODE_AUTOMATIC_REVERTIVE;@;0{;{;o;;o;	;
+@
+;i˜;".MESA_CLOCK_SELECTION_MODE_FORCED_HOLDOVER;@;0{;{;o;;o;	;
+@
+;ib;".MESA_CLOCK_SELECTION_MODE_FORCED_FREE_RUN;@;0{;{;o;;o;	;
+@
+;iÕ;")MESA_CLOCK_SELECTION_MODE_FORCED_DCO;@;0;o;;o;	;
+@
+;i@;"!mesa_clock_selection_mode_t ;@;[ ;o;;o;	;
+@
+;i\;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i™;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iø;"!mesa_clock_selection_mode_t ;@:	nameo;;o;	;
+@
+;i€;"	mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"!uint8_t                     ;@; o;;o;	;
+@
+;i";"clock_input;@;[ ;0;o;;o;	;
+@
+;iZ;"!mesa_clock_selection_conf_t ;@;[ ;o;;o;	;
+@
+;iv;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i∆;"typedef;@;{;o;;o;	;
+@
+;iŒ;"	enum;@;[{;{;o;;o;	;
+@
+;iŸ;"%MESA_CLOCK_SELECTOR_STATE_LOCKED;@;0{;{;o;;o;	;
+@
+;i*;"'MESA_CLOCK_SELECTOR_STATE_HOLDOVER;@;0{;{;o;;o;	;
+@
+;iz;"&MESA_CLOCK_SELECTOR_STATE_FREERUN;@;0{;{;o;;o;	;
+@
+;i ;""MESA_CLOCK_SELECTOR_STATE_DCO;@;0{;{;o;;o;	;
+@
+;i$	;")MESA_CLOCK_SELECTOR_STATE_REF_FAILED;@;0{;{;o;;o;	;
+@
+;it	;"(MESA_CLOCK_SELECTOR_STATE_ACQUIRING;@;0;o;;o;	;
+@
+;iÕ	;"!mesa_clock_selector_state_t ;@;[ ;o;;o;	;
+@
+;iÈ	;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i7
+;"typedef;@;{;o;;o;	;
+@
+;i?
+;"	enum;@;[{;{;o;;o;	;
+@
+;iJ
+;"'MESA_CLOCK_OPERATION_MODE_DISABLED;@;0{;{;o;;o;	;
+@
+;iè
+;"&MESA_CLOCK_OPERATION_MODE_ENABLED;@;0;o;;o;	;
+@
+;i—
+;"!mesa_clock_operation_mode_t ;@;[ ;o;;o;	;
+@
+;iÌ
+;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i?;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ij;"uint32_t    ;@; o;;o;	;
+@
+;iv;"limit_ppb;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷;"mesa_bool_t ;@; o;;o;	;
+@
+;i‚;"phase_build_out_ena;@;[ ;0{;{;{	;o;;o;	;
+@
+;i3;"mesa_bool_t ;@; o;;o;	;
+@
+;i?;"ho_based;@;[ ;0;o;;o;	;
+@
+;iØ;"mesa_clock_psl_conf_t ;@;[ ;o;;o;	;
+@
+;i≈;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i>;"!mesa_clock_operation_mode_t ;@; o;;o;	;
+@
+;iZ;"	mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;ió;"!uint16_t                    ;@; o;;o;	;
+@
+;i≥;"holdoff;@;[ ;0{;{;{	;o;;o;	;
+@
+;iR;"!uint32_t                    ;@; o;;o;	;
+@
+;in;"holdover;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≤;"!uint16_t                    ;@; o;;o;	;
+@
+;iŒ;"wtr;@;[ ;0;o;;o;	;
+@
+;i;"mesa_clock_dpll_conf_t ;@;[ ;o;;o;	;
+@
+;i';"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i~;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÆ;"uint32_t ;@; o;;o;	;
+@
+;i∑;"ho_post_filtering_bw;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@;"uint8_t  ;@; o;;o;	;
+@
+;iI;"ho_qual_time_conf;@;[ ;0;o;;o;	;
+@
+;i‹;" mesa_clock_ho_stack_conf_t ;@;[ ;o;;o;	;
+@
+;i˜;"CAP(CLOCK);@{;o;;o;	;
+@
+;i;"L#define MESA_CLOCK_HO_STACK_SIZE 12 /**< Size of the holdover stack */
+;@{
+;o;;o;	;
+@
+;iè;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i¬;"uint64_t    ;@; o;;o;	;
+@
+;iŒ;"stack_value;@;[{:	expro;;o;	;
+@
+;i⁄;"MESA_CLOCK_HO_STACK_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i,;"uint8_t     ;@; o;;o;	;
+@
+;i8;"ho_sel;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ;"uint8_t     ;@; o;;o;	;
+@
+;ié;"ho_min_fill_lvl;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ;"mesa_bool_t ;@; o;;o;	;
+@
+;iÎ;"ho_filled;@;[ ;0;o;;o;	;
+@
+;i;"#mesa_clock_ho_stack_content_t ;@;[ ;o;;o;	;
+@
+;i;;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;ió;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÀ;"uint8_t     ;@; o;;o;	;
+@
+;i◊;"priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@; o;;o;	;
+@
+;i;"enable;@;[ ;0;o;;o;	;
+@
+;iH;"$mesa_clock_priority_selector_t ;@;[ ;o;;o;	;
+@
+;ig;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i⁄;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@; o;;o;	;
+@
+;i;"num;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:;"uint32_t ;@; o;;o;	;
+@
+;iC;"den;@;[ ;0;o;;o;	;
+@
+;ir;"mesa_clock_ratio_t ;@;[ ;o;;o;	;
+@
+;iÖ;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;iÿ;"typedef;@;{;o;;o;	;
+@
+;i‡;"	enum;@;[{;{;o;;o;	;
+@
+;iÎ;"MESA_CLOCK_INPUT_TYPE_DPLL;@;0{;{;o;;o;	;
+@
+;i;;"MESA_CLOCK_INPUT_TYPE_IN;@;0{;{;o;;o;	;
+@
+;iï;"#MESA_CLOCK_INPUT_TYPE_PURE_DCO;@;0;o;;o;	;
+@
+;iÙ;"mesa_clock_input_type_t ;@;[ ;o;;o;	;
+@
+;i;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i\;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iç;"mesa_clock_input_type_t ;@; o;;o;	;
+@
+;i•;"input_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint8_t                 ;@; o;;o;	;
+@
+;i ;"input_inst;@;[ ;0;o;;o;	;
+@
+;i_;"!mesa_clock_input_selector_t ;@;[ ;o;;o;	;
+@
+;i{;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i¬;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iÔ;"mesa_bool_t ;@; o;;o;	;
+@
+;i˚;"pll_freq_lock;@;[ ;0{;{;{	;o;;o;	;
+@
+;iE;"mesa_bool_t ;@; o;;o;	;
+@
+;iQ;"pll_phase_lock;@;[ ;0{;{;{	;o;;o;	;
+@
+;iï;"mesa_bool_t ;@; o;;o;	;
+@
+;i°;"pll_losx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@; o;;o;	;
+@
+;i¸;"pll_lol;@;[ ;0{;{;{	;o;;o;	;
+@
+;i+;"mesa_bool_t ;@; o;;o;	;
+@
+;i7;"pll_dig_hold_vld;@;[ ;0;o;;o;	;
+@
+;iÑ;"mesa_clock_dpll_state_t ;@;[ ;o;;o;	;
+@
+;iú;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;iÍ;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@; o;;o;	;
+@
+;i$;"los;@;[ ;0{;{;{	;o;;o;	;
+@
+;iM;"mesa_bool_t ;@; o;;o;	;
+@
+;iY;"pfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iâ;"mesa_bool_t ;@; o;;o;	;
+@
+;iï;"cfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iƒ;"mesa_bool_t ;@; o;;o;	;
+@
+;i–;"scm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı;"mesa_bool_t ;@; o;;o;	;
+@
+;i;"lol;@;[ ;0;o;;o;	;
+@
+;i;"mesa_clock_input_state_t ;@;[ ;o;;o;	;
+@
+;i6;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;iü;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iœ;"mesa_bool_t ;@; o;;o;	;
+@
+;i€;"los;@;[ ;0{;{;{	;o;;o;	;
+@
+;i6;"mesa_bool_t ;@; o;;o;	;
+@
+;iB;"pfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®;"mesa_bool_t ;@; o;;o;	;
+@
+;i¥;"cfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@; o;;o;	;
+@
+;i%;"scm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜ;"mesa_bool_t ;@; o;;o;	;
+@
+;ií;"gst;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÔ;"mesa_bool_t ;@; o;;o;	;
+@
+;i˚;"lol;@;[ ;0;o;;o;	;
+@
+;iT;""mesa_clock_input_alarm_ena_t ;@;[ ;o;;o;	;
+@
+;iq;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i¡;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÏ;""mesa_bool_t                  ;@; o;;o;	;
+@
+;i	 ;"los_active_high;@;[ ;0{;{;{	;o;;o;	;
+@
+;iY ;""mesa_clock_input_alarm_ena_t ;@; o;;o;	;
+@
+;iv ;"alarm_ena;@;[ ;0;o;;o;	;
+@
+;i≠ ;"mesa_clock_input_conf_t ;@;[ ;o;;o;	;
+@
+;i≈ ;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i !;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iI!;"uint32_t ;@; o;;o;	;
+@
+;iR!;"cfm_set_ppb;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≈!;"uint32_t ;@; o;;o;	;
+@
+;iŒ!;"cfm_clr_ppb;@;[ ;0;o;;o;	;
+@
+;iB";"mesa_clock_cfm_conf_t ;@;[ ;o;;o;	;
+@
+;iX";"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i¥";"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i›";"uint32_t ;@; o;;o;	;
+@
+;iÊ";"pfm_set_ppb;@;[ ;0{;{;{	;o;;o;	;
+@
+;iY#;"uint32_t ;@; o;;o;	;
+@
+;ib#;"pfm_clr_ppb;@;[ ;0;o;;o;	;
+@
+;i÷#;"mesa_clock_pfm_conf_t ;@;[ ;o;;o;	;
+@
+;iÏ#;"CAP(CLOCK);@{
+;o;;o;	;
+@
+;i,$;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU$;"uint32_t ;@; o;;o;	;
+@
+;i^$;"disqualification_time_us;@;[ ;0{;{;{	;o;;o;	;
+@
+;iπ$;"uint32_t ;@; o;;o;	;
+@
+;i¬$;"qualification_time_us;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÖ%;"mesa_bool_t ;@; o;;o;	;
+@
+;ië%;"los;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ%;"mesa_bool_t ;@; o;;o;	;
+@
+;iÎ%;"pfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD&;"mesa_bool_t ;@; o;;o;	;
+@
+;iP&;"cfm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®&;"mesa_bool_t ;@; o;;o;	;
+@
+;i¥&;"scm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i';"mesa_bool_t ;@; o;;o;	;
+@
+;i';"lol;@;[ ;0;o;;o;	;
+@
+;i`';"mesa_clock_gst_conf_t ;@;[ ;o;;o;	;
+@
+;iv';"CAP(CLOCK);@{:func_proto{;{	;o;;o;	;
+@
+;i4);"mesa_rc ;@; o;;o;	;
+@
+;i<);"mesa_clock_rd;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iJ);"const mesa_inst_t ;@; o;;o;	;
+@
+;i\);"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ix);"const uint32_t    ;@; o;;o;	;
+@
+;iä);"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i¶);"uint32_t          *const ;@; o;;o;	;
+@
+;iø);"
+value;@;[ ;0;o;;o;	;
+@
+;i );"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iß*;"mesa_rc ;@; o;;o;	;
+@
+;iØ*;"mesa_clock_wr;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iΩ*;"const mesa_inst_t ;@; o;;o;	;
+@
+;iœ*;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÎ*;"const uint32_t    ;@; o;;o;	;
+@
+;i˝*;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i+;"const uint32_t    ;@; o;;o;	;
+@
+;i++;"
+value;@;[ ;0;o;;o;	;
+@
+;i6+;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i},;"mesa_rc ;@; o;;o;	;
+@
+;iÖ,;"mesa_clock_wrm;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iî,;"const mesa_inst_t ;@; o;;o;	;
+@
+;i¶,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i√,;"const uint32_t    ;@; o;;o;	;
+@
+;i’,;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ,;"const uint32_t    ;@; o;;o;	;
+@
+;i-;"
+value;@;[ ;0{;{	;o;;o;	;
+@
+;i"-;"const uint32_t    ;@; o;;o;	;
+@
+;i4-;"	mask;@;[ ;0;o;;o;	;
+@
+;i>-;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i±.;"mesa_rc ;@; o;;o;	;
+@
+;iπ.;"!mesa_clock_global_enable_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i÷.;"&const mesa_inst_t                ;@; o;;o;	;
+@
+;i˜.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i"/;"&const mesa_clock_global_enable_t ;@; o;;o;	;
+@
+;iC/;"ena;@;[ ;0;o;;o;	;
+@
+;iL/;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i0;"mesa_rc ;@; o;;o;	;
+@
+;i0;"!mesa_clock_global_enable_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i(0;" const mesa_inst_t          ;@; o;;o;	;
+@
+;iC0;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;in0;"!mesa_clock_global_enable_t *;@; o;;o;	;
+@
+;iä0;"ena;@;[ ;0;o;;o;	;
+@
+;iì0;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iI1;"mesa_rc ;@; o;;o;	;
+@
+;iQ1;"mesa_clock_global_sw_reset;@;[ ;0;#[{;{	;o;;o;	;
+@
+;il1;"const mesa_inst_t ;@; o;;o;	;
+@
+;i~1;"	inst;@;[ ;0;o;;o;	;
+@
+;ià1;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iW2;"mesa_rc ;@; o;;o;	;
+@
+;i_2;"mesa_clock_shutdown;@;[ ;0;#[{;{	;o;;o;	;
+@
+;is2;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÖ2;"	inst;@;[ ;0;o;;o;	;
+@
+;iè2;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i∑3;"mesa_rc ;@; o;;o;	;
+@
+;iø3;""mesa_clock_selection_mode_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i›3;"'const mesa_inst_t                 ;@; o;;o;	;
+@
+;iˇ3;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i+4;"'const mesa_clock_dpll_inst_t      ;@; o;;o;	;
+@
+;iM4;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iy4;".const mesa_clock_selection_conf_t *const ;@; o;;o;	;
+@
+;i¢4;"	conf;@;[ ;0;o;;o;	;
+@
+;i¨4;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i‘5;"mesa_rc ;@; o;;o;	;
+@
+;i‹5;""mesa_clock_selection_mode_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i˙5;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iC6;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i`6;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iå6;")mesa_clock_selection_conf_t  *const ;@; o;;o;	;
+@
+;i∞6;"	conf;@;[ ;0;o;;o;	;
+@
+;i∫6;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i≥7;"mesa_rc ;@; o;;o;	;
+@
+;iª7;""mesa_clock_operation_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iŸ7;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iˆ7;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i"8;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i?8;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;ik8;")const mesa_clock_dpll_conf_t *const ;@; o;;o;	;
+@
+;iè8;"	conf;@;[ ;0;o;;o;	;
+@
+;iô8;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;ií9;"mesa_rc ;@; o;;o;	;
+@
+;iö9;""mesa_clock_operation_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i∏9;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i’9;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i:;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i:;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iJ:;")mesa_clock_dpll_conf_t       *const ;@; o;;o;	;
+@
+;in:;"	conf;@;[ ;0;o;;o;	;
+@
+;ix:;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iu;;"mesa_rc ;@; o;;o;	;
+@
+;i};;"!mesa_clock_ho_stack_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iö;;"&const mesa_inst_t                ;@; o;;o;	;
+@
+;iª;;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ;;"&const mesa_clock_dpll_inst_t     ;@; o;;o;	;
+@
+;i<;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i2<;"-const mesa_clock_ho_stack_conf_t *const ;@; o;;o;	;
+@
+;iZ<;"	conf;@;[ ;0;o;;o;	;
+@
+;id<;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;ia=;"mesa_rc ;@; o;;o;	;
+@
+;ii=;"!mesa_clock_ho_stack_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÜ=;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i£=;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iŒ=;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;iÎ=;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i>;")mesa_clock_ho_stack_conf_t   *const ;@; o;;o;	;
+@
+;i:>;"	conf;@;[ ;0;o;;o;	;
+@
+;iD>;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iJ?;"mesa_rc ;@; o;;o;	;
+@
+;iR?;"$mesa_clock_ho_stack_content_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;ir?;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iê?;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iæ?;"#const mesa_clock_dpll_inst_t  ;@; o;;o;	;
+@
+;i‹?;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i
+@;"*mesa_clock_ho_stack_content_t *const ;@; o;;o;	;
+@
+;i/@;"	cont;@;[ ;0;o;;o;	;
+@
+;i9@;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iÈA;"mesa_rc ;@; o;;o;	;
+@
+;iÒA;"(mesa_clock_dco_frequency_offset_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iB;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i2B;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;idB;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;iÅB;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i≥B;""const int64_t                ;@; o;;o;	;
+@
+;i–B;"offset;@;[ ;0;o;;o;	;
+@
+;i‹B;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iåD;"mesa_rc ;@; o;;o;	;
+@
+;iîD;"(mesa_clock_dco_frequency_offset_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i∏D;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i’D;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iE;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i$E;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iVE;")int64_t                      *const ;@; o;;o;	;
+@
+;izE;"offset;@;[ ;0;o;;o;	;
+@
+;iÜE;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iÛF;"mesa_rc ;@; o;;o;	;
+@
+;i˚F;"$mesa_clock_output_filter_bw_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iG;"const mesa_inst_t ;@; o;;o;	;
+@
+;i-G;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i[G;"const uint8_t     ;@; o;;o;	;
+@
+;imG;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i£G;"const uint32_t    ;@; o;;o;	;
+@
+;iµG;"bw_100uhz;@;[ ;0;o;;o;	;
+@
+;iƒG;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i H;"mesa_rc ;@; o;;o;	;
+@
+;i“H;"$mesa_clock_output_filter_bw_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÚH;"const mesa_inst_t ;@; o;;o;	;
+@
+;iI;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i2I;"const uint8_t     ;@; o;;o;	;
+@
+;iDI;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;izI;"uint32_t          *;@; o;;o;	;
+@
+;içI;"bw_100uhz;@;[ ;0;o;;o;	;
+@
+;iúI;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i£J;"mesa_rc ;@; o;;o;	;
+@
+;i´J;"+mesa_clock_output_filter_lock_fast_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i“J;"const mesa_inst_t ;@; o;;o;	;
+@
+;i‰J;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iK;"const uint8_t     ;@; o;;o;	;
+@
+;i+K;"clock_output;@;[ ;0;o;;o;	;
+@
+;i=K;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iEL;"mesa_rc ;@; o;;o;	;
+@
+;iML;"+mesa_clock_output_filter_lock_fast_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;itL;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÜL;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iªL;"const uint8_t     ;@; o;;o;	;
+@
+;iÕL;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i
+M;"mesa_bool_t       *;@; o;;o;	;
+@
+;iM;"lock_completed;@;[ ;0;o;;o;	;
+@
+;i1M;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iBN;"mesa_rc ;@; o;;o;	;
+@
+;iJN;"#mesa_clock_output_psl_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iiN;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;iÖN;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≤N;"!const uint8_t               ;@; o;;o;	;
+@
+;iŒN;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;iO;"(const mesa_clock_psl_conf_t *const ;@; o;;o;	;
+@
+;i&O;"	conf;@;[ ;0;o;;o;	;
+@
+;i0O;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iSP;"mesa_rc ;@; o;;o;	;
+@
+;i[P;"#mesa_clock_output_psl_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;izP;"const mesa_inst_t     ;@; o;;o;	;
+@
+;iêP;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iΩP;"const uint8_t         ;@; o;;o;	;
+@
+;i”P;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;iQ;""mesa_clock_psl_conf_t *const ;@; o;;o;	;
+@
+;i%Q;"	conf;@;[ ;0;o;;o;	;
+@
+;i/Q;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i‘R;"mesa_rc ;@; o;;o;	;
+@
+;i‹R;"!mesa_clock_adj_frequency_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i˘R;"const mesa_inst_t ;@; o;;o;	;
+@
+;iS;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i6S;"const uint8_t     ;@; o;;o;	;
+@
+;iHS;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i{S;"const int64_t     ;@; o;;o;	;
+@
+;içS;"adj;@;[ ;0;o;;o;	;
+@
+;iñS;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i:U;"mesa_rc ;@; o;;o;	;
+@
+;iBU;"!mesa_clock_adj_frequency_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i_U;"const mesa_inst_t ;@; o;;o;	;
+@
+;iqU;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iúU;"const uint8_t     ;@; o;;o;	;
+@
+;iÆU;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i·U;"int64_t           *const ;@; o;;o;	;
+@
+;i˙U;"adj;@;[ ;0;o;;o;	;
+@
+;iV;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iòW;"mesa_rc ;@; o;;o;	;
+@
+;i†W;"mesa_clock_adj_phase_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iπW;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÀW;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÚW;"const uint8_t     ;@; o;;o;	;
+@
+;iX;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i3X;"const int32_t     ;@; o;;o;	;
+@
+;iEX;"adj;@;[ ;0;o;;o;	;
+@
+;iNX;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i2Y;"mesa_rc ;@; o;;o;	;
+@
+;i:Y;"mesa_clock_adj_phase_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iSY;"const mesa_inst_t ;@; o;;o;	;
+@
+;ieY;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iåY;"mesa_bool_t       *const ;@; o;;o;	;
+@
+;i•Y;"adj_ongoing;@;[ ;0;o;;o;	;
+@
+;i∂Y;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i[;"mesa_rc ;@; o;;o;	;
+@
+;i	[;"mesa_clock_priority_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i![;"*const mesa_inst_t                    ;@; o;;o;	;
+@
+;iF[;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;il[;"*const mesa_clock_dpll_inst_t         ;@; o;;o;	;
+@
+;ië[;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i∑[;"*const uint8_t                        ;@; o;;o;	;
+@
+;i‹[;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i	\;"1const mesa_clock_priority_selector_t *const ;@; o;;o;	;
+@
+;i5\;"	conf;@;[ ;0;o;;o;	;
+@
+;i?\;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iä];"mesa_rc ;@; o;;o;	;
+@
+;ií];"mesa_clock_priority_get;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i™];"$const mesa_inst_t              ;@; o;;o;	;
+@
+;i…];"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÔ];"$const mesa_clock_dpll_inst_t   ;@; o;;o;	;
+@
+;i^;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i4^;"$const uint8_t                  ;@; o;;o;	;
+@
+;iS^;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iÄ^;"+mesa_clock_priority_selector_t *const ;@; o;;o;	;
+@
+;i¶^;"	conf;@;[ ;0;o;;o;	;
+@
+;i∞^;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i¨`;"mesa_rc ;@; o;;o;	;
+@
+;i¥`;"#mesa_clock_input_frequency_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i”`;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÂ`;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ia;"const uint8_t     ;@; o;;o;	;
+@
+;i$a;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iXa;"const uint32_t    ;@; o;;o;	;
+@
+;ija;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;iõa;"const mesa_bool_t ;@; o;;o;	;
+@
+;i≠a;"use_internal_clock_src;@;[ ;0;o;;o;	;
+@
+;i…a;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iic;"mesa_rc ;@; o;;o;	;
+@
+;iqc;"#mesa_clock_input_frequency_get;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iêc;"const mesa_inst_t ;@; o;;o;	;
+@
+;i¢c;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iœc;"const uint8_t     ;@; o;;o;	;
+@
+;i·c;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;id;"uint32_t          *const ;@; o;;o;	;
+@
+;i.d;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;i_d;"mesa_bool_t       *const ;@; o;;o;	;
+@
+;ixd;"use_internal_clock_src;@;[ ;0;o;;o;	;
+@
+;iîd;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i,g;"mesa_rc ;@; o;;o;	;
+@
+;i4g;")mesa_clock_input_frequency_ratio_set;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;iYg;"const mesa_inst_t        ;@; o;;o;	;
+@
+;irg;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i•g;"const uint8_t            ;@; o;;o;	;
+@
+;iæg;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i¯g;"const uint32_t           ;@; o;;o;	;
+@
+;ih;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;iHh;"%const mesa_clock_ratio_t *const ;@; o;;o;	;
+@
+;ihh;"
+ratio;@;[ ;0{;{	;o;;o;	;
+@
+;iúh;"const mesa_bool_t        ;@; o;;o;	;
+@
+;iµh;"use_internal_clock_src;@;[ ;0;o;;o;	;
+@
+;i—h;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i
+k;"mesa_rc ;@; o;;o;	;
+@
+;ik;")mesa_clock_input_frequency_ratio_get;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;i7k;"const mesa_inst_t  ;@; o;;o;	;
+@
+;iJk;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i}k;"const uint8_t      ;@; o;;o;	;
+@
+;iêk;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i k;"uint32_t           *const ;@; o;;o;	;
+@
+;i‰k;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;il;"mesa_clock_ratio_t *const ;@; o;;o;	;
+@
+;i5l;"
+ratio;@;[ ;0{;{	;o;;o;	;
+@
+;iil;"mesa_bool_t        *const ;@; o;;o;	;
+@
+;iÉl;"use_internal_clock_src;@;[ ;0;o;;o;	;
+@
+;iül;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i‚p;"mesa_rc ;@; o;;o;	;
+@
+;iÍp;"$mesa_clock_output_frequency_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i
+q;"const mesa_inst_t ;@; o;;o;	;
+@
+;iq;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iJq;"const uint8_t     ;@; o;;o;	;
+@
+;i\q;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;iíq;"const uint32_t    ;@; o;;o;	;
+@
+;i§q;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;i÷q;"const uint32_t    ;@; o;;o;	;
+@
+;iËq;"par_freq_khz;@;[ ;0;o;;o;	;
+@
+;i˙q;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iis;"mesa_rc ;@; o;;o;	;
+@
+;iqs;"$mesa_clock_output_frequency_get;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iës;"const mesa_inst_t ;@; o;;o;	;
+@
+;i£s;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i—s;"const uint8_t     ;@; o;;o;	;
+@
+;i„s;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;it;"uint32_t          *const ;@; o;;o;	;
+@
+;i2t;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;idt;"uint32_t          *const ;@; o;;o;	;
+@
+;i}t;"par_freq_khz;@;[ ;0;o;;o;	;
+@
+;ièt;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iYy;"mesa_rc ;@; o;;o;	;
+@
+;iay;"*mesa_clock_output_frequency_ratio_set;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;iáy;"const mesa_inst_t        ;@; o;;o;	;
+@
+;i†y;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‘y;"const uint8_t            ;@; o;;o;	;
+@
+;iÌy;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i)z;"const uint32_t           ;@; o;;o;	;
+@
+;iBz;"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;izz;"const uint32_t           ;@; o;;o;	;
+@
+;iìz;"par_freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;iœz;"%const mesa_clock_ratio_t *const ;@; o;;o;	;
+@
+;iÔz;"
+ratio;@;[ ;0;o;;o;	;
+@
+;i˙z;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iÌ|;"mesa_rc ;@; o;;o;	;
+@
+;iı|;"*mesa_clock_output_frequency_ratio_get;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;i};"const mesa_inst_t  ;@; o;;o;	;
+@
+;i.};"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ib};"const uint8_t      ;@; o;;o;	;
+@
+;iu};"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i±};"uint32_t           *const ;@; o;;o;	;
+@
+;iÀ};"freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;i~;"uint32_t           *const ;@; o;;o;	;
+@
+;i~;"par_freq_khz;@;[ ;0{;{	;o;;o;	;
+@
+;iY~;"mesa_clock_ratio_t *const ;@; o;;o;	;
+@
+;is~;"
+ratio;@;[ ;0;o;;o;	;
+@
+;i~~;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i⁄;"mesa_rc ;@; o;;o;	;
+@
+;i‚;" mesa_clock_output_level_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i˛;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÄ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i:Ä;"const uint8_t     ;@; o;;o;	;
+@
+;iLÄ;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i~Ä;"const uint16_t    ;@; o;;o;	;
+@
+;iêÄ;"level_mv;@;[ ;0;o;;o;	;
+@
+;iûÄ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i∑Å;"mesa_rc ;@; o;;o;	;
+@
+;iøÅ;" mesa_clock_output_level_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i€Å;"const mesa_inst_t ;@; o;;o;	;
+@
+;iÌÅ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÇ;"const uint8_t     ;@; o;;o;	;
+@
+;i)Ç;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i[Ç;"uint16_t          *const ;@; o;;o;	;
+@
+;itÇ;"level_mv;@;[ ;0;o;;o;	;
+@
+;iÇÇ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;ilÉ;"mesa_rc ;@; o;;o;	;
+@
+;itÉ;"#mesa_clock_output_selector_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iìÉ;"'const mesa_inst_t                 ;@; o;;o;	;
+@
+;iµÉ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‚É;"'const uint8_t                     ;@; o;;o;	;
+@
+;iÑ;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;i9Ñ;".const mesa_clock_input_selector_t *const ;@; o;;o;	;
+@
+;ibÑ;"
+input;@;[ ;0;o;;o;	;
+@
+;imÑ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iZÖ;"mesa_rc ;@; o;;o;	;
+@
+;ibÖ;"#mesa_clock_output_selector_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÅÖ;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;iùÖ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i Ö;"!const uint8_t               ;@; o;;o;	;
+@
+;iÊÖ;"clock_output;@;[ ;0{;{	;o;;o;	;
+@
+;iÜ;"(mesa_clock_input_selector_t *const ;@; o;;o;	;
+@
+;i>Ü;"
+input;@;[ ;0;o;;o;	;
+@
+;iIÜ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;ioá;"mesa_rc ;@; o;;o;	;
+@
+;iwá;"$mesa_clock_input_alarm_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;ióá;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iµá;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i„á;"#const uint8_t                 ;@; o;;o;	;
+@
+;ià;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i6à;"*const mesa_clock_input_conf_t *const ;@; o;;o;	;
+@
+;i[à;"	conf;@;[ ;0;o;;o;	;
+@
+;ieà;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iãâ;"mesa_rc ;@; o;;o;	;
+@
+;iìâ;"$mesa_clock_input_alarm_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i≥â;"const mesa_inst_t       ;@; o;;o;	;
+@
+;iÀâ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˘â;"const uint8_t           ;@; o;;o;	;
+@
+;iä;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iFä;"$mesa_clock_input_conf_t *const ;@; o;;o;	;
+@
+;ieä;"	conf;@;[ ;0;o;;o;	;
+@
+;ioä;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iêã;"mesa_rc ;@; o;;o;	;
+@
+;iòã;""mesa_clock_input_cfm_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i∂ã;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;i“ã;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˛ã;"!const uint8_t               ;@; o;;o;	;
+@
+;iå;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iMå;"(const mesa_clock_cfm_conf_t *const ;@; o;;o;	;
+@
+;ipå;"	conf;@;[ ;0;o;;o;	;
+@
+;izå;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iõç;"mesa_rc ;@; o;;o;	;
+@
+;i£ç;""mesa_clock_input_cfm_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i¡ç;"const mesa_inst_t     ;@; o;;o;	;
+@
+;i◊ç;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ié;"const uint8_t         ;@; o;;o;	;
+@
+;ié;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iLé;""mesa_clock_cfm_conf_t *const ;@; o;;o;	;
+@
+;iié;"	conf;@;[ ;0;o;;o;	;
+@
+;isé;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iñè;"mesa_rc ;@; o;;o;	;
+@
+;iûè;""mesa_clock_input_pfm_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iºè;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;iÿè;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iê;"!const uint8_t               ;@; o;;o;	;
+@
+;i ê;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iSê;"(const mesa_clock_pfm_conf_t *const ;@; o;;o;	;
+@
+;ivê;"	conf;@;[ ;0;o;;o;	;
+@
+;iÄê;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i£ë;"mesa_rc ;@; o;;o;	;
+@
+;i´ë;""mesa_clock_input_pfm_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i…ë;"const mesa_inst_t     ;@; o;;o;	;
+@
+;iﬂë;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ií;"const uint8_t         ;@; o;;o;	;
+@
+;i!í;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iTí;""mesa_clock_pfm_conf_t *const ;@; o;;o;	;
+@
+;iqí;"	conf;@;[ ;0;o;;o;	;
+@
+;i{í;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iãì;"mesa_rc ;@; o;;o;	;
+@
+;iìì;""mesa_clock_input_gst_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i±ì;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;iÕì;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˘ì;"!const uint8_t               ;@; o;;o;	;
+@
+;iî;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;iHî;"(const mesa_clock_gst_conf_t *const ;@; o;;o;	;
+@
+;ikî;"	conf;@;[ ;0;o;;o;	;
+@
+;iuî;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iÜï;"mesa_rc ;@; o;;o;	;
+@
+;iéï;""mesa_clock_input_gst_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i¨ï;"const mesa_inst_t     ;@; o;;o;	;
+@
+;i¬ï;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÓï;"const uint8_t         ;@; o;;o;	;
+@
+;iñ;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i7ñ;""mesa_clock_gst_conf_t *const ;@; o;;o;	;
+@
+;iTñ;"	conf;@;[ ;0;o;;o;	;
+@
+;i^ñ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iZò;"mesa_rc ;@; o;;o;	;
+@
+;ibò;""mesa_clock_selector_state_get;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iÄò;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iùò;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i…ò;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;iÊò;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iô;")mesa_clock_selector_state_t  *const ;@; o;;o;	;
+@
+;i6ô;"selector_state;@;[ ;0{;{	;o;;o;	;
+@
+;ilô;")uint8_t                      *const ;@; o;;o;	;
+@
+;iêô;"clock_input;@;[ ;0;o;;o;	;
+@
+;i°ô;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iÜö;"mesa_rc ;@; o;;o;	;
+@
+;iéö;"mesa_clock_dpll_state_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i®ö;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i≈ö;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÌö;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i
+õ;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i2õ;")mesa_clock_dpll_state_t      *const ;@; o;;o;	;
+@
+;iVõ;"pll_state;@;[ ;0;o;;o;	;
+@
+;ieõ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i≈ú;"mesa_rc ;@; o;;o;	;
+@
+;iÕú;"-mesa_clock_ho_stack_frequency_offset_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iˆú;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iù;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iJù;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;igù;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iûù;")int64_t                      *const ;@; o;;o;	;
+@
+;i¬ù;"offset;@;[ ;0;o;;o;	;
+@
+;iŒù;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;i≤û;"mesa_rc ;@; o;;o;	;
+@
+;i∫û;"mesa_clock_input_state_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i’û;"const mesa_inst_t       ;@; o;;o;	;
+@
+;iÌû;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iü;"const uint8_t            ;@; o;;o;	;
+@
+;i.ü;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i]ü;"%mesa_clock_input_state_t *const ;@; o;;o;	;
+@
+;i}ü;"input_state;@;[ ;0;o;;o;	;
+@
+;iéü;"CAP(CLOCK);@{;o;;o;	;
+@
+;i¿†;"Y#define MESA_CLOCK_INPUT_LOS_EV     (1 << 0)  /**< External Loss Of Signal event */
+;@{;o;;o;	;
+@
+;i°;"[#define MESA_CLOCK_INPUT_PFM_EV     (1 << 1)  /**< Precise frequency monitor event */
+;@{;o;;o;	;
+@
+;ij°;"Z#define MESA_CLOCK_INPUT_CFM_EV     (1 << 2)  /**< Coarse frequency monitor event */
+;@{;o;;o;	;
+@
+;iø°;"V#define MESA_CLOCK_INPUT_SCM_EV     (1 << 3)  /**< Single Cycle monitor event */
+;@{;o;;o;	;
+@
+;i¢;"R#define MESA_CLOCK_INPUT_GST_EV     (1 << 4)  /**< Guard Soak timer event */
+;@{;o;;o;	;
+@
+;i]¢;"N#define MESA_CLOCK_INPUT_LOL_EV     (1 << 5)  /**< Loss of Lock event */
+;@{
+;o;;o;	;
+@
+;i¶¢;"typedef;@;o;;o;	;
+@
+;iÆ¢;"uint32_t ;@;o;;o;	;
+@
+;i∑¢;""mesa_clock_input_event_type_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i•;"mesa_rc ;@; o;;o;	;
+@
+;i•;" mesa_clock_input_event_poll;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i3•;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iQ•;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i{•;"#const uint8_t                 ;@; o;;o;	;
+@
+;iô•;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i •;"*mesa_clock_input_event_type_t *const ;@; o;;o;	;
+@
+;iÔ•;"ev_mask;@;[ ;0;o;;o;	;
+@
+;i¸•;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iTß;"mesa_rc ;@; o;;o;	;
+@
+;i\ß;""mesa_clock_input_event_enable;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;izß;")const mesa_inst_t                   ;@; o;;o;	;
+@
+;iûß;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i ß;")const uint8_t                       ;@; o;;o;	;
+@
+;iÓß;"clock_input;@;[ ;0{;{	;o;;o;	;
+@
+;i!®;")const mesa_clock_input_event_type_t ;@; o;;o;	;
+@
+;iE®;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;it®;")const mesa_bool_t                   ;@; o;;o;	;
+@
+;iò®;"enable;@;[ ;0;o;;o;	;
+@
+;i§®;"CAP(CLOCK);@{;o;;o;	;
+@
+;iÖ™;"^#define MESA_CLOCK_DPLL_STATE_CHANGE_EV   (1 << 0) /**< State change event in EEC FSM */
+;@{
+;o;;o;	;
+@
+;iﬁ™;"typedef;@;o;;o;	;
+@
+;iÊ™;"uint32_t ;@;o;;o;	;
+@
+;iÔ™;"!mesa_clock_dpll_event_type_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i;≠;"mesa_rc ;@; o;;o;	;
+@
+;iC≠;"mesa_clock_dpll_event_poll;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i^≠;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i{≠;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i§≠;""const mesa_clock_dpll_inst_t ;@; o;;o;	;
+@
+;i¡≠;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;iÍ≠;")mesa_clock_dpll_event_type_t *const ;@; o;;o;	;
+@
+;iÆ;"ev_mask;@;[ ;0;o;;o;	;
+@
+;iÆ;"CAP(CLOCK);@{;"{;{	;o;;o;	;
+@
+;iwØ;"mesa_rc ;@; o;;o;	;
+@
+;iØ;"!mesa_clock_dpll_event_enable;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iúØ;"(const mesa_inst_t                  ;@; o;;o;	;
+@
+;iøØ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÍØ;"(const mesa_clock_dpll_inst_t       ;@; o;;o;	;
+@
+;i∞;"	dpll;@;[ ;0{;{	;o;;o;	;
+@
+;i8∞;"(const mesa_clock_dpll_event_type_t ;@; o;;o;	;
+@
+;i[∞;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;iâ∞;"(const mesa_bool_t                  ;@; o;;o;	;
+@
+;i¨∞;"enable;@;[ ;0;o;;o;	;
+@
+;i∏∞;"CAP(CLOCK);@{;o;;o;	;
+@
+;i≈∞;"M#include <microchip/ethernet/hdr_end.h>  // ALL INCLUDE ABOVE THIS LINE
+;@{;o;;o;	;
+@
+;i±;"5#endif // _MICROCHIP_ETHERNET_SWITCH_API_CLOCK_
+;@

@@ -1,0 +1,1047 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"&6// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+#ifndef _VTSS_MRP_API_H_
+#define _VTSS_MRP_API_H_
+
+#include <vtss/api/types.h>
+
+#if defined(VTSS_FEATURE_MRP)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define VTSS_MRP_CNT   (VTSS_PORTS / 2)  // The maximum number of MRP instances. One instance requires at least two ports
+
+// MRP ring role.
+typedef enum {
+    VTSS_MRP_RING_ROLE_DISABLED,
+    VTSS_MRP_RING_ROLE_CLIENT,
+    VTSS_MRP_RING_ROLE_MANAGER,
+} vtss_mrp_ring_role_t;
+
+// MRP instance create configuration.
+typedef struct {
+    vtss_mrp_ring_role_t  ring_role;    // MRP ring role
+    vtss_mrp_ring_role_t  in_ring_role; // MRP Interconnect ring role
+    BOOL                  mra;          // MRP is MRA. The actual role is given by 'ring_role' and can be changed with vtss_mrp_ring_role_set()
+    u32                   mra_priority; // MRA priority
+    BOOL                  in_rc_mode;   // Is interconnection in RC-mode (TRUE) or LC-mode (FALSE)?
+    vtss_port_no_t        p_port;       // Port with Primary port role
+    vtss_port_no_t        s_port;       // Port with Secondary port role
+    vtss_port_no_t        i_port;       // Port with Interconnect port role
+    vtss_mac_t            mac;          // MAC address (MRP_TS_SA)
+} vtss_mrp_conf_t;
+
+// Add an MRP instance with configuration.
+// Resources are allocated.
+// The ring state is VTSS_MRP_RING_STATE_OPEN.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// conf     [IN] Configuration parameters for MRP.
+vtss_rc vtss_mrp_add(const vtss_inst_t      inst,
+                     const vtss_mrp_idx_t   mrp_idx,
+                     const vtss_mrp_conf_t  *const conf);
+
+vtss_rc vtss_mrp_get(const vtss_inst_t      inst,
+                     const vtss_mrp_idx_t   mrp_idx,
+                     vtss_mrp_conf_t        *const conf);
+
+// Delete an MRP instance.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the deleted MRP instance.
+vtss_rc vtss_mrp_del(const vtss_inst_t      inst,
+                     const vtss_mrp_idx_t   mrp_idx);
+
+// Set an MRP instance ring role. Requires MRP instance is configured as MRA.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// role     [IN] The MRP ring role.
+vtss_rc vtss_mrp_ring_role_set(const vtss_inst_t          inst,
+                               const vtss_mrp_idx_t       mrp_idx,
+                               const vtss_mrp_ring_role_t role);
+
+vtss_rc vtss_mrp_ring_role_get(const vtss_inst_t    inst,
+                               const vtss_mrp_idx_t mrp_idx,
+                               vtss_mrp_ring_role_t *const role);
+
+// Set the port number of the primary port. This is used to swap the port roles
+// of the two ring ports.
+// After swapping ports vtss_mrp_port_state_set() must be called with updated
+// port state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// port_no  [IN] The new primary port. Must be one of the already configured ring ports.
+vtss_rc vtss_mrp_primary_port_set(const vtss_inst_t    inst,
+                                  const vtss_mrp_idx_t mrp_idx,
+                                  const vtss_port_no_t port_no);
+
+vtss_rc vtss_mrp_primary_port_get(const vtss_inst_t    inst,
+                                  const vtss_mrp_idx_t mrp_idx,
+                                  vtss_port_no_t       *const port_no);
+
+// MRP ring state.
+typedef enum {
+    VTSS_MRP_RING_STATE_CLOSED,
+    VTSS_MRP_RING_STATE_OPEN
+} vtss_mrp_ring_state_t;
+
+// Set an MRP instance's ring state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// state    [IN] The ring state.
+vtss_rc vtss_mrp_ring_state_set(const vtss_inst_t            inst,
+                                const vtss_mrp_idx_t         mrp_idx,
+                                const vtss_mrp_ring_state_t  state);
+
+vtss_rc vtss_mrp_ring_state_get(const vtss_inst_t      inst,
+                                const vtss_mrp_idx_t   mrp_idx,
+                                vtss_mrp_ring_state_t  *const state);
+
+// Set an MRP instance's interconnect ring state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// state    [IN] The ring state.
+vtss_rc vtss_mrp_in_ring_state_set(const vtss_inst_t            inst,
+                                   const vtss_mrp_idx_t         mrp_idx,
+                                   const vtss_mrp_ring_state_t  state);
+
+vtss_rc vtss_mrp_in_ring_state_get(const vtss_inst_t      inst,
+                                   const vtss_mrp_idx_t   mrp_idx,
+                                   vtss_mrp_ring_state_t  *const state);
+
+// MRP port state.
+typedef enum {
+    VTSS_MRP_PORT_STATE_DISABLED,
+    VTSS_MRP_PORT_STATE_BLOCKED,
+    VTSS_MRP_PORT_STATE_FORWARDING
+} vtss_mrp_port_state_t;
+
+// Set an MRP instance's ring port state.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// port     [IN] The port.
+// state    [IN] The port state.
+vtss_rc vtss_mrp_port_state_set(const vtss_inst_t            inst,
+                                const vtss_mrp_idx_t         mrp_idx,
+                                const vtss_port_no_t         port,
+                                const vtss_mrp_port_state_t  state);
+
+vtss_rc vtss_mrp_port_state_get(const vtss_inst_t      inst,
+                                const vtss_mrp_idx_t   mrp_idx,
+                                const vtss_port_no_t   port,
+                                vtss_mrp_port_state_t  *const state);
+
+// MRP instance's best MRM information.
+typedef struct {
+    vtss_mac_t mac;  // Best MAC address
+    u32        prio; // Best priority
+} vtss_mrp_best_mrm_t;
+
+// Set an MRP instance's best received priority and MAC.
+// This information can be received by MRP_TestMgrNAck or MRP_TestPropagate.
+// It is used to check for TST reception from current best MRM.
+// Can only be called if configured as an MRA.
+//
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// best     [IN] Best parameters for MRP.
+vtss_rc vtss_mrp_best_mrm_set(const vtss_inst_t         inst,
+                              const vtss_mrp_idx_t      mrp_idx,
+                              const vtss_mrp_best_mrm_t *const best);
+
+vtss_rc vtss_mrp_best_mrm_get(const vtss_inst_t    inst,
+                              const vtss_mrp_idx_t mrp_idx,
+                              vtss_mrp_best_mrm_t  *const best);
+
+// MRP TST LOC configuration.
+typedef struct {
+    u32  tst_interval;    // The expected TST frame reception interval in microseconds
+    u32  tst_mon_count;   // The TST monitoring count of intervals without TST generating TST LOC
+
+    u32  itst_interval;   // The expected ITST frame reception interval in microseconds
+    u32  itst_mon_count;  // The ITST monitoring count of intervals without ITST generating ITST LOC
+} vtss_mrp_tst_loc_conf_t;
+
+// Set an MRP instance TST LOC configuration.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// conf     [IN] The TST LOC configuration.
+vtss_rc vtss_mrp_tst_loc_conf_set(const vtss_inst_t             inst,
+                                  const vtss_mrp_idx_t          mrp_idx,
+                                  const vtss_mrp_tst_loc_conf_t *const conf);
+
+vtss_rc vtss_mrp_tst_loc_conf_get(const vtss_inst_t       inst,
+                                  const vtss_mrp_idx_t    mrp_idx,
+                                  vtss_mrp_tst_loc_conf_t *const conf);
+
+// This function causes the next MRP_Test PDU that causes the LoC miss counter
+// to be cleared to be copied to the CPU.
+// This is needed after a LoC interrupt, to indicate to the application software
+// that valid MRP_Test PDUs are arriving again.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+vtss_rc vtss_mrp_tst_hitme_once(const vtss_inst_t    inst,
+                                const vtss_mrp_idx_t mrp_idx);
+
+// This function causes the next MRP_InTest PDU that causes the LoC miss counter
+// to be cleared to be copied to the CPU.
+// This is needed after a LoC interrupt, to indicate to the application software
+// that valid MRP_InTest PDUs are arriving again.
+// This only works for MIM-RC instances.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+vtss_rc vtss_mrp_itst_hitme_once(const vtss_inst_t   inst,
+                                 const vtss_mrp_idx_t mrp_idx);
+
+// Copy of remote MRP_Test/MRP_InTest PDUs to the CPU.
+typedef struct {
+    BOOL tst_to_cpu;  // Copy MRP_Test PDUs from remote MRM to CPU if we are currently an MRM.
+    BOOL itst_to_cpu; // Copy MRP_InTest PDUs from remote MIM to CPU if we are a MIM-RC.
+} vtss_mrp_tst_copy_conf_t;
+
+// Configure copying of MRP_Test and MRP_InTest PDUs from remote MRMs and/or
+// MIMs to the CPU.
+// This is usually needed if the application wishes to detect multiple MRMs/MIMs
+// on the (interconnection) ring if it's currently operating as an MRM/MIM
+// itself. In order not to be overwhelmed with remote MRP_[In]Test PDUs this can
+// be turned on and off periodically. It does not affect H/W-based forwarding in
+// any way.
+// It only takes effect if operating as an MRM/MIM.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// copy     [IN] The copy configuration.
+vtss_rc vtss_mrp_tst_copy_conf_set(const vtss_inst_t              inst,
+                                   const vtss_mrp_idx_t           mrp_idx,
+                                   const vtss_mrp_tst_copy_conf_t *const copy);
+
+vtss_rc vtss_mrp_tst_copy_conf_get(const vtss_inst_t        inst,
+                                   const vtss_mrp_idx_t     mrp_idx,
+                                   vtss_mrp_tst_copy_conf_t *const copy);
+
+// MRP status.
+typedef struct {
+    BOOL  tst_loc;        // The TST LOC state.
+    BOOL  itst_loc;       // The ITST LOC state.
+
+    BOOL  mrp_seen;       // MRP frame received
+    BOOL  mrp_proc_seen;  // MRP frame received and processed
+    BOOL  dmac_err_seen;  // MRP frame received with DMAC error
+    BOOL  vers_err_seen;  // MRP frame received with version error
+} vtss_mrp_port_status_t;
+
+typedef struct {
+    vtss_mrp_port_status_t p_status;
+    vtss_mrp_port_status_t s_status;
+    vtss_mrp_port_status_t i_status;
+} vtss_mrp_status_t;
+
+// Get an MRP instance's status.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// status   [IN] The MRP status.
+vtss_rc vtss_mrp_status_get(const vtss_inst_t     inst,
+                            const vtss_mrp_idx_t  mrp_idx,
+                            vtss_mrp_status_t     *const status);
+
+// MRP counters.
+typedef struct {
+    u64 tst_rx_count;  // Number of received valid MRP_Test frames subject to MRP_Test processing.
+    u64 itst_rx_count; // Number of received valid MRP_InTest frames subject to MRP_InTest processing.
+} vtss_mrp_port_counters_t;
+
+typedef struct {
+    vtss_mrp_port_counters_t p_counters;
+    vtss_mrp_port_counters_t s_counters;
+    vtss_mrp_port_counters_t i_counters;
+} vtss_mrp_counters_t;
+
+// Get an MRP instance's counters.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+// counters [IN] The MRP counters.
+vtss_rc vtss_mrp_counters_get(const vtss_inst_t     inst,
+                              const vtss_mrp_idx_t  mrp_idx,
+                              vtss_mrp_counters_t   *const counters);
+
+// Clear the MRP instance status counters.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRP instance.
+vtss_rc vtss_mrp_counters_clear(const vtss_inst_t     inst,
+                                const vtss_mrp_idx_t  mrp_idx);
+
+// MRP Event indication flags.
+// Different events can be enabled/disabled and polled.
+// The events are represented by a bit in an event mask.
+// VTSS_CAP(VTSS_CAP_MRP_EVENT_SUPPORTED) will return an event mask with the
+// events supported on a given platform.
+#define VTSS_MRP_EVENT_MASK_NONE     0x00
+// Change in TST frame Loss of Continuity (LOC) state
+#define VTSS_MRP_EVENT_MASK_TST_LOC  0x01
+// Change in ITST frame Loss of Continuity (LOC) state
+#define VTSS_MRP_EVENT_MASK_ITST_LOC 0x02
+#define VTSS_MRP_EVENT_MASK_ALL      0x0F
+
+// MRP event generation enable/disable.
+// inst     [IN] Target instance reference.
+// mrp_idx  [IN] Index of the configured MRPE instance.
+// mask     [IN] Mask of events to either enable or disable.
+// enable   [IN] Whether to enable or disable the events specified in the mask.
+vtss_rc vtss_mrp_event_mask_set(const vtss_inst_t     inst,
+                                const vtss_mrp_idx_t  mrp_idx,
+                                const u32             mask,
+                                const BOOL            enable);
+
+vtss_rc vtss_mrp_event_mask_get(const vtss_inst_t     inst,
+                                const vtss_mrp_idx_t  mrp_idx,
+                                u32                   *const mask);
+
+// MRP event polling.
+// Mask is returned indicating pending events. Pending event are cleared after get.
+// inst      [IN]  Target instance reference.
+// mrp_idx   [IN]  Index of polled MRPE instance.
+// events    [OUT] Masks of detected pending events during get.
+typedef struct {
+    u32 p_mask;
+    u32 s_mask;
+    u32 i_mask;
+} vtss_mrp_event_t;
+
+vtss_rc vtss_mrp_event_get(const vtss_inst_t     inst,
+                           const vtss_mrp_idx_t  mrp_idx,
+                           vtss_mrp_event_t      *const events);
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* VTSS_FEATURE_MRP */
+#endif /* _VTSS_MRP_API_H_ */
+:@byteposiq:	@str"#ifndef _VTSS_MRP_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[>iPipiqiÖiûiüiªiºi⁄iÌi˙iii|i}ièiûiøiﬁi˛iii=iNiáiÕi]iïi˘i@iâi’ii+i,iWisi¢iŒii8ijiüiŸi⁄iiAi{i|iói√i˜i)i_i`iÆi⁄i	i5	iu	i∏	i˘	i˙	i4
+iq
+i≥
+i¥
+iiili{ißiﬁi7iti¥iıiˆi3isiªiºiœiﬁi˛ii4i5iZiÜiΩiﬁi!igi¨i≠iÍi*ipiqi£iœii'imi∂i˛iˇi?iÇiÀiÃiﬂiÓii1iTiminiòiƒi˚ii7izi¿iiHiIiÜi∆iiIiJiriÉi¨i“iÈiÍi#ipi∞iﬂi‚iiEioi≠iÓi4i5ini™iÎiÏi
+iiri‘i’i-iíi≠iÆi‹ii?iki±i˙iHiIiâiÃiiidiéiﬂii;iri≠iÏiÌi> ih iπ iÎ i!i@!iw!i≤!iÚ!iÛ!i*"i;"iö"iÛ"i#i#i]#iq#i¬#i$i^$iØ$iª$iÔ$i%iR%i{%i√%i&i^&i_&i°&iÊ&i0'i1'i@'iQ'iÅ'i≤'i≥'i„'i!(ia(i§(iæ(iø(i–(iı(i)i?)iT)iU)iv)i¢)iŸ)i˙)i2*im*iØ*i∞*i¡*i“*i5+iú+i∏+iπ+i +iÛ+i,iE,i\,i],iÄ,i¨,i„,i-i@-i}-i√-iƒ-iÔ-i.iR.ié.iŒ.iœ.iÓ.i&/i_/i¨/i’/iˇ/i50i_0iñ0i¿0iÍ0iÎ0i1i?1iw1i¥1i2i@2i2iª2i˙2i˚2i73iv3i∫3iª3i—3i%4iS4iÖ4i≈4i÷4iÊ4iˆ4i5i5i5iR5iå5iÕ5iŒ5i·5i„5iÍ5i6i&6:@last_line_endi&6{;o;;o;	;
+@
+;iÖ;"#define _VTSS_MRP_API_H_
+
+;@{;o;;o;	;
+@
+;iü;""#include <vtss/api/types.h>
+
+;@{;o;;o;	;
+@
+;iº;"##if defined(VTSS_FEATURE_MRP)
+;@{;o;;o;	;
+@
+;i⁄;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;iÌ;"extern;@:stringo;;o;	;
+@
+;iÙ;""C";@; [3{;o;;o;	;
+@
+;i˙;"#endif
+
+;@{;o;;o;	;
+@
+;i;"{#define VTSS_MRP_CNT   (VTSS_PORTS / 2)  // The maximum number of MRP instances. One instance requires at least two ports
+
+;@{
+;o;;o;	;
+@
+;iè;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;ió;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i¢;" VTSS_MRP_RING_ROLE_DISABLED;@:cap0{;{;o;;o;	;
+@
+;i√;"VTSS_MRP_RING_ROLE_CLIENT;@;0{;{;o;;o;	;
+@
+;i‚;"VTSS_MRP_RING_ROLE_MANAGER;@;0:typedef_nameo;;o;	;
+@
+;i ;"vtss_mrp_ring_role_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;i=;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iR;"vtss_mrp_ring_role_t  ;@:	nameo;;o;	;
+@
+;ih;"ring_role;@;[ ;0{;{;{	;o;;o;	;
+@
+;iã;"vtss_mrp_ring_role_t  ;@; o;;o;	;
+@
+;i°;"in_ring_role;@;[ ;0{;{;{	;o;;o;	;
+@
+;i—;"BOOL                  ;@; o;;o;	;
+@
+;iÁ;"mra;@;[ ;0{;{;{	;o;;o;	;
+@
+;ia;"u32                   ;@; o;;o;	;
+@
+;iw;"mra_priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô;"BOOL                  ;@; o;;o;	;
+@
+;iØ;"in_rc_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝;"vtss_port_no_t        ;@; o;;o;	;
+@
+;i;"p_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD;"vtss_port_no_t        ;@; o;;o;	;
+@
+;iZ;"s_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iç;"vtss_port_no_t        ;@; o;;o;	;
+@
+;i£;"i_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŸ;"vtss_mac_t            ;@; o;;o;	;
+@
+;iÔ;"mac;@;[ ;0;o;;o;	;
+@
+;i;"vtss_mrp_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;i8;"vtss_rc ;@; o;;o;	;
+@
+;i@;"vtss_mrp_add;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iM;"const vtss_inst_t      ;@; o;;o;	;
+@
+;id;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;iñ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i¥;"#const vtss_mrp_conf_t  *const ;@; o;;o;	;
+@
+;i“;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i⁄;"vtss_rc ;@; o;;o;	;
+@
+;i‚;"vtss_mrp_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÔ;"const vtss_inst_t      ;@; o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i!;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;i8;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iV;"#vtss_mrp_conf_t        *const ;@; o;;o;	;
+@
+;it;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i˜;"vtss_rc ;@; o;;o;	;
+@
+;iˇ;"vtss_mrp_del;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i;"const vtss_inst_t      ;@; o;;o;	;
+@
+;i#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i>;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;iU;"mrp_idx;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i5	;"vtss_rc ;@; o;;o;	;
+@
+;i=	;"vtss_mrp_ring_role_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iT	;" const vtss_inst_t          ;@; o;;o;	;
+@
+;io	;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iî	;" const vtss_mrp_idx_t       ;@; o;;o;	;
+@
+;iØ	;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i◊	;" const vtss_mrp_ring_role_t ;@; o;;o;	;
+@
+;iÚ	;"	role;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i˙	;"vtss_rc ;@; o;;o;	;
+@
+;i
+;"vtss_mrp_ring_role_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i
+;"const vtss_inst_t    ;@; o;;o;	;
+@
+;i.
+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iS
+;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;ih
+;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iê
+;"!vtss_mrp_ring_role_t *const ;@; o;;o;	;
+@
+;i¨
+;"	role;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i7;"vtss_rc ;@; o;;o;	;
+@
+;i?;"vtss_mrp_primary_port_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iY;"const vtss_inst_t    ;@; o;;o;	;
+@
+;in;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iñ;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;i´;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i÷;"const vtss_port_no_t ;@; o;;o;	;
+@
+;iÎ;"port_no;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iˆ;"vtss_rc ;@; o;;o;	;
+@
+;i˛;"vtss_mrp_primary_port_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i;"const vtss_inst_t    ;@; o;;o;	;
+@
+;i-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iU;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;ij;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iï;"!vtss_port_no_t       *const ;@; o;;o;	;
+@
+;i±;"port_no;@;[ ;0;0{
+;o;;o;	;
+@
+;iœ;"typedef;@;{;o;;o;	;
+@
+;i◊;"	enum;@;[{;{;o;;o;	;
+@
+;i‚;"VTSS_MRP_RING_STATE_CLOSED;@;0{;{;o;;o;	;
+@
+;i;"VTSS_MRP_RING_STATE_OPEN
+;@;0;o;;o;	;
+@
+;i;"vtss_mrp_ring_state_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iﬁ;"vtss_rc ;@; o;;o;	;
+@
+;iÊ;"vtss_mrp_ring_state_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i˛;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iA;""const vtss_mrp_idx_t         ;@; o;;o;	;
+@
+;i^;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iá;""const vtss_mrp_ring_state_t  ;@; o;;o;	;
+@
+;i§;"
+state;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i≠;"vtss_rc ;@; o;;o;	;
+@
+;iµ;"vtss_mrp_ring_state_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÕ;"const vtss_inst_t      ;@; o;;o;	;
+@
+;i‰;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i
+;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;i!;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iJ;"#vtss_mrp_ring_state_t  *const ;@; o;;o;	;
+@
+;ih;"
+state;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i';"vtss_rc ;@; o;;o;	;
+@
+;i/;"vtss_mrp_in_ring_state_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iJ;""const vtss_inst_t            ;@; o;;o;	;
+@
+;ig;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iê;""const vtss_mrp_idx_t         ;@; o;;o;	;
+@
+;i≠;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iŸ;""const vtss_mrp_ring_state_t  ;@; o;;o;	;
+@
+;iˆ;"
+state;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iˇ;"vtss_rc ;@; o;;o;	;
+@
+;i;"vtss_mrp_in_ring_state_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i";"const vtss_inst_t      ;@; o;;o;	;
+@
+;i9;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ib;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;iy;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i•;"#vtss_mrp_ring_state_t  *const ;@; o;;o;	;
+@
+;i√;"
+state;@;[ ;0;0{
+;o;;o;	;
+@
+;iﬂ;"typedef;@;{;o;;o;	;
+@
+;iÁ;"	enum;@;[{;{;o;;o;	;
+@
+;iÚ;"!VTSS_MRP_PORT_STATE_DISABLED;@;0{;{;o;;o;	;
+@
+;i;" VTSS_MRP_PORT_STATE_BLOCKED;@;0{;{;o;;o;	;
+@
+;i5;"$VTSS_MRP_PORT_STATE_FORWARDING
+;@;0;o;;o;	;
+@
+;iV;"vtss_mrp_port_state_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i7;"vtss_rc ;@; o;;o;	;
+@
+;i?;"vtss_mrp_port_state_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iW;""const vtss_inst_t            ;@; o;;o;	;
+@
+;it;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iö;""const vtss_mrp_idx_t         ;@; o;;o;	;
+@
+;i∑;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i‡;""const vtss_port_no_t         ;@; o;;o;	;
+@
+;i˝;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i#;""const vtss_mrp_port_state_t  ;@; o;;o;	;
+@
+;i@;"
+state;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iI;"vtss_rc ;@; o;;o;	;
+@
+;iQ;"vtss_mrp_port_state_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;ii;"const vtss_inst_t      ;@; o;;o;	;
+@
+;iÄ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¶;"const vtss_mrp_idx_t   ;@; o;;o;	;
+@
+;iΩ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ;"const vtss_port_no_t   ;@; o;;o;	;
+@
+;i˝;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i#;"#vtss_mrp_port_state_t  *const ;@; o;;o;	;
+@
+;iA;"
+state;@;[ ;0;0{
+;o;;o;	;
+@
+;ir;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iá;"vtss_mac_t ;@; o;;o;	;
+@
+;ií;"mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞;"u32        ;@; o;;o;	;
+@
+;iª;"	prio;@;[ ;0;o;;o;	;
+@
+;i‘;"vtss_mrp_best_mrm_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;io;"vtss_rc ;@; o;;o;	;
+@
+;iw;"vtss_mrp_best_mrm_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iç;"const vtss_inst_t         ;@; o;;o;	;
+@
+;iß;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÀ;"const vtss_mrp_idx_t      ;@; o;;o;	;
+@
+;iÂ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i;"&const vtss_mrp_best_mrm_t *const ;@; o;;o;	;
+@
+;i-;"	best;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i5;"vtss_rc ;@; o;;o;	;
+@
+;i=;"vtss_mrp_best_mrm_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iS;"const vtss_inst_t    ;@; o;;o;	;
+@
+;ih;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iå;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;i°;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i»;"!vtss_mrp_best_mrm_t  *const ;@; o;;o;	;
+@
+;i‰;"	best;@;[ ;0;0{
+;o;;o;	;
+@
+;i
+;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i;"
+u32  ;@; o;;o;	;
+@
+;i$;"tst_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;iv;"
+u32  ;@; o;;o;	;
+@
+;i{;"tst_mon_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŸ;"
+u32  ;@; o;;o;	;
+@
+;iﬁ;"itst_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1;"
+u32  ;@; o;;o;	;
+@
+;i6;"itst_mon_count;@;[ ;0;o;;o;	;
+@
+;iî;"vtss_mrp_tst_loc_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ik;"vtss_rc ;@; o;;o;	;
+@
+;is;"vtss_mrp_tst_loc_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iç;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;i´;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i”;"#const vtss_mrp_idx_t          ;@; o;;o;	;
+@
+;iÒ;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i;"*const vtss_mrp_tst_loc_conf_t *const ;@; o;;o;	;
+@
+;iA;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iI;"vtss_rc ;@; o;;o;	;
+@
+;iQ;"vtss_mrp_tst_loc_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ik;"const vtss_inst_t       ;@; o;;o;	;
+@
+;iÉ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i´;"const vtss_mrp_idx_t    ;@; o;;o;	;
+@
+;i√;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÓ;"$vtss_mrp_tst_loc_conf_t *const ;@; o;;o;	;
+@
+;i;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;ir;"vtss_rc ;@; o;;o;	;
+@
+;iz;"vtss_mrp_tst_hitme_once;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ií;"const vtss_inst_t    ;@; o;;o;	;
+@
+;iß;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÕ;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;i‚;"mrp_idx;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iw!;"vtss_rc ;@; o;;o;	;
+@
+;i!;"vtss_mrp_itst_hitme_once;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iò!;"const vtss_inst_t   ;@; o;;o;	;
+@
+;i¨!;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i”!;"const vtss_mrp_idx_t ;@; o;;o;	;
+@
+;iË!;"mrp_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;i*";"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i?";"
+BOOL ;@; o;;o;	;
+@
+;iD";"tst_to_cpu;@;[ ;0{;{;{	;o;;o;	;
+@
+;iû";"
+BOOL ;@; o;;o;	;
+@
+;i£";"itst_to_cpu;@;[ ;0;o;;o;	;
+@
+;iı";"vtss_mrp_tst_copy_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i{%;"vtss_rc ;@; o;;o;	;
+@
+;iÉ%;"vtss_mrp_tst_copy_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iû%;"$const vtss_inst_t              ;@; o;;o;	;
+@
+;iΩ%;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ%;"$const vtss_mrp_idx_t           ;@; o;;o;	;
+@
+;i&;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i1&;"+const vtss_mrp_tst_copy_conf_t *const ;@; o;;o;	;
+@
+;iW&;"	copy;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i_&;"vtss_rc ;@; o;;o;	;
+@
+;ig&;"vtss_mrp_tst_copy_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÇ&;"const vtss_inst_t        ;@; o;;o;	;
+@
+;iõ&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iƒ&;"const vtss_mrp_idx_t     ;@; o;;o;	;
+@
+;i›&;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i	';"%vtss_mrp_tst_copy_conf_t *const ;@; o;;o;	;
+@
+;i)';"	copy;@;[ ;0;0{
+;o;;o;	;
+@
+;i@';"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU';"BOOL  ;@; o;;o;	;
+@
+;i[';"tst_loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÖ';"BOOL  ;@; o;;o;	;
+@
+;iã';"itst_loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑';"BOOL  ;@; o;;o;	;
+@
+;iΩ';"mrp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ';"BOOL  ;@; o;;o;	;
+@
+;iÌ';"mrp_proc_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i%(;"BOOL  ;@; o;;o;	;
+@
+;i+(;"dmac_err_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;ie(;"BOOL  ;@; o;;o;	;
+@
+;ik(;"vers_err_seen;@;[ ;0;o;;o;	;
+@
+;i¶(;"vtss_mrp_port_status_t;@;[ ;0{
+;o;;o;	;
+@
+;iø(;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i‘(;"vtss_mrp_port_status_t ;@; o;;o;	;
+@
+;iÎ(;"p_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˘(;"vtss_mrp_port_status_t ;@; o;;o;	;
+@
+;i);"s_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;i);"vtss_mrp_port_status_t ;@; o;;o;	;
+@
+;i5);"i_status;@;[ ;0;o;;o;	;
+@
+;iA);"vtss_mrp_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˙);"vtss_rc ;@; o;;o;	;
+@
+;i*;"vtss_mrp_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i*;"const vtss_inst_t     ;@; o;;o;	;
+@
+;i,*;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iN*;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;id*;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iâ*;""vtss_mrp_status_t     *const ;@; o;;o;	;
+@
+;i¶*;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i¡*;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i÷*;"	u64 ;@; o;;o;	;
+@
+;i⁄*;"tst_rx_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;i9+;"	u64 ;@; o;;o;	;
+@
+;i=+;"itst_rx_count;@;[ ;0;o;;o;	;
+@
+;iû+;"vtss_mrp_port_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;iπ+;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iŒ+;"vtss_mrp_port_counters_t ;@; o;;o;	;
+@
+;iÁ+;"p_counters;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˜+;"vtss_mrp_port_counters_t ;@; o;;o;	;
+@
+;i,;"s_counters;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ,;"vtss_mrp_port_counters_t ;@; o;;o;	;
+@
+;i9,;"i_counters;@;[ ;0;o;;o;	;
+@
+;iG,;"vtss_mrp_counters_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i-;"vtss_rc ;@; o;;o;	;
+@
+;i-;"vtss_mrp_counters_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i$-;"const vtss_inst_t     ;@; o;;o;	;
+@
+;i:-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i^-;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;it-;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iõ-;""vtss_mrp_counters_t   *const ;@; o;;o;	;
+@
+;i∏-;"counters;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iR.;"vtss_rc ;@; o;;o;	;
+@
+;iZ.;"vtss_mrp_counters_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ir.;"const vtss_inst_t     ;@; o;;o;	;
+@
+;ià.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ.;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;iƒ.;"mrp_idx;@;[ ;0;0{;o;;o;	;
+@
+;i’/;"/#define VTSS_MRP_EVENT_MASK_NONE     0x00
+;@{;o;;o;	;
+@
+;i50;"/#define VTSS_MRP_EVENT_MASK_TST_LOC  0x01
+;@{;o;;o;	;
+@
+;iñ0;"/#define VTSS_MRP_EVENT_MASK_ITST_LOC 0x02
+;@{;o;;o;	;
+@
+;i¿0;"0#define VTSS_MRP_EVENT_MASK_ALL      0x0F
+
+;@{;!{;{	;o;;o;	;
+@
+;i2;"vtss_rc ;@; o;;o;	;
+@
+;i2;"vtss_mrp_event_mask_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i$2;"const vtss_inst_t     ;@; o;;o;	;
+@
+;i:2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i`2;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;iv2;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iü2;"const u32             ;@; o;;o;	;
+@
+;iµ2;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;i€2;"const BOOL            ;@; o;;o;	;
+@
+;iÒ2;"enable;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i˚2;"vtss_rc ;@; o;;o;	;
+@
+;i3;"vtss_mrp_event_mask_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i3;"const vtss_inst_t     ;@; o;;o;	;
+@
+;i13;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iW3;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;im3;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iñ3;""u32                   *const ;@; o;;o;	;
+@
+;i≥3;"	mask;@;[ ;0;0{
+;o;;o;	;
+@
+;i≈4;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i⁄4;"	u32 ;@; o;;o;	;
+@
+;iﬁ4;"p_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍ4;"	u32 ;@; o;;o;	;
+@
+;iÓ4;"s_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˙4;"	u32 ;@; o;;o;	;
+@
+;i˛4;"i_mask;@;[ ;0;o;;o;	;
+@
+;i5;"vtss_mrp_event_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i5;"vtss_rc ;@; o;;o;	;
+@
+;i#5;"vtss_mrp_event_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i65;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iL5;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;im5;"const vtss_mrp_idx_t  ;@; o;;o;	;
+@
+;iÉ5;"mrp_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iß5;""vtss_mrp_event_t      *const ;@; o;;o;	;
+@
+;iƒ5;"events;@;[ ;0;0{;o;;o;	;
+@
+;iŒ5;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;i„5;"#endif
+;@{;o;;o;	;
+@
+;iÍ5;"##endif /* VTSS_FEATURE_MRP */
+;@{;o;;o;	;
+@
+;i6;"##endif /* _VTSS_MRP_API_H_ */
+;@

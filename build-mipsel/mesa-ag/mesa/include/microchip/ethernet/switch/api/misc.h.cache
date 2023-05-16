@@ -1,0 +1,2748 @@
+{:	root[l{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"úä// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+#define _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+
+#include <stdarg.h>
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// Trace group layer
+typedef enum
+{
+    MESA_TRACE_LAYER_AIL,  // Application Interface Layer
+    MESA_TRACE_LAYER_CIL,  // Chip Interface Layer
+
+    MESA_TRACE_LAYER_COUNT // Number of layers
+} mesa_trace_layer_t;
+
+// Trace groups
+typedef enum
+{
+    MESA_TRACE_GROUP_DEFAULT,     // Default trace group
+    MESA_TRACE_GROUP_PORT,        // Port control
+    MESA_TRACE_GROUP_PHY,         // PHY control
+    MESA_TRACE_GROUP_PACKET,      // Packet control
+    MESA_TRACE_GROUP_AFI,         // AFI
+    MESA_TRACE_GROUP_QOS,         // Quality of Service
+    MESA_TRACE_GROUP_L2,          // Layer 2
+    MESA_TRACE_GROUP_L3,          // Layer 3
+    MESA_TRACE_GROUP_SECURITY,    // Security
+    MESA_TRACE_GROUP_EVC,         // Ethernet Virtual Connections
+    MESA_TRACE_GROUP_FDMA_NORMAL, // (Obsoleted group)
+    MESA_TRACE_GROUP_FDMA_IRQ,    // (Obsoleted group)
+    MESA_TRACE_GROUP_REG_CHECK,   // (Obsoleted group)
+    MESA_TRACE_GROUP_MPLS,        // MPLS
+    MESA_TRACE_GROUP_HW_PROT,     // HW Protection
+    MESA_TRACE_GROUP_HQOS,        // Hierarchical Quality of Service
+    MESA_TRACE_GROUP_MACSEC,      // MACSEC control
+    MESA_TRACE_GROUP_VCAP,        // VCAP
+    MESA_TRACE_GROUP_OAM,         // OAM
+    MESA_TRACE_GROUP_MRP,         // MRP
+    MESA_TRACE_GROUP_TS,          // Timestamping
+    MESA_TRACE_GROUP_CLOCK,       // Synce Clock
+    MESA_TRACE_GROUP_EMUL,        // Emulation
+
+    MESA_TRACE_GROUP_COUNT        // Number of trace groups
+} mesa_trace_group_t;
+
+// Trace levels
+typedef enum
+{
+    MESA_TRACE_LEVEL_NONE,  // No trace
+    MESA_TRACE_LEVEL_ERROR, // Error trace
+    MESA_TRACE_LEVEL_INFO,  // Information trace
+    MESA_TRACE_LEVEL_DEBUG, // Debug trace
+    MESA_TRACE_LEVEL_NOISE, // More debug information
+
+    MESA_TRACE_LEVEL_COUNT  // Number of trace levels
+} mesa_trace_level_t;
+
+// Trace group configuration
+typedef struct
+{
+    mesa_trace_level_t level[MESA_TRACE_LAYER_COUNT]; // Trace level per layer
+} mesa_trace_conf_t;
+
+// Get trace configuration
+// group [IN]  Trace group
+// conf [OUT]  Trace group configuration.
+mesa_rc mesa_trace_conf_get(const mesa_trace_group_t  group,
+                            mesa_trace_conf_t         *const conf);
+
+
+// Set trace configuration
+// group [IN]  Trace group
+// conf [IN]   Trace group configuration.
+mesa_rc mesa_trace_conf_set(const mesa_trace_group_t  group,
+                            const mesa_trace_conf_t   *const conf);
+
+// Trace callout function
+//
+// layer [IN]     Trace layer
+// group [IN]     Trace group
+// level [IN]     Trace level
+// file [IN]      File name string
+// line [IN]      Line number in file
+// function [IN]  Function name string
+// format [IN]    Print format string
+void mesa_callout_trace_printf(const mesa_trace_layer_t  layer,
+                               const mesa_trace_group_t  group,
+                               const mesa_trace_level_t  level,
+                               const char                *file,
+                               const int                 line,
+                               const char                *function,
+                               const char                *format,
+                               va_list                   args);
+
+// Trace hex-dump callout function
+//
+// layer [IN]     Trace layer
+// group [IN]     Trace group
+// level [IN]     Trace level
+// file [IN]      The file from where the trace were called.
+// line [IN]      The line from where the trace were called.
+// function [IN]  The function from where the trace were called.
+// byte_p [IN]    Pointer to start of area to print
+// byte_cnt [IN]  Number of bytes to print
+void mesa_callout_trace_hex_dump(const mesa_trace_layer_t layer,
+                                 const mesa_trace_group_t group,
+                                 const mesa_trace_level_t level,
+                                 const char               *file,
+                                 const int                line,
+                                 const char               *function,
+                                 const uint8_t            *byte_p,
+                                 const int                byte_cnt);
+
+// Debug layer
+typedef enum {
+    MESA_DEBUG_LAYER_ALL, // All layers
+    MESA_DEBUG_LAYER_AIL, // Application Interface Layer
+    MESA_DEBUG_LAYER_CIL  // Chip Interface Layer
+} mesa_debug_layer_t;
+
+// Debug function group
+typedef enum {
+    MESA_DEBUG_GROUP_ALL,       // All groups
+    MESA_DEBUG_GROUP_INIT,      // Initialization
+    MESA_DEBUG_GROUP_MISC,      // Miscellaneous
+    MESA_DEBUG_GROUP_PORT,      // Port configuration
+    MESA_DEBUG_GROUP_PORT_CNT,  // Port counters
+    MESA_DEBUG_GROUP_PHY,       // PHY
+    MESA_DEBUG_GROUP_VLAN,      // VLAN
+    MESA_DEBUG_GROUP_PVLAN,     // PVLAN
+    MESA_DEBUG_GROUP_MAC_TABLE, // MAC address table
+    MESA_DEBUG_GROUP_ACL,       // ACL
+    MESA_DEBUG_GROUP_QOS,       // QoS
+    MESA_DEBUG_GROUP_AGGR,      // Link aggregation
+    MESA_DEBUG_GROUP_GLAG,      // Global link aggregation
+    MESA_DEBUG_GROUP_STP,       // Spanning Tree
+    MESA_DEBUG_GROUP_MIRROR,    // Mirroring
+    MESA_DEBUG_GROUP_EVC,       // EVC
+    MESA_DEBUG_GROUP_ERPS,      // ERPS
+    MESA_DEBUG_GROUP_EPS,       // EPS
+    MESA_DEBUG_GROUP_SR,        // Seamless Redundancy
+    MESA_DEBUG_GROUP_PACKET,    // Packet control
+    MESA_DEBUG_GROUP_FDMA,      // Obsoleted
+    MESA_DEBUG_GROUP_TS,        // TS: TimeStamping
+    MESA_DEBUG_GROUP_PHY_TS,    // PHY_TS: PHY TimeStamping
+    MESA_DEBUG_GROUP_WM,        // WaterMarks
+    MESA_DEBUG_GROUP_LRN,       // DEPRECATED. Use MESA_DEBUG_GROUP_MAC_TABLE instead
+    MESA_DEBUG_GROUP_IPMC,      // IP Multicast
+    MESA_DEBUG_GROUP_STACK,     // Stacking
+    MESA_DEBUG_GROUP_CMEF,      // Congestion Management
+    MESA_DEBUG_GROUP_HOST,      // CE-MAX Host configuration
+    MESA_DEBUG_GROUP_MPLS,      // MPLS
+    MESA_DEBUG_GROUP_HW_PROT,   // Hardware Protection
+    MESA_DEBUG_GROUP_HQOS,      // Hierarchical Quality of Service
+    MESA_DEBUG_GROUP_VXLAT,     // VLAN Translation
+    MESA_DEBUG_GROUP_OAM,       // OAM, incl. VOEs/VOP
+    MESA_DEBUG_GROUP_MRP,       // MRP
+    MESA_DEBUG_GROUP_SER_GPIO,  // Serial GPIO configuration
+    MESA_DEBUG_GROUP_L3,        // L3 services
+    MESA_DEBUG_GROUP_AFI,       // Automatic Frame Injector
+    MESA_DEBUG_GROUP_MACSEC,    // 802.1AE MacSec
+    MESA_DEBUG_GROUP_SERDES,    // Serdes Macroes
+    MESA_DEBUG_GROUP_KR,        // 5G/10G/25G-KR
+    MESA_DEBUG_GROUP_MUX,       // mux mode
+
+    // New groups are added above this line
+    MESA_DEBUG_GROUP_COUNT      // Number of groups
+} mesa_debug_group_t;
+
+// Special chip number value for showing information from all chips
+#define MESA_CHIP_NO_ALL 0xffffffff
+
+// Debug information structure
+typedef struct {
+    mesa_debug_layer_t layer;      // Layer
+    mesa_debug_group_t group;      // Function group
+    mesa_chip_no_t     chip_no;    // Chip number, multi-chip targets
+    mesa_port_list_t   port_list;  // Port list
+    mesa_bool_t        full;       // Full information dump
+    mesa_bool_t        clear;      // Clear counters
+    mesa_bool_t        vml_format; // VML format register dump
+    mesa_bool_t        has_action; // Action parameter is present
+    uint32_t           action;     // Debug group depending action value
+} mesa_debug_info_t;
+
+// Get default debug information structure
+// info [OUT]  Debug information
+mesa_rc mesa_debug_info_get(mesa_debug_info_t *const info);
+
+// Print default information
+// prntf [IN]  Debug printf function.
+// info [IN]   Debug information
+mesa_rc mesa_debug_info_print(const mesa_inst_t         inst,
+                              const mesa_debug_printf_t prntf,
+                              const mesa_debug_info_t   *const info);
+
+/* - API protection functions -------------------------------------- */
+
+// API lock structure
+typedef struct {
+    mesa_inst_t inst;     // Target instance reference
+    const char *function; // Function name
+    const char *file;     // File name
+    int        line;      // Line number
+} mesa_api_lock_t;
+
+// Lock API access
+// lock [IN]  Lock information
+void mesa_callout_lock(const mesa_api_lock_t *const lock);
+
+// Unlock API access
+// lock [IN]  Lock information
+void mesa_callout_unlock(const mesa_api_lock_t *const lock);
+
+// API debug lock structure
+typedef struct {
+    mesa_chip_no_t chip_no; // Chip number (if multi-chip instance).
+} mesa_debug_lock_t;
+
+// Debug lock API access
+// lock [IN]  Lock information
+mesa_rc mesa_debug_lock(const mesa_inst_t       inst,
+                        const mesa_debug_lock_t *const lock);
+
+// Debug unlock API access
+// lock [IN]  Lock information
+mesa_rc mesa_debug_unlock(const mesa_inst_t inst,
+                          mesa_debug_lock_t *const lock);
+
+/* - Direct register access (for debugging only) ------------------- */
+
+// Read value from target register.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// addr [IN]     Address to read. Format depends on target.
+// value [OUT]   Register value.
+mesa_rc mesa_reg_read(const mesa_inst_t    inst,
+                      const mesa_chip_no_t chip_no,
+                      const uint32_t       addr,
+                      uint32_t             *const value);
+
+// Write value to target register.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// addr [IN]     Address to read. Format depends on target.
+// value [IN]    Register value.
+mesa_rc mesa_reg_write(const mesa_inst_t    inst,
+                       const mesa_chip_no_t chip_no,
+                       const uint32_t       addr,
+                       const uint32_t       value);
+
+// Read, modify and write value to target register.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// addr [IN]     Address to read. Format depends on target.
+// value [IN]    Register value.
+// mask [IN]     Register mask, only bits enabled are changed.
+mesa_rc mesa_reg_write_masked(const mesa_inst_t    inst,
+                              const mesa_chip_no_t chip_no,
+                              const uint32_t       addr,
+                              const uint32_t       value,
+                              const uint32_t       mask);
+
+/* - Secondary chip if ------------------- */
+
+// Clear EXT0-1 interrupt sticky bits on secondary chip.
+// ext [IN]     EXT number (0-1).
+mesa_rc mesa_intr_sticky_clear(const mesa_inst_t inst,
+                               uint32_t          ext);
+
+/* - Chip ID and revision ------------------------------------------ */
+
+// Chip ID
+typedef struct
+{
+    uint16_t part_number; // BCD encoded part number
+    uint16_t revision;    // Chip revision
+} mesa_chip_id_t;
+
+// Get chip ID and revision.
+// chip_id [IN]  Pointer to chip ID structure.
+mesa_rc mesa_chip_id_get(const mesa_inst_t  inst,
+                         mesa_chip_id_t     *const chip_id);
+
+/* - Polling functions ---------------------------------------- */
+
+// Polling function called every second.
+mesa_rc mesa_poll_1sec(const mesa_inst_t inst);
+
+// Event (interrupt) types related to PTP in the switch chips
+typedef enum {
+    MESA_PTP_SYNC_EV =      (1 << 0), // PTP Synchronization pulse update
+    MESA_PTP_EXT_SYNC_EV =  (1 << 1), // PTP External Synchronization input  (Sync 0 on Serval)
+    MESA_PTP_CLK_ADJ_EV =   (1 << 2), // PTP Clock adjustment updated
+    MESA_PTP_TX_TSTAMP_EV = (1 << 3), // Tx timestamp udated (Jaguar and Serval only)
+    MESA_PTP_EXT_1_SYNC_EV =(1 << 4), // PTP External Synchronization 1 input (Serval only)
+    MESA_PTP_PIN_0_SYNC_EV =(1 << 5), // PTP External pin 0 synchronization (Jaguar2 only)
+    MESA_PTP_PIN_1_SYNC_EV =(1 << 6), // PTP External pin 1 synchronization (Jaguar2 only)
+    MESA_PTP_PIN_2_SYNC_EV =(1 << 7), // PTP External pin 2 synchronization (Jaguar2 only)
+    MESA_PTP_PIN_3_SYNC_EV =(1 << 8), // PTP External pin 3 synchronization (Jaguar2 only)
+} mesa_ptp_event_type_t;
+
+// PTP polling function called at by interrupt or periodicly
+// ev_mask    [OUT] Event type mask of active events
+// The ev_mask parameter can be either a single event_type or
+// multiple event types (or MESA_EVTYPE_ALL). If invoked by a
+// processor interrupt signal, the type of event to check for may be
+// narrowed in to specific events.
+mesa_rc mesa_ptp_event_poll(const mesa_inst_t      inst,
+                            mesa_ptp_event_type_t  *const ev_mask);
+
+// Enable PTP event generation for a specific event type
+// enable   [IN] Enable or disable events
+// ev_mask  [IN] Event type(s) to control (mask)
+mesa_rc mesa_ptp_event_enable(const mesa_inst_t            inst,
+                              const mesa_ptp_event_type_t  ev_mask,
+                              const mesa_bool_t            enable);
+
+// The dev_all event (interrupt) types
+typedef enum {
+    MESA_DEV_ALL_TX_TSTAMP_EV = (1 << 0), // Tx timestamp udated
+    MESA_DEV_ALL_LINK_EV =      (1 << 1), // Link state changed
+} mesa_dev_all_event_type_t;
+
+// The dev_all polling types
+typedef enum {
+    MESA_DEV_ALL_POLL_ALL,       // Polling all chip
+    MESA_DEV_ALL_POLL_PRIMARY,   // Polling primary chip
+    MESA_DEV_ALL_POLL_SECONDARY, // Polling secondary chip
+} mesa_dev_all_event_poll_t;
+
+// DEV_ALL polling function called at by interrupt or periodically
+// poll_type [IN] Polling type
+// ev_mask   [OUT] Event type mask array of active events for all ports - must be of size MESA_PORT_ARRAY_SIZE
+// The ev_mask parameter can be either a single event_type or
+// multiple event types (or MESA_EVTYPE_ALL). If invoked by a
+// processor interrupt signal, the type of event to check for may be
+// narrowed in to specific events.
+mesa_rc mesa_dev_all_event_poll(const mesa_inst_t                 inst,
+                                const mesa_dev_all_event_poll_t   poll_type,
+                                mesa_dev_all_event_type_t         *const ev_mask);
+
+// Enable DEV_ALL event generation for a specific event type
+// port_no  [IN] Port number.
+// enable   [IN] Enable or disable events.
+// ev_mask  [IN] Event type(s) to control (mask).
+mesa_rc mesa_dev_all_event_enable(const mesa_inst_t                inst,
+                                  const mesa_port_no_t             port_no,
+                                  const mesa_dev_all_event_type_t  ev_mask,
+                                  const mesa_bool_t                enable);
+
+/* - GPIOs --------------------------------------------------------- */
+
+// GPIO number
+typedef uint32_t mesa_gpio_no_t;
+
+// GPIO start number
+#define MESA_GPIO_NO_START 0
+
+// GPIO end number
+#define MESA_GPIO_NO_END   (MESA_GPIO_NO_START+MESA_GPIOS)
+
+// GPIO configured mode
+typedef enum
+{
+    MESA_GPIO_OUT,    // Output enabled
+    MESA_GPIO_IN,     // Input enabled
+    MESA_GPIO_IN_INT, // Input enabled, IRQ gated
+    MESA_GPIO_ALT_0,  // Alternate function 0
+    MESA_GPIO_ALT_1,  // Alternate function 1
+    MESA_GPIO_ALT_2,  // Alternate function 2
+    MESA_GPIO_ALT_3,  // Alternate function 3
+    MESA_GPIO_ALT_4,  // Alternate function 4
+    MESA_GPIO_ALT_5,  // Alternate function 5
+} mesa_gpio_mode_t;
+
+// Set GPIO mode.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// gpio_no [IN]  GPIO pin number.
+// mode [IN]     GPIO mode.
+mesa_rc mesa_gpio_mode_set(const mesa_inst_t      inst,
+                           const mesa_chip_no_t   chip_no,
+                           const mesa_gpio_no_t   gpio_no,
+                           const mesa_gpio_mode_t mode);
+
+// Set GPIO direction to input or output.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// gpio_no [IN]  GPIO pin number.
+// output [IN]   TRUE if output, FALSE if input.
+// DEPRECATED. Use mesa_gpio_mode_set() instead.
+mesa_rc mesa_gpio_direction_set(const mesa_inst_t     inst,
+                                const mesa_chip_no_t  chip_no,
+                                const mesa_gpio_no_t  gpio_no,
+                                const mesa_bool_t     output);
+
+// Read from GPIO input pin.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// gpio_no [IN]  GPIO pin number.
+// value [OUT]   TRUE if pin is high, FALSE if it is low.
+mesa_rc mesa_gpio_read(const mesa_inst_t     inst,
+                       const mesa_chip_no_t  chip_no,
+                       const mesa_gpio_no_t  gpio_no,
+                       mesa_bool_t           *const value);
+
+// Write to GPIO output pin.
+// chip_no [IN]  Chip number (if multi-chip instance).
+// gpio_no [IN]  GPIO pin number.
+// value [IN]    TRUE to set pin high, FALSE to set pin low.
+mesa_rc mesa_gpio_write(const mesa_inst_t     inst,
+                        const mesa_chip_no_t  chip_no,
+                        const mesa_gpio_no_t  gpio_no,
+                        const mesa_bool_t     value);
+
+// Get GPIO event indication
+// chip_no [IN]      Chip number (if multi-chip instance).
+// events [OUT]      Event indication for each GPIO pin - must point to MESA_GPIOS of mesa_bool_t.
+mesa_rc mesa_gpio_event_poll(const mesa_inst_t     inst,
+                             const mesa_chip_no_t  chip_no,
+                             mesa_bool_t           *const events);
+
+// Set GPIO event enable
+// chip_no [IN]      Chip number (if multi-chip instance).
+// gpio_no [IN]      GPIO pin number.
+// enable  [IN]      Enable or disable event.
+mesa_rc mesa_gpio_event_enable(const mesa_inst_t     inst,
+                               const mesa_chip_no_t  chip_no,
+                               const mesa_gpio_no_t  gpio_no,
+                               mesa_bool_t           enable);
+
+// The GPIO functionality identifier
+typedef enum {
+    MESA_GPIO_FUNC_PTP_0,   // PTP 0 GPIO functionality
+    MESA_GPIO_FUNC_PTP_1,   // PTP 1 GPIO functionality
+    MESA_GPIO_FUNC_PTP_2,   // PTP 2 GPIO functionality
+    MESA_GPIO_FUNC_PTP_3,   // PTP 3 GPIO functionality
+    MESA_GPIO_FUNC_PTP_4    // PTP 4 GPIO functionality
+} mesa_gpio_func_t;
+
+// GPIO functionality ALT mode
+typedef enum
+{
+    MESA_GPIO_FUNC_ALT_0,  // Alternate function 0
+    MESA_GPIO_FUNC_ALT_1,  // Alternate function 1
+    MESA_GPIO_FUNC_ALT_2  // Alternate function 2
+} mesa_gpio_func_alt_t;
+
+// GPIO functionality information
+typedef struct {
+    mesa_gpio_no_t       gpio_no;    // GPIO pin number.
+    mesa_gpio_func_alt_t alt;        // GPIO ALT function.
+} mesa_gpio_func_info_t;
+
+// Get the GPIO information that is board specific for this GPIO functionality
+typedef mesa_rc (*mesa_gpio_func_info_get_t)(const mesa_inst_t       inst,
+                                             const mesa_gpio_func_t  gpio_func,
+                                             mesa_gpio_func_info_t   *const info);
+
+/* - Serial GPIO control ---------------------------------------------------- */
+
+// Serial GPIO group
+typedef uint32_t mesa_sgpio_group_t;
+
+// Number of serial GPIO ports
+#define MESA_SGPIO_PORTS 32
+
+// SGPIO output mode
+typedef enum
+{
+    MESA_SGPIO_MODE_OFF,            // Off
+    MESA_SGPIO_MODE_ON,             // On
+    MESA_SGPIO_MODE_0,              // Mode 0
+    MESA_SGPIO_MODE_1,              // Mode 1
+    MESA_SGPIO_MODE_0_ACTIVITY,     // Mode 0 when link activity
+    MESA_SGPIO_MODE_1_ACTIVITY,     // Mode 1 when link activity
+    MESA_SGPIO_MODE_0_ACTIVITY_INV, // Mode 0 when link activity, inversed polarity
+    MESA_SGPIO_MODE_1_ACTIVITY_INV, // Mode 1 when link activity, inversed polarity
+    MESA_SGPIO_MODE_NO_CHANGE       // Do not change the SGPIO mode (the mode is controlled elsewhere)
+} mesa_sgpio_mode_t CAP(MISC_SGPIO_CNT);
+
+// SGPIO blink mode
+typedef enum
+{
+    MESA_SGPIO_BMODE_TOGGLE, // Burst toggle (mode 1 only)
+    MESA_SGPIO_BMODE_0_625,  // 0.625 Hz (mode 0 only)
+    MESA_SGPIO_BMODE_1_25,   // 1.25 Hz
+    MESA_SGPIO_BMODE_2_5,    // 2.5 Hz
+    MESA_SGPIO_BMODE_5       // 5 Hz
+} mesa_sgpio_bmode_t CAP(MISC_SGPIO_CNT);
+
+// SGPIO port configuration
+typedef struct
+{
+    mesa_bool_t       enabled; // Port enabled/disabled
+    mesa_sgpio_mode_t mode[4]; // Mode for each bit
+    mesa_bool_t       int_pol_high[4];  // SGPIO interrupt polarity for each bit - TRUE - Interrupt when SGPIO pin high, FALSE - Interrupt when SGPIO pin low.
+} mesa_sgpio_port_conf_t CAP(MISC_SGPIO_CNT);
+
+// SGPIO configuration for a group
+typedef struct
+{
+    mesa_sgpio_bmode_t     bmode[2];                    // Blink mode 0 and 1
+    uint8_t                bit_count;                   // Bits enabled per port, 1-4
+    mesa_sgpio_port_conf_t port_conf[MESA_SGPIO_PORTS]; // Port configuration
+} mesa_sgpio_conf_t CAP(MISC_SGPIO_CNT);
+
+// Get SGPIO configuration
+// chip_no [IN]  Chip number (if multi-chip instance).
+// group [IN]    SGPIO group.
+// conf [OUT]    SGPIO configuration.
+mesa_rc mesa_sgpio_conf_get(const mesa_inst_t        inst,
+                            const mesa_chip_no_t     chip_no,
+                            const mesa_sgpio_group_t group,
+                            mesa_sgpio_conf_t        *const conf)
+    CAP(MISC_SGPIO_CNT);
+
+// Set SGPIO configuration
+// chip_no [IN]  Chip number (if multi-chip instance).
+// group [IN]    SGPIO group.
+// conf [IN]     SGPIO configuration.
+mesa_rc mesa_sgpio_conf_set(const mesa_inst_t        inst,
+                            const mesa_chip_no_t     chip_no,
+                            const mesa_sgpio_group_t group,
+                            const mesa_sgpio_conf_t  *const conf)
+    CAP(MISC_SGPIO_CNT);
+
+// SGPIO read data for a port
+typedef struct
+{
+    mesa_bool_t value[4]; // Data for each and bit
+} mesa_sgpio_port_data_t CAP(MISC_SGPIO_CNT);
+
+// Read SGPIO data
+// chip_no [IN]  Chip number (if multi-chip instance).
+// group [IN]    SGPIO group.
+// data [OUT]    SGPIO data.
+mesa_rc mesa_sgpio_read(const mesa_inst_t        inst,
+                        const mesa_chip_no_t     chip_no,
+                        const mesa_sgpio_group_t group,
+                        mesa_sgpio_port_data_t   data[MESA_SGPIO_PORTS])
+     CAP(MISC_SGPIO_CNT);
+
+// Get SGPIO event indication
+// chip_no [IN]  Chip number (if multi-chip instance).
+// group [IN]    SGPIO group.
+// bit [IN]      SGPIO port bit (0-3).
+// events [OUT]  Event indication for each port for the selected bit - must point to MESA_SGPIO_PORTS of mesa_bool_t.
+mesa_rc mesa_sgpio_event_poll(const mesa_inst_t        inst,
+                              const mesa_chip_no_t     chip_no,
+                              const mesa_sgpio_group_t group,
+                              const uint32_t           bit,
+                              mesa_bool_t              *const events)
+    CAP(MISC_SGPIO_CNT);
+
+// Get SGPIO event enable
+// chip_no [IN]  Chip number (if multi-chip instance).
+// group [IN]    SGPIO group.
+// port [IN]     SGPIO port (0-31).
+// bit [IN]      SGPIO port bit (0-3).
+// enable [IN]   Event for each port for the selected bit is enabled or disabled.
+mesa_rc mesa_sgpio_event_enable(const mesa_inst_t        inst,
+                                const mesa_chip_no_t     chip_no,
+                                const mesa_sgpio_group_t group,
+                                const mesa_port_no_t     port,
+                                const uint32_t           bit,
+                                mesa_bool_t              enable)
+    CAP(MISC_SGPIO_CNT);
+
+// Configure interrupt.
+// mask [IN] Interrupt mask - Configures the interrupts for the bits set in the mask.
+// polarity [IN] Polarity - Interrupt polarity.
+// enable [IN] Enable   - 1 = enable, 0 = disable.
+mesa_rc mesa_intr_cfg(const mesa_inst_t inst,
+                      const uint32_t    mask,
+                      const mesa_bool_t polarity,
+                      const mesa_bool_t enable);
+
+
+// Interrupt source structure.
+typedef struct {
+    mesa_port_list_t link_change; // Applies to XAUI, 100FX and 1000X ports
+} mesa_intr_t CAP(MISC_INTERRUPTS);
+
+// Set the interrupt mask.
+// mask [IN] Pointer to mask structure.
+mesa_rc mesa_intr_mask_set(const mesa_inst_t inst,
+                           mesa_intr_t *mask)
+    CAP(MISC_INTERRUPTS);
+
+// Get the interrupt status for all enabled sources.
+// The interrupt status bit is cleared by the function
+// status [OUT] Pointer to a structure with status of all enabled interrupt sources.
+mesa_rc mesa_intr_status_get(const mesa_inst_t inst,
+                             mesa_intr_t *status)
+    CAP(MISC_INTERRUPTS);
+
+// This vil negate polarity on fast link fail detection signals when active
+// This is only intended to be used on Luton26 RevB as a work around for the
+// Atom PHY interrupt always active problem
+mesa_rc mesa_intr_pol_negation(const mesa_inst_t inst)
+     CAP(MISC_INTERRUPTS);
+
+// Interrupt sources.
+typedef enum
+{
+    MESA_IRQ_XTR,      // Frame Extraction Ready(register-based)
+    MESA_IRQ_FDMA_XTR, // Frame Extraction Ready (FDMA-based)
+    MESA_IRQ_SOFTWARE, // Software IRQ
+    MESA_IRQ_PTP_RDY,  // PTP Timestamp Ready
+    MESA_IRQ_PTP_SYNC, // PTP Synchronization IRQ
+    MESA_IRQ_EXT0,     // EXT0 IRQ
+    MESA_IRQ_EXT1,     // EXT1 IRQ
+    MESA_IRQ_OAM,      // OAM IRQ
+    MESA_IRQ_SGPIO,    // Serial GPIO IRQ
+    MESA_IRQ_SGPIO2,   // Serial GPIO2 IRQ
+    MESA_IRQ_DPLL,     // DPLL
+    MESA_IRQ_GPIO,     // GPIO
+    MESA_IRQ_PUSH_BUTTON, // General purpose pushbutton
+    MESA_IRQ_DEV_ALL,  // Device (port) IRQ
+    MESA_IRQ_CU_PHY_0,    // LAN966X internal PHY 0
+    MESA_IRQ_CU_PHY_1,    // LAN966X internal PHY 1
+    MESA_IRQ_KR_SD10G_0,  // KR IRQ 0
+    MESA_IRQ_KR_SD10G_1,  // KR IRQ 1
+    MESA_IRQ_KR_SD10G_2,  // KR IRQ 2
+    MESA_IRQ_KR_SD10G_3,  // KR IRQ 3
+    MESA_IRQ_KR_SD10G_4,  // KR IRQ 4
+    MESA_IRQ_KR_SD10G_5,  // KR IRQ 5
+    MESA_IRQ_KR_SD10G_6,  // KR IRQ 6
+    MESA_IRQ_KR_SD10G_7,  // KR IRQ 7
+    MESA_IRQ_KR_SD10G_8,  // KR IRQ 8
+    MESA_IRQ_KR_SD10G_9,  // KR IRQ 9
+    MESA_IRQ_KR_SD10G_10, // KR IRQ 10
+    MESA_IRQ_KR_SD10G_11, // KR IRQ 11
+    MESA_IRQ_KR_SD10G_12, // KR IRQ 12
+    MESA_IRQ_KR_SD10G_13, // KR IRQ 13
+    MESA_IRQ_KR_SD10G_14, // KR IRQ 14
+    MESA_IRQ_KR_SD10G_15, // KR IRQ 15
+    MESA_IRQ_KR_SD10G_16, // KR IRQ 16
+    MESA_IRQ_KR_SD10G_17, // KR IRQ 17
+    MESA_IRQ_KR_SD10G_18, // KR IRQ 18
+    MESA_IRQ_KR_SD10G_19, // KR IRQ 19
+
+    MESA_IRQ_MAX,      // Maximum IRQ Source - MUST be the last in this enum
+} mesa_irq_t CAP(MISC_IRQ_CONTROL);
+
+// Interrupt configuration options.
+typedef struct {
+    mesa_bool_t  external;    // Redirect to external IRQ
+    uint8_t      destination; // IRQ destination index
+} mesa_irq_conf_t CAP(MISC_IRQ_CONTROL);
+
+// Interrupt status structure.
+typedef struct {
+    uint32_t active;     // Bitmap for pending IRQs (MESA_IRQ_xxx)
+    uint32_t raw_ident;  // RAW (target dependentant) bitmap for active pending IRQs
+    uint32_t raw_status; // RAW (target dependentant) bitmap for all pending IRQs
+    uint32_t raw_mask;   // RAW (target dependentant) bitmap for IRQs mask
+} mesa_irq_status_t CAP(MISC_IRQ_CONTROL);
+
+// Get IRQ configuration
+// irq  [IN]     Interrupt source.
+// conf [OUT]    IRQ configuration.
+mesa_rc  mesa_irq_conf_get(const mesa_inst_t inst,
+                           const mesa_irq_t irq,
+                           mesa_irq_conf_t *conf)
+    CAP(MISC_IRQ_CONTROL);
+
+// Set IRQ configuration
+// irq  [IN]     Interrupt source.
+// conf [IN]     IRQ configuration.
+mesa_rc  mesa_irq_conf_set(const mesa_inst_t inst,
+                           const mesa_irq_t irq,
+                           const mesa_irq_conf_t *const conf)
+    CAP(MISC_IRQ_CONTROL);
+
+// Get IRQ status (active sources), mask current sources
+// status [OUT]  IRQ status.
+mesa_rc  mesa_irq_status_get_and_mask(const mesa_inst_t inst,
+                                      mesa_irq_status_t *status)
+    CAP(MISC_IRQ_CONTROL);
+
+// Control a specific interrupt source
+// irq    [IN]   Interrupt source.
+// enable [IN]   Enable or disable source.
+mesa_rc  mesa_irq_enable(const mesa_inst_t inst,
+                         const mesa_irq_t irq,
+                         mesa_bool_t enable)
+    CAP(MISC_IRQ_CONTROL);
+
+/* - API tod functions -------------------------------------- */
+
+// Get the current hw nanosec time
+// This function is called from interrupt
+// Returns actual ns counter
+
+uint32_t mesa_tod_get_ns_cnt(void);
+
+// If the actual HW does not support time stamping, an external callback
+// function can be set up to do the work.
+// Returns actual ns counter.
+typedef uint32_t (*tod_get_ns_cnt_cb_t)(void);  // Get ns Counter callback
+
+// Set an external hw nanosec read function.
+// cb pointer to callback function
+void mesa_tod_set_ns_cnt_cb(tod_get_ns_cnt_cb_t cb);
+
+// mesa_os_timestamp_t
+// MESA_OS_TIMESTAMP()
+// These two provides a mean to have the API timestamp events for use
+// by the application. It is up to the platform specific code to
+// implement the actual functions to obtain the timestamp.
+// The implementation *must* be callable from interrupt context, so no
+// implicit waits or sleeps are allowed.
+typedef struct {
+    uint32_t hw_cnt; // hardware counter
+} mesa_os_timestamp_t;
+
+#define MESA_OS_TIMESTAMP(timestamp)                                    \
+  do { (timestamp)->hw_cnt = mesa_tod_get_ns_cnt(); } while(0);
+
+/* - Fan control functions -------------------------------------- */
+
+// Initialize the temperature sensor
+// enable [IN]       Set to true if sensor shall be active else false
+mesa_rc mesa_temp_sensor_init(const mesa_inst_t inst,
+                              const mesa_bool_t enable)
+    CAP(MISC_FAN);
+
+// Read temperature sensor value
+// temperature [OUT]      Temperature from sensor (range from -46 to 135 degC)
+mesa_rc mesa_temp_sensor_get(const mesa_inst_t     inst,
+                             int16_t               *temperature)
+    CAP(MISC_FAN);
+
+// FAN PWM frequency
+typedef enum
+{
+    MESA_FAN_PWM_FREQ_25KHZ,
+    MESA_FAN_PWM_FREQ_120HZ,
+    MESA_FAN_PWM_FREQ_100HZ,
+    MESA_FAN_PWM_FREQ_80HZ,
+    MESA_FAN_PWM_FREQ_60HZ,
+    MESA_FAN_PWM_FREQ_40HZ,
+    MESA_FAN_PWM_FREQ_20HZ,
+    MESA_FAN_PWM_FREQ_10HZ
+} mesa_fan_pwd_freq_t CAP(MISC_FAN);
+
+// FAN Types
+typedef enum
+{
+    MESA_FAN_2_WIRE_TYPE,
+    MESA_FAN_3_WIRE_TYPE,
+    MESA_FAN_4_WIRE_TYPE
+} mesa_fan_type_t CAP(MISC_FAN);
+
+// Maximum fan speed level (Fan runs at full speed)
+#define MESA_FAN_SPEED_MAX 0x255
+// Minimum fan speed level (Fan is OFF)
+#define MESA_FAN_SPEED_MIN 0x0
+
+// Fan specifications
+typedef struct
+{
+    mesa_fan_pwd_freq_t fan_pwm_freq; // Fan PWM frequency
+    mesa_bool_t         fan_low_pol;  // Fan polarity of the PWM output. TRUE = PWM is logic 0 when on. FALSE = PWM is logic 1 when on
+    mesa_bool_t         fan_open_col; // PWM output is open collector if TRUE.
+    mesa_fan_type_t     type;         // 2,3 or 4 wire fan type
+    uint32_t            ppr;          // Pulses per rotation. Only valid for 3 and 4 wire fans
+} mesa_fan_conf_t CAP(MISC_FAN);
+
+// Get the number of fan rotations
+// rotation_count [OUT] Number of fan rotation countered for the last second.
+mesa_rc mesa_fan_rotation_get(const mesa_inst_t inst,
+                              uint32_t          *rotation_count)
+    CAP(MISC_FAN);
+
+// Set fan cool level (Duty cycle)
+// lvl  [IN]       Level. 0 = Fan off, 255 = fan fully on
+mesa_rc mesa_fan_cool_lvl_set(const mesa_inst_t inst,
+                              uint8_t lvl)
+    CAP(MISC_FAN);
+
+// Initialise fan controller)
+// spec [IN]    Fan specifications
+mesa_rc mesa_fan_controller_init(const mesa_inst_t     inst,
+                                 const mesa_fan_conf_t *const spec)
+    CAP(MISC_FAN);
+
+// Get fan cool level (Duty cycle)
+// lvl  [IN]       Level. 0 = Fan off, 255 = fan fully on
+mesa_rc mesa_fan_cool_lvl_get(const mesa_inst_t inst,
+                              uint8_t *lvl)
+    CAP(MISC_FAN);
+
+/* - EEE functions -------------------------------------- */
+
+// EEE port configuration
+typedef struct
+{
+    mesa_bool_t eee_ena;          // Enable EEE
+    uint8_t     eee_fast_queues;  // Queues set in this mask will activate egress path as soon as any data is available. Vector for enabling fast queues. bit 0 = queue 0, bit 1 = queue 1 and so on.
+    uint16_t    tx_tw;            // Time from path is activated until frame transmission restarted.
+    uint8_t     lp_advertisement; // Link partner EEE advertisement. Bit 0 = Link partner advertises 100BASE-T capability. Bit 1 = Link partner advertises 1000BASE-T capability.
+    mesa_bool_t optimized_for_power; // EEE can be optimized for either most power savings or least traffic latency
+} mesa_eee_port_conf_t;
+
+// Set EEE configuration
+// port_no  [IN] Port number
+// eee_conf [IN] EEE configuration
+mesa_rc mesa_eee_port_conf_set(const mesa_inst_t          inst,
+                               const mesa_port_no_t       port_no,
+                               const mesa_eee_port_conf_t *const eee_conf);
+
+// RS422 specifications
+typedef struct
+{
+    uint32_t     gpio_rs422_1588_mstoen; // IO pin used for RS422 server output enable/disable
+    uint32_t     gpio_rs422_1588_slvoen; // IO pin used for RS422 client output enable/disable
+    uint32_t     ptp_pin_ldst;           // PTP_IO pin used for RS422 Load/store input
+    uint32_t     ptp_pin_ppso;           // PTP_IO pin used for RS422 1 PPS output
+    uint32_t     ptp_rs422_pps_int_id;   // Interrupt id for RS422 1PPS interrupt
+    uint32_t     ptp_rs422_ldsv_int_id;  // Interrupt id for RS422 Load/Save input interrupt
+} meba_ptp_rs422_conf_t CAP(TS_PTP_RS422);
+
+/* - Symreg ----------------------------------------------------------------- */
+
+// Symbolic descriptiopn of a register.
+typedef struct {
+    const char      *name;      // Name of register
+    unsigned long   addr;       // Address of register
+    unsigned long   repl_cnt;   // Replication count of register
+    unsigned long   repl_width; // Replication width of register
+} mesa_symreg_reg_t;
+
+// Symbolic descriptiopn of a register group.
+typedef struct {
+    const char         *name;      // Name of register group
+    unsigned long      base_addr;  // Base address of register group
+    unsigned long      repl_cnt;   // Replication count of register group
+    unsigned long      repl_width; // Replication width of register group
+    mesa_symreg_reg_t const *regs; // Pointer to symbolic registers (null terminated)
+} mesa_symreg_reggrp_t;
+
+// Symbolic descriptiopn of a register target.
+typedef struct {
+    const char            *name;         // Name of register target
+    int                   repl_number;   // Target instance number
+    unsigned long         tgt_id;        // Target ID
+    unsigned long         base_addr;     // Base address
+    mesa_symreg_reggrp_t const *reggrps; // Pointer to symbolic register groups (null terminated)
+} mesa_symreg_target_t;
+
+// Symbolic register base data.
+typedef struct {
+    const mesa_symreg_target_t *targets;           // Pointer to targets (not null terminated)
+    unsigned long               targets_cnt;       // Number of targets
+    unsigned long               io_origin1_offset; // IO register offset
+    unsigned long               repl_cnt_max;      // Highest number of replications
+    unsigned long               name_len_max;      // Max name length
+} mesa_symreg_data_t;
+
+// Get symbolic register data.
+// data       [OUT] data
+mesa_rc mesa_symreg_data_get(const mesa_inst_t   inst,
+                             mesa_symreg_data_t *const data);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+:@byteposir:	@str"2#ifndef _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[eiPipiqiriöi«i»i‹iiWiXimizi|i∂iÈiÍii/i0i@iMiOiài∫iÎiiHiÄi≠i⁄iiJiÅi∏iÔiiLiëi≈iÔiiAisi§i”i‘ii&i'i7iDiFiniôi iıi+i,ibixiyiñi•ißiˆi	i	i'	iB	il	i©	iÌ	iÓ	iÔ	i
+
+i%
+iO
+iå
+i–
+i—
+iÎ
+iÓ
+ii*iHikiëi∏iﬁii^iûiﬁiiai£i„i‰ii
+i(iFidi°iﬁiiSi~iøi iAiÇi¬iiJièiêiüiÆi÷iiAiWiXipii≠iﬂiiFiwiûi∆iÔi$iKiri¶i·ii?ifiéiµiÏiiKiiªiÈi?ioiõi‘ii9ipi≥iÁiiEiÇi±iÌiiQiÇiÆiØi€ii%i&ijiéièiÆiøiÎi ifiñi“iiFiài—iÊiÁii3ioipiçi≥i‘iiQióiòi‡i·i˜i i? ij ië i∫ iÕ iŒ i· i !i;!i<!iQ!ip!i≠!iÆ!i !i€!i "i5"i6"iO"in"i§"i‚"i„"i˛"i#iO#iâ#iä#i“#i”#i˜#i.$ij$iã$iº$i$i!%i[%i\%i%i∂%iÚ%i&iE&iz&i¨&i‡&i·&i'iL'ià'i©'iË'i!(i](iñ(i–(i
+)i)i9)i:)is)iï)iÃ)i*i*iL*iM*iX*ig*ii*iû*i…*i€*i‹*i˘*i(+iZ+ió+iò+i€+i‹+i,i5,i6,it,iÉ,iÕ,i--is-i…-i%.iÄ.i€.i6/ië/i™/i´/iË/i0i[0iô0iﬁ0i1i:1i~1i1i∏1i‚1i2iT2iò2i‹2i›2i3i3iT3iî3i±3i≤3iœ3iﬁ3i4iL4iá4i§4i•4iË4i5iv5i¥5iÚ5i76iZ6i¢6iÔ6iB7iC7iÄ7iû7i…7i˚7iD8iê8i‹8i(9i)9iq9ir9iÅ9i¢9i£9i∏9i’9i÷9iÈ9i$:i%:i=:iJ:iL:it:iõ:iÕ:i˚:i);iW;iÖ;i≥;i·;iı;iˆ;i<i?<ia<i}<iµ<i<i+=id=ie=iè=i∆=iË=i>iJ>iÜ>i≈>i?iC?iD?ia?iò?i∫?iÙ?i'@i]@iì@iœ@i–@iÌ@i$AiFAiÉAi∑AiÓAi%Bi[Bi\BiyBi¥BiCiPCiåCiœCi–CiÈCi$DiJDixDi≥DiÒDi/EimEinEiìEi¢Ei⁄EiFiJFiÇFi∫FiŒFiœFiÓFi˚Fi˝Fi0GicGiïGi≠GiÆGi–Gi·GiHiUHinHioHiæHi	IiYIi¨Ii≠Ii˛IiˇIiJi9Ji:JiYJiuJivJiãJiòJiöJi≈JiÔJiKiKKiåKiÕKi!LiuLi‹LiMiMiMi'Mi)MidMiõMi√MiÍMiNi9Ni:NiVNieNigNiüNi”NirOi†Oi°OiƒOi”Oi’Oi#PiyPi«PiPiÒPiQiCQiaQiáQi¬Qi Ri<Ri~RióRiòRi≥RiÍRiSi.SiiSißSi„Si%Ti>Ti?Ti]TilTinTi°TiœTi–Ti„TiUi8UiUUiåUi∆Ui˛UiGViaVibViÄVi∑Vi’Vi¸VirWiØWiÔWi-XiiXiØXi»Xi…Xi„XiYi8Yi\YiÉYi’YiZiVZiñZi’Zi[iT[im[in[iÜ[i‹[i\i?\im\iõ\iÕ\i˛\iˇ\i ]i]i0]i|]i†]i°]iº]i‰]i^iE^i_^i`^iï^iÃ^i!_iV_ià_i¢_i£_iÔ_i<`ih`iü`i∫`iª`i—`iﬁ`i‡`i!ai_aiÜai¥aiÊai	bi,biNbixbi£bi¬bi·biciEciyci≠ci”ci˘cidiEdikdiëdi∑di›diei)eiPeiweiûei≈eiÏeifi:fiafiàfiØfi∞fi˝fi!gi"giFgiWgiëgi»giÒgiÚgihi"hiehi∫hiiiWiiÇiiÉiiúiiøii„iijiGjiyjiîjiïjiÆji—jiıji(kiYkióki≤ki≥kiÏki	liGliàli£li§liÀliÓlimiJmiymi¶mi¡mi¬minini'niQninnioniìniîni›nioi%oipoiqoiûoi¡oiˆoi˜oipi%pikpi¨piÁpi.qiWqihqiëqi®qi©qiÛqi3ri4riyrizriüriÂrisiSsifsigsiàsi◊sitiQtidtietiztiátiâti¶ti√ti‡ti¸tiui4uiPuikuiêuiëuiûui´ui≠ui«ui·ui˙uiviviPviqviôvi∏viπviœviﬁvi‡viwi¢wiÒwi1xiêxi±xi≤xi’xi#yiYyiöyi≠yiÆyi—yiziAzilziziÄziûzi¡zi˛ziB{iU{iV{iy{i≥{iÈ{i|i(|i)|if|ig|iÅ|iê|ií|i¬|ià}iÌ}iü~ii+i,iEibiÖi≈iÄiTÄiUÄimÄi|Äi~Äi›Äi<ÅiìÅiÊÅi8ÇiïÇi¿Çi¡ÇiÉiÉi;ÉiLÉiÄÉi∑Éi¯Éi9ÑiNÑiOÑi}ÑiéÑiÀÑiÖiZÖi§Öi˙ÖiÜiÜiBÜiSÜióÜi⁄ÜiáiIái´ái√áiƒái‰áiıáiTàiúàiÂài:âiÄâiñâióâi∂âiœâiäiDäiEäimäiúä:@last_line_endiúä{;o;;o;	;
+@
+;iö;"3#define _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+
+;@{;o;;o;	;
+@
+;i»;"#include <stdarg.h>
+;@{;o;;o;	;
+@
+;i‹;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;im;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iu;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÄ;"MESA_TRACE_LAYER_AIL;@:cap0{;{;o;;o;	;
+@
+;i∫;"MESA_TRACE_LAYER_CIL;@;0{;{;o;;o;	;
+@
+;iÓ;"MESA_TRACE_LAYER_COUNT ;@;0:typedef_nameo;;o;	;
+@
+;i;"mesa_trace_layer_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;i@;"typedef;@;{;o;;o;	;
+@
+;iH;"	enum;@;[{;{;o;;o;	;
+@
+;iS;"MESA_TRACE_GROUP_DEFAULT;@;0{;{;o;;o;	;
+@
+;iå;"MESA_TRACE_GROUP_PORT;@;0{;{;o;;o;	;
+@
+;iæ;"MESA_TRACE_GROUP_PHY;@;0{;{;o;;o;	;
+@
+;iÔ;"MESA_TRACE_GROUP_PACKET;@;0{;{;o;;o;	;
+@
+;i#;"MESA_TRACE_GROUP_AFI;@;0{;{;o;;o;	;
+@
+;iL;"MESA_TRACE_GROUP_QOS;@;0{;{;o;;o;	;
+@
+;iÑ;"MESA_TRACE_GROUP_L2;@;0{;{;o;;o;	;
+@
+;i±;"MESA_TRACE_GROUP_L3;@;0{;{;o;;o;	;
+@
+;iﬁ;"MESA_TRACE_GROUP_SECURITY;@;0{;{;o;;o;	;
+@
+;i;"MESA_TRACE_GROUP_EVC;@;0{;{;o;;o;	;
+@
+;iN;"!MESA_TRACE_GROUP_FDMA_NORMAL;@;0{;{;o;;o;	;
+@
+;iÖ;"MESA_TRACE_GROUP_FDMA_IRQ;@;0{;{;o;;o;	;
+@
+;iº;"MESA_TRACE_GROUP_REG_CHECK;@;0{;{;o;;o;	;
+@
+;iÛ;"MESA_TRACE_GROUP_MPLS;@;0{;{;o;;o;	;
+@
+;i;"MESA_TRACE_GROUP_HW_PROT;@;0{;{;o;;o;	;
+@
+;iP;"MESA_TRACE_GROUP_HQOS;@;0{;{;o;;o;	;
+@
+;iï;"MESA_TRACE_GROUP_MACSEC;@;0{;{;o;;o;	;
+@
+;i…;"MESA_TRACE_GROUP_VCAP;@;0{;{;o;;o;	;
+@
+;iÛ;"MESA_TRACE_GROUP_OAM;@;0{;{;o;;o;	;
+@
+;i;"MESA_TRACE_GROUP_MRP;@;0{;{;o;;o;	;
+@
+;iE;"MESA_TRACE_GROUP_TS;@;0{;{;o;;o;	;
+@
+;iw;"MESA_TRACE_GROUP_CLOCK;@;0{;{;o;;o;	;
+@
+;i®;"MESA_TRACE_GROUP_EMUL;@;0{;{;o;;o;	;
+@
+;iÿ;"#MESA_TRACE_GROUP_COUNT        ;@;0;o;;o;	;
+@
+;i;"mesa_trace_group_t;@;[ ;0{
+;o;;o;	;
+@
+;i7;"typedef;@;{;o;;o;	;
+@
+;i?;"	enum;@;[{;{;o;;o;	;
+@
+;iJ;"MESA_TRACE_LEVEL_NONE;@;0{;{;o;;o;	;
+@
+;ir;"MESA_TRACE_LEVEL_ERROR;@;0{;{;o;;o;	;
+@
+;iù;"MESA_TRACE_LEVEL_INFO;@;0{;{;o;;o;	;
+@
+;iŒ;"MESA_TRACE_LEVEL_DEBUG;@;0{;{;o;;o;	;
+@
+;i˘;"MESA_TRACE_LEVEL_NOISE;@;0{;{;o;;o;	;
+@
+;i0;"MESA_TRACE_LEVEL_COUNT  ;@;0;o;;o;	;
+@
+;id;"mesa_trace_level_t;@;[ ;0{
+;o;;o;	;
+@
+;iñ;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i´;"mesa_trace_level_t ;@:	nameo;;o;	;
+@
+;iæ;"
+level;@;[{:	expro;;o;	;
+@
+;iƒ;"MESA_TRACE_LAYER_COUNT;@;0;o;;o;	;
+@
+;i¯;"mesa_trace_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;il	;"mesa_rc ;@;o;;o;	;
+@
+;it	;"mesa_trace_conf_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;ià	;"const mesa_trace_group_t  ;@;o;;o;	;
+@
+;i¢	;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i≈	;"&mesa_trace_conf_t         *const ;@;o;;o;	;
+@
+;iÊ	;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iO
+;"mesa_rc ;@;o;;o;	;
+@
+;iW
+;"mesa_trace_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ik
+;"const mesa_trace_group_t  ;@;o;;o;	;
+@
+;iÖ
+;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i®
+;"&const mesa_trace_conf_t   *const ;@;o;;o;	;
+@
+;i…
+;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iﬁ;"
+void ;@;o;;o;	;
+@
+;i„;"mesa_callout_trace_printf;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i˝;"const mesa_trace_layer_t  ;@;o;;o;	;
+@
+;i;"
+layer;@;[ ;0{;{	;o;;o;	;
+@
+;i=;"const mesa_trace_group_t  ;@;o;;o;	;
+@
+;iW;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i};"const mesa_trace_level_t  ;@;o;;o;	;
+@
+;ió;"
+level;@;[ ;0{;{	;o;;o;	;
+@
+;iΩ;" const char                *;@;o;;o;	;
+@
+;iÿ;"	file;@;[ ;0{;{	;o;;o;	;
+@
+;i˝;"const int                 ;@;o;;o;	;
+@
+;i;"	line;@;[ ;0{;{	;o;;o;	;
+@
+;i<;" const char                *;@;o;;o;	;
+@
+;iW;"function;@;[ ;0{;{	;o;;o;	;
+@
+;iÄ;" const char                *;@;o;;o;	;
+@
+;iõ;"format;@;[ ;0{;{	;o;;o;	;
+@
+;i¬;"va_list                   ;@;o;;o;	;
+@
+;i‹;"	args;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i~;"
+void ;@;o;;o;	;
+@
+;iÉ;" mesa_callout_trace_hex_dump;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iü;"const mesa_trace_layer_t ;@;o;;o;	;
+@
+;i∏;"
+layer;@;[ ;0{;{	;o;;o;	;
+@
+;i‡;"const mesa_trace_group_t ;@;o;;o;	;
+@
+;i˘;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i!;"const mesa_trace_level_t ;@;o;;o;	;
+@
+;i:;"
+level;@;[ ;0{;{	;o;;o;	;
+@
+;ib;"const char               *;@;o;;o;	;
+@
+;i|;"	file;@;[ ;0{;{	;o;;o;	;
+@
+;i£;"const int                ;@;o;;o;	;
+@
+;iº;"	line;@;[ ;0{;{	;o;;o;	;
+@
+;i„;"const char               *;@;o;;o;	;
+@
+;i˝;"function;@;[ ;0{;{	;o;;o;	;
+@
+;i(;"const uint8_t            *;@;o;;o;	;
+@
+;iB;"byte_p;@;[ ;0{;{	;o;;o;	;
+@
+;ik;"const int                ;@;o;;o;	;
+@
+;iÑ;"byte_cnt;@;[ ;0;0{
+;o;;o;	;
+@
+;iü;"typedef;@;{;o;;o;	;
+@
+;iß;"	enum;@;[{;{;o;;o;	;
+@
+;i≤;"MESA_DEBUG_LAYER_ALL;@;0{;{;o;;o;	;
+@
+;i⁄;"MESA_DEBUG_LAYER_AIL;@;0{;{;o;;o;	;
+@
+;i;"MESA_DEBUG_LAYER_CIL  ;@;0;o;;o;	;
+@
+;iC;"mesa_debug_layer_t;@;[ ;0{
+;o;;o;	;
+@
+;ip;"typedef;@;{;o;;o;	;
+@
+;ix;"	enum;@;[0{;{;o;;o;	;
+@
+;iÉ;"MESA_DEBUG_GROUP_ALL;@;0{;{;o;;o;	;
+@
+;i±;"MESA_DEBUG_GROUP_INIT;@;0{;{;o;;o;	;
+@
+;i„;"MESA_DEBUG_GROUP_MISC;@;0{;{;o;;o;	;
+@
+;i;"MESA_DEBUG_GROUP_PORT;@;0{;{;o;;o;	;
+@
+;iJ;"MESA_DEBUG_GROUP_PORT_CNT;@;0{;{;o;;o;	;
+@
+;i{;"MESA_DEBUG_GROUP_PHY;@;0{;{;o;;o;	;
+@
+;i¢;"MESA_DEBUG_GROUP_VLAN;@;0{;{;o;;o;	;
+@
+;i ;"MESA_DEBUG_GROUP_PVLAN;@;0{;{;o;;o;	;
+@
+;iÛ;"MESA_DEBUG_GROUP_MAC_TABLE;@;0{;{;o;;o;	;
+@
+;i(;"MESA_DEBUG_GROUP_ACL;@;0{;{;o;;o;	;
+@
+;iO;"MESA_DEBUG_GROUP_QOS;@;0{;{;o;;o;	;
+@
+;iv;"MESA_DEBUG_GROUP_AGGR;@;0{;{;o;;o;	;
+@
+;i™;"MESA_DEBUG_GROUP_GLAG;@;0{;{;o;;o;	;
+@
+;iÂ;"MESA_DEBUG_GROUP_STP;@;0{;{;o;;o;	;
+@
+;i;"MESA_DEBUG_GROUP_MIRROR;@;0{;{;o;;o;	;
+@
+;iC;"MESA_DEBUG_GROUP_EVC;@;0{;{;o;;o;	;
+@
+;ij;"MESA_DEBUG_GROUP_ERPS;@;0{;{;o;;o;	;
+@
+;ií;"MESA_DEBUG_GROUP_EPS;@;0{;{;o;;o;	;
+@
+;iπ;"MESA_DEBUG_GROUP_SR;@;0{;{;o;;o;	;
+@
+;i;"MESA_DEBUG_GROUP_PACKET;@;0{;{;o;;o;	;
+@
+;i";"MESA_DEBUG_GROUP_FDMA;@;0{;{;o;;o;	;
+@
+;iO;"MESA_DEBUG_GROUP_TS;@;0{;{;o;;o;	;
+@
+;iÉ;"MESA_DEBUG_GROUP_PHY_TS;@;0{;{;o;;o;	;
+@
+;iø;"MESA_DEBUG_GROUP_WM;@;0{;{;o;;o;	;
+@
+;iÌ;"MESA_DEBUG_GROUP_LRN;@;0{;{;o;;o;	;
+@
+;iC;"MESA_DEBUG_GROUP_IPMC;@;0{;{;o;;o;	;
+@
+;is;"MESA_DEBUG_GROUP_STACK;@;0{;{;o;;o;	;
+@
+;iü;"MESA_DEBUG_GROUP_CMEF;@;0{;{;o;;o;	;
+@
+;iÿ;"MESA_DEBUG_GROUP_HOST;@;0{;{;o;;o;	;
+@
+;i;"MESA_DEBUG_GROUP_MPLS;@;0{;{;o;;o;	;
+@
+;i=;"MESA_DEBUG_GROUP_HW_PROT;@;0{;{;o;;o;	;
+@
+;it;"MESA_DEBUG_GROUP_HQOS;@;0{;{;o;;o;	;
+@
+;i∑;"MESA_DEBUG_GROUP_VXLAT;@;0{;{;o;;o;	;
+@
+;iÎ;"MESA_DEBUG_GROUP_OAM;@;0{;{;o;;o;	;
+@
+;i";"MESA_DEBUG_GROUP_MRP;@;0{;{;o;;o;	;
+@
+;iI;"MESA_DEBUG_GROUP_SER_GPIO;@;0{;{;o;;o;	;
+@
+;iÜ;"MESA_DEBUG_GROUP_L3;@;0{;{;o;;o;	;
+@
+;iµ;"MESA_DEBUG_GROUP_AFI;@;0{;{;o;;o;	;
+@
+;iÒ;"MESA_DEBUG_GROUP_MACSEC;@;0{;{;o;;o;	;
+@
+;i#;"MESA_DEBUG_GROUP_SERDES;@;0{;{;o;;o;	;
+@
+;iU;"MESA_DEBUG_GROUP_KR;@;0{;{;o;;o;	;
+@
+;iÜ;"MESA_DEBUG_GROUP_MUX;@;0{;{;o;;o;	;
+@
+;iﬂ;"!MESA_DEBUG_GROUP_COUNT      ;@;0;o;;o;	;
+@
+;i;"mesa_debug_group_t;@;[ ;0{;o;;o;	;
+@
+;ij;"*#define MESA_CHIP_NO_ALL 0xffffffff
+
+;@{
+;o;;o;	;
+@
+;iÆ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i√;"mesa_debug_layer_t ;@;o;;o;	;
+@
+;i÷;"
+layer;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÔ;"mesa_debug_group_t ;@;o;;o;	;
+@
+;i;"
+group;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$;"mesa_chip_no_t     ;@;o;;o;	;
+@
+;i7;"chip_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;ij;"mesa_port_list_t   ;@;o;;o;	;
+@
+;i};"port_list;@;[ ;0{;{;{	;o;;o;	;
+@
+;iö;"mesa_bool_t        ;@;o;;o;	;
+@
+;i≠;"	full;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷;"mesa_bool_t        ;@;o;;o;	;
+@
+;iÈ;"
+clear;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t        ;@;o;;o;	;
+@
+;i;"vml_format;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJ;"mesa_bool_t        ;@;o;;o;	;
+@
+;i];"has_action;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå;"uint32_t           ;@;o;;o;	;
+@
+;iü;"action;@;[ ;0;o;;o;	;
+@
+;i”;"mesa_debug_info_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i3;"mesa_rc ;@;o;;o;	;
+@
+;i;;"mesa_debug_info_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iO;"mesa_debug_info_t *const ;@;o;;o;	;
+@
+;ih;"	info;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i‘;"mesa_rc ;@;o;;o;	;
+@
+;i‹;"mesa_debug_info_print;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÚ;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i0;"const mesa_debug_printf_t ;@;o;;o;	;
+@
+;iJ;"
+prntf;@;[ ;0{;{	;o;;o;	;
+@
+;io;"&const mesa_debug_info_t   *const ;@;o;;o;	;
+@
+;iê;"	info;@;[ ;0;0{
+;o;;o;	;
+@
+;i˜;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i ;"mesa_inst_t ;@;o;;o;	;
+@
+;i ;"	inst;@;[ ;0{;{;{	;o;;o;	;
+@
+;iC ;"const char *;@;o;;o;	;
+@
+;iO ;"function;@;[ ;0{;{;{	;o;;o;	;
+@
+;in ;"const char *;@;o;;o;	;
+@
+;iz ;"	file;@;[ ;0{;{;{	;o;;o;	;
+@
+;iï ;"int        ;@;o;;o;	;
+@
+;i† ;"	line;@;[ ;0;o;;o;	;
+@
+;iº ;"mesa_api_lock_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i !;"
+void ;@;o;;o;	;
+@
+;i!;"mesa_callout_lock;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i!;""const mesa_api_lock_t *const ;@;o;;o;	;
+@
+;i4!;"	lock;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;ip!;"
+void ;@;o;;o;	;
+@
+;iu!;"mesa_callout_unlock;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iâ!;""const mesa_api_lock_t *const ;@;o;;o;	;
+@
+;i¶!;"	lock;@;[ ;0;0{
+;o;;o;	;
+@
+;i !;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iﬂ!;"mesa_chip_no_t ;@;o;;o;	;
+@
+;iÓ!;"chip_no;@;[ ;0;o;;o;	;
+@
+;i"";"mesa_debug_lock_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;in";"mesa_rc ;@;o;;o;	;
+@
+;iv";"mesa_debug_lock;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÜ";"const mesa_inst_t       ;@;o;;o;	;
+@
+;iû";"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iº";"$const mesa_debug_lock_t *const ;@;o;;o;	;
+@
+;i€";"	lock;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i#;"mesa_rc ;@;o;;o;	;
+@
+;i%#;"mesa_debug_unlock;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i7#;"const mesa_inst_t ;@;o;;o;	;
+@
+;iI#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ii#;"mesa_debug_lock_t *const ;@;o;;o;	;
+@
+;iÇ#;"	lock;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iã$;"mesa_rc ;@;o;;o;	;
+@
+;iì$;"mesa_reg_read;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i°$;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i∂$;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i“$;"const mesa_chip_no_t ;@;o;;o;	;
+@
+;iÁ$;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i%;"const uint32_t       ;@;o;;o;	;
+@
+;i%;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i7%;"!uint32_t             *const ;@;o;;o;	;
+@
+;iS%;"
+value;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i&;"mesa_rc ;@;o;;o;	;
+@
+;i&;"mesa_reg_write;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i*&;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i?&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i\&;"const mesa_chip_no_t ;@;o;;o;	;
+@
+;iq&;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;ië&;"const uint32_t       ;@;o;;o;	;
+@
+;i¶&;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i√&;"const uint32_t       ;@;o;;o;	;
+@
+;iÿ&;"
+value;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iË';"mesa_rc ;@;o;;o;	;
+@
+;i';"mesa_reg_write_masked;@;[ ;0;"[
+{;{	;o;;o;	;
+@
+;i(;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i(;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i?(;"const mesa_chip_no_t ;@;o;;o;	;
+@
+;iT(;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i{(;"const uint32_t       ;@;o;;o;	;
+@
+;iê(;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i¥(;"const uint32_t       ;@;o;;o;	;
+@
+;i…(;"
+value;@;[ ;0{;{	;o;;o;	;
+@
+;iÓ(;"const uint32_t       ;@;o;;o;	;
+@
+;i);"	mask;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iï);"mesa_rc ;@;o;;o;	;
+@
+;iù);"mesa_intr_sticky_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i¥);"const mesa_inst_t ;@;o;;o;	;
+@
+;i∆);"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÎ);"uint32_t          ;@;o;;o;	;
+@
+;i˝);"ext;@;[ ;0;0{
+;o;;o;	;
+@
+;iX*;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;im*;"uint16_t ;@;o;;o;	;
+@
+;iv*;"part_number;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢*;"uint16_t ;@;o;;o;	;
+@
+;i´*;"revision;@;[ ;0;o;;o;	;
+@
+;iÀ*;"mesa_chip_id_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i(+;"mesa_rc ;@;o;;o;	;
+@
+;i0+;"mesa_chip_id_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iA+;"const mesa_inst_t  ;@;o;;o;	;
+@
+;iT+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;is+;"mesa_chip_id_t     *const ;@;o;;o;	;
+@
+;iç+;"chip_id;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i,;"mesa_rc ;@;o;;o;	;
+@
+;i,;"mesa_poll_1sec;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i,;"const mesa_inst_t ;@;o;;o;	;
+@
+;i.,;"	inst;@;[ ;0;0{
+;o;;o;	;
+@
+;it,;"typedef;@;{;o;;o;	;
+@
+;i|,;"	enum;@;[{;{	;o;;o;	;
+@
+;iá,;"MESA_PTP_SYNC_EV ;@:operatoro;;o;	;
+@
+;iò,;"=;@; o;;o;	;
+@
+;iü,;"(1 << 0);@;0{;{	;o;;o;	;
+@
+;i—,;"MESA_PTP_EXT_SYNC_EV ;@;#o;;o;	;
+@
+;iÊ,;"=;@; o;;o;	;
+@
+;iÈ,;"(1 << 1);@;0{;{	;o;;o;	;
+@
+;i1-;"MESA_PTP_CLK_ADJ_EV ;@;#o;;o;	;
+@
+;iE-;"=;@; o;;o;	;
+@
+;iI-;"(1 << 2);@;0{;{	;o;;o;	;
+@
+;iw-;"MESA_PTP_TX_TSTAMP_EV ;@;#o;;o;	;
+@
+;iç-;"=;@; o;;o;	;
+@
+;iè-;"(1 << 3);@;0{;{	;o;;o;	;
+@
+;iÕ-;"MESA_PTP_EXT_1_SYNC_EV ;@;#o;;o;	;
+@
+;i‰-;"=;@; o;;o;	;
+@
+;iÂ-;"(1 << 4);@;0{;{	;o;;o;	;
+@
+;i).;"MESA_PTP_PIN_0_SYNC_EV ;@;#o;;o;	;
+@
+;i@.;"=;@; o;;o;	;
+@
+;iA.;"(1 << 5);@;0{;{	;o;;o;	;
+@
+;iÑ.;"MESA_PTP_PIN_1_SYNC_EV ;@;#o;;o;	;
+@
+;iõ.;"=;@; o;;o;	;
+@
+;iú.;"(1 << 6);@;0{;{	;o;;o;	;
+@
+;iﬂ.;"MESA_PTP_PIN_2_SYNC_EV ;@;#o;;o;	;
+@
+;iˆ.;"=;@; o;;o;	;
+@
+;i˜.;"(1 << 7);@;0{;{	;o;;o;	;
+@
+;i:/;"MESA_PTP_PIN_3_SYNC_EV ;@;#o;;o;	;
+@
+;iQ/;"=;@; o;;o;	;
+@
+;iR/;"(1 << 8);@;0;o;;o;	;
+@
+;iì/;"mesa_ptp_event_type_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i1;"mesa_rc ;@;o;;o;	;
+@
+;i	1;"mesa_ptp_event_poll;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i1;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i41;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iV1;"#mesa_ptp_event_type_t  *const ;@;o;;o;	;
+@
+;it1;"ev_mask;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i2;"mesa_rc ;@;o;;o;	;
+@
+;i2;"mesa_ptp_event_enable;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i12;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iN2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ir2;""const mesa_ptp_event_type_t  ;@;o;;o;	;
+@
+;iè2;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;i∂2;""const mesa_bool_t            ;@;o;;o;	;
+@
+;i”2;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;i3;"typedef;@;{;o;;o;	;
+@
+;i3;"	enum;@;[{;{	;o;;o;	;
+@
+;i3;"MESA_DEV_ALL_TX_TSTAMP_EV ;@;#o;;o;	;
+@
+;i13;"=;@; o;;o;	;
+@
+;i33;"(1 << 0);@;0{;{	;o;;o;	;
+@
+;iX3;"MESA_DEV_ALL_LINK_EV ;@;#o;;o;	;
+@
+;im3;"=;@; o;;o;	;
+@
+;it3;"(1 << 1);@;0;o;;o;	;
+@
+;iñ3;"mesa_dev_all_event_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iœ3;"typedef;@;{;o;;o;	;
+@
+;i◊3;"	enum;@;[{;{;o;;o;	;
+@
+;i‚3;"MESA_DEV_ALL_POLL_ALL;@;0{;{;o;;o;	;
+@
+;i4;"MESA_DEV_ALL_POLL_PRIMARY;@;0{;{;o;;o;	;
+@
+;iP4;" MESA_DEV_ALL_POLL_SECONDARY;@;0;o;;o;	;
+@
+;iâ4;"mesa_dev_all_event_poll_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iZ6;"mesa_rc ;@;o;;o;	;
+@
+;ib6;"mesa_dev_all_event_poll;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iz6;"'const mesa_inst_t                 ;@;o;;o;	;
+@
+;iú6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¬6;"'const mesa_dev_all_event_poll_t   ;@;o;;o;	;
+@
+;i‰6;"poll_type;@;[ ;0{;{	;o;;o;	;
+@
+;i7;".mesa_dev_all_event_type_t         *const ;@;o;;o;	;
+@
+;i87;"ev_mask;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i˚7;"mesa_rc ;@;o;;o;	;
+@
+;i8;"mesa_dev_all_event_enable;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i8;"&const mesa_inst_t                ;@;o;;o;	;
+@
+;i>8;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;if8;"&const mesa_port_no_t             ;@;o;;o;	;
+@
+;iá8;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i≤8;"&const mesa_dev_all_event_type_t  ;@;o;;o;	;
+@
+;i”8;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;i˛8;"&const mesa_bool_t                ;@;o;;o;	;
+@
+;i9;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;iÅ9;"typedef;@:type_aliaso;;o;	;
+@
+;iâ9;"uint32_t ;@;o;;o;	;
+@
+;ií9;"mesa_gpio_no_t;@;[ ;0{;o;;o;	;
+@
+;i∏9;"##define MESA_GPIO_NO_START 0
+
+;@{;o;;o;	;
+@
+;iÈ9;"A#define MESA_GPIO_NO_END   (MESA_GPIO_NO_START+MESA_GPIOS)
+
+;@{
+;o;;o;	;
+@
+;i=:;"typedef;@;{;o;;o;	;
+@
+;iE:;"	enum;@;[{;{;o;;o;	;
+@
+;iP:;"MESA_GPIO_OUT;@;0{;{;o;;o;	;
+@
+;ix:;"MESA_GPIO_IN;@;0{;{;o;;o;	;
+@
+;iü:;"MESA_GPIO_IN_INT;@;0{;{;o;;o;	;
+@
+;i—:;"MESA_GPIO_ALT_0;@;0{;{;o;;o;	;
+@
+;iˇ:;"MESA_GPIO_ALT_1;@;0{;{;o;;o;	;
+@
+;i-;;"MESA_GPIO_ALT_2;@;0{;{;o;;o;	;
+@
+;i[;;"MESA_GPIO_ALT_3;@;0{;{;o;;o;	;
+@
+;iâ;;"MESA_GPIO_ALT_4;@;0{;{;o;;o;	;
+@
+;i∑;;"MESA_GPIO_ALT_5;@;0;o;;o;	;
+@
+;i„;;"mesa_gpio_mode_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i}<;"mesa_rc ;@;o;;o;	;
+@
+;iÖ<;"mesa_gpio_mode_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iò<;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iØ<;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i–<;"const mesa_chip_no_t   ;@;o;;o;	;
+@
+;iÁ<;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i=;"const mesa_gpio_no_t   ;@;o;;o;	;
+@
+;i"=;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iF=;"const mesa_gpio_mode_t ;@;o;;o;	;
+@
+;i]=;"	mode;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iJ>;"mesa_rc ;@;o;;o;	;
+@
+;iR>;"mesa_gpio_direction_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;ij>;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iÄ>;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¶>;"const mesa_chip_no_t  ;@;o;;o;	;
+@
+;iº>;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÂ>;"const mesa_gpio_no_t  ;@;o;;o;	;
+@
+;i˚>;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;i$?;"const mesa_bool_t     ;@;o;;o;	;
+@
+;i:?;"output;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÙ?;"mesa_rc ;@;o;;o;	;
+@
+;i¸?;"mesa_gpio_read;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i@;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i!@;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i>@;"const mesa_chip_no_t  ;@;o;;o;	;
+@
+;iT@;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;it@;"const mesa_gpio_no_t  ;@;o;;o;	;
+@
+;iä@;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;i™@;""mesa_bool_t           *const ;@;o;;o;	;
+@
+;i«@;"
+value;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÉA;"mesa_rc ;@;o;;o;	;
+@
+;iãA;"mesa_gpio_write;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iõA;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i±A;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iœA;"const mesa_chip_no_t  ;@;o;;o;	;
+@
+;iÂA;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iB;"const mesa_gpio_no_t  ;@;o;;o;	;
+@
+;iB;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;i=B;"const mesa_bool_t     ;@;o;;o;	;
+@
+;iSB;"
+value;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iC;"mesa_rc ;@;o;;o;	;
+@
+;iC;"mesa_gpio_event_poll;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i4C;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iJC;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;imC;"const mesa_chip_no_t  ;@;o;;o;	;
+@
+;iÉC;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i©C;""mesa_bool_t           *const ;@;o;;o;	;
+@
+;i∆C;"events;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;ixD;"mesa_rc ;@;o;;o;	;
+@
+;iÄD;"mesa_gpio_event_enable;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;ióD;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i≠D;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i“D;"const mesa_chip_no_t  ;@;o;;o;	;
+@
+;iËD;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iE;"const mesa_gpio_no_t  ;@;o;;o;	;
+@
+;i&E;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iNE;"mesa_bool_t           ;@;o;;o;	;
+@
+;idE;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;iìE;"typedef;@;{;o;;o;	;
+@
+;iõE;"	enum;@;[
+{;{;o;;o;	;
+@
+;i¶E;"MESA_GPIO_FUNC_PTP_0;@;0{;{;o;;o;	;
+@
+;iﬁE;"MESA_GPIO_FUNC_PTP_1;@;0{;{;o;;o;	;
+@
+;iF;"MESA_GPIO_FUNC_PTP_2;@;0{;{;o;;o;	;
+@
+;iNF;"MESA_GPIO_FUNC_PTP_3;@;0{;{;o;;o;	;
+@
+;iÜF;"MESA_GPIO_FUNC_PTP_4    ;@;0;o;;o;	;
+@
+;iºF;"mesa_gpio_func_t;@;[ ;0{
+;o;;o;	;
+@
+;iÓF;"typedef;@;{;o;;o;	;
+@
+;iˆF;"	enum;@;[{;{;o;;o;	;
+@
+;iG;"MESA_GPIO_FUNC_ALT_0;@;0{;{;o;;o;	;
+@
+;i4G;"MESA_GPIO_FUNC_ALT_1;@;0{;{;o;;o;	;
+@
+;igG;"MESA_GPIO_FUNC_ALT_2  ;@;0;o;;o;	;
+@
+;ióG;"mesa_gpio_func_alt_t;@;[ ;0{
+;o;;o;	;
+@
+;i–G;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÂG;"mesa_gpio_no_t       ;@;o;;o;	;
+@
+;i˙G;"gpio_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH;"mesa_gpio_func_alt_t ;@;o;;o;	;
+@
+;i3H;"alt;@;[ ;0;o;;o;	;
+@
+;iWH;"mesa_gpio_func_info_t;@;[ ;0{;o;;o;	;
+@
+;iæH;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;i∆H;"mesa_rc ;@:fptr_nameo;;o;	;
+@
+;i–H;"mesa_gpio_func_info_get_t;@;"[{;{	;o;;o;	;
+@
+;iÎH;"const mesa_inst_t       ;@;o;;o;	;
+@
+;iI;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i6I;"const mesa_gpio_func_t  ;@;o;;o;	;
+@
+;iNI;"gpio_func;@;[ ;0{;{	;o;;o;	;
+@
+;iÜI;"$mesa_gpio_func_info_t   *const ;@;o;;o;	;
+@
+;i•I;"	info;@;[ ;0;0{
+;o;;o;	;
+@
+;iJ;"typedef;@;$o;;o;	;
+@
+;iJ;"uint32_t ;@;o;;o;	;
+@
+;i%J;"mesa_sgpio_group_t;@;[ ;0{;o;;o;	;
+@
+;iYJ;""#define MESA_SGPIO_PORTS 32
+
+;@{
+;o;;o;	;
+@
+;iãJ;"typedef;@;{;o;;o;	;
+@
+;iìJ;"	enum;@;[{;{;o;;o;	;
+@
+;iûJ;"MESA_SGPIO_MODE_OFF;@;0{;{;o;;o;	;
+@
+;i…J;"MESA_SGPIO_MODE_ON;@;0{;{;o;;o;	;
+@
+;iÛJ;"MESA_SGPIO_MODE_0;@;0{;{;o;;o;	;
+@
+;i!K;"MESA_SGPIO_MODE_1;@;0{;{;o;;o;	;
+@
+;iOK;"MESA_SGPIO_MODE_0_ACTIVITY;@;0{;{;o;;o;	;
+@
+;iêK;"MESA_SGPIO_MODE_1_ACTIVITY;@;0{;{;o;;o;	;
+@
+;i—K;"#MESA_SGPIO_MODE_0_ACTIVITY_INV;@;0{;{;o;;o;	;
+@
+;i%L;"#MESA_SGPIO_MODE_1_ACTIVITY_INV;@;0{;{;o;;o;	;
+@
+;iyL;"%MESA_SGPIO_MODE_NO_CHANGE       ;@;0;o;;o;	;
+@
+;iﬁL;"mesa_sgpio_mode_t ;@;[ ;o;;o;	;
+@
+;iL;"CAP(MISC_SGPIO_CNT);@{
+;o;;o;	;
+@
+;iM;"typedef;@;{;o;;o;	;
+@
+;i"M;"	enum;@;[
+{;{;o;;o;	;
+@
+;i-M;"MESA_SGPIO_BMODE_TOGGLE;@;0{;{;o;;o;	;
+@
+;ihM;"MESA_SGPIO_BMODE_0_625;@;0{;{;o;;o;	;
+@
+;iüM;"MESA_SGPIO_BMODE_1_25;@;0{;{;o;;o;	;
+@
+;i«M;"MESA_SGPIO_BMODE_2_5;@;0{;{;o;;o;	;
+@
+;iÓM;"MESA_SGPIO_BMODE_5       ;@;0;o;;o;	;
+@
+;iN;"mesa_sgpio_bmode_t ;@;[ ;o;;o;	;
+@
+;i$N;"CAP(MISC_SGPIO_CNT);@{
+;o;;o;	;
+@
+;iVN;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ikN;"mesa_bool_t       ;@;o;;o;	;
+@
+;i}N;"enabled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i£N;"mesa_sgpio_mode_t ;@;o;;o;	;
+@
+;iµN;"	mode;@;[{; o;;o;	;
+@
+;i∫N;"4;@;0{;{;{	;o;;o;	;
+@
+;i◊N;"mesa_bool_t       ;@;o;;o;	;
+@
+;iÈN;"int_pol_high;@;[{; o;;o;	;
+@
+;iˆN;"4;@;0;o;;o;	;
+@
+;itO;"mesa_sgpio_port_conf_t ;@;[ ;o;;o;	;
+@
+;iãO;"CAP(MISC_SGPIO_CNT);@{
+;o;;o;	;
+@
+;iƒO;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iŸO;"mesa_sgpio_bmode_t     ;@;o;;o;	;
+@
+;iO;"
+bmode;@;[{; o;;o;	;
+@
+;iˆO;"2;@;0{;{;{	;o;;o;	;
+@
+;i'P;"uint8_t                ;@;o;;o;	;
+@
+;i>P;"bit_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;i}P;"mesa_sgpio_port_conf_t ;@;o;;o;	;
+@
+;iîP;"port_conf;@;[{; o;;o;	;
+@
+;iûP;"MESA_SGPIO_PORTS;@;0;o;;o;	;
+@
+;i…P;"mesa_sgpio_conf_t ;@;[ ;o;;o;	;
+@
+;i€P;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;iáQ;"mesa_rc ;@;o;;o;	;
+@
+;ièQ;"mesa_sgpio_conf_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i£Q;"const mesa_inst_t        ;@;o;;o;	;
+@
+;iºQ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁQ;"const mesa_chip_no_t     ;@;o;;o;	;
+@
+;i˜Q;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iR;"const mesa_sgpio_group_t ;@;o;;o;	;
+@
+;i5R;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iXR;"%mesa_sgpio_conf_t        *const ;@;o;;o;	;
+@
+;ixR;"	conf;@;[ ;0;o;;o;	;
+@
+;iÇR;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;i.S;"mesa_rc ;@;o;;o;	;
+@
+;i6S;"mesa_sgpio_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iJS;"const mesa_inst_t        ;@;o;;o;	;
+@
+;icS;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÖS;"const mesa_chip_no_t     ;@;o;;o;	;
+@
+;iûS;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i√S;"const mesa_sgpio_group_t ;@;o;;o;	;
+@
+;i‹S;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iˇS;"%const mesa_sgpio_conf_t  *const ;@;o;;o;	;
+@
+;iT;"	conf;@;[ ;0;o;;o;	;
+@
+;i)T;"CAP(MISC_SGPIO_CNT);@{
+;o;;o;	;
+@
+;i]T;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;irT;"mesa_bool_t ;@;o;;o;	;
+@
+;i~T;"
+value;@;[{; o;;o;	;
+@
+;iÑT;"4;@;0;o;;o;	;
+@
+;i£T;"mesa_sgpio_port_data_t ;@;[ ;o;;o;	;
+@
+;i∫T;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;iUU;"mesa_rc ;@;o;;o;	;
+@
+;i]U;"mesa_sgpio_read;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;imU;"const mesa_inst_t        ;@;o;;o;	;
+@
+;iÜU;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i§U;"const mesa_chip_no_t     ;@;o;;o;	;
+@
+;iΩU;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁU;"const mesa_sgpio_group_t ;@;o;;o;	;
+@
+;i˜U;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iV;"mesa_sgpio_port_data_t   ;@;o;;o;	;
+@
+;i/V;"	data;@;[{; o;;o;	;
+@
+;i4V;"MESA_SGPIO_PORTS;@;0;o;;o;	;
+@
+;iLV;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;irW;"mesa_rc ;@;o;;o;	;
+@
+;izW;"mesa_sgpio_event_poll;@;[ ;0;"[
+{;{	;o;;o;	;
+@
+;iêW;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i©W;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÕW;"const mesa_chip_no_t     ;@;o;;o;	;
+@
+;iÊW;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iX;"const mesa_sgpio_group_t ;@;o;;o;	;
+@
+;i&X;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iKX;"const uint32_t           ;@;o;;o;	;
+@
+;idX;"bit;@;[ ;0{;{	;o;;o;	;
+@
+;iáX;"%mesa_bool_t              *const ;@;o;;o;	;
+@
+;ißX;"events;@;[ ;0;o;;o;	;
+@
+;i≥X;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;i’Y;"mesa_rc ;@;o;;o;	;
+@
+;i›Y;"mesa_sgpio_event_enable;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iıY;"const mesa_inst_t        ;@;o;;o;	;
+@
+;iZ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i4Z;"const mesa_chip_no_t     ;@;o;;o;	;
+@
+;iMZ;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;ivZ;"const mesa_sgpio_group_t ;@;o;;o;	;
+@
+;ièZ;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i∂Z;"const mesa_port_no_t     ;@;o;;o;	;
+@
+;iœZ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iıZ;"const uint32_t           ;@;o;;o;	;
+@
+;i[;"bit;@;[ ;0{;{	;o;;o;	;
+@
+;i3[;"mesa_bool_t              ;@;o;;o;	;
+@
+;iL[;"enable;@;[ ;0;o;;o;	;
+@
+;iX[;"CAP(MISC_SGPIO_CNT);@{;!{;{	;o;;o;	;
+@
+;i?\;"mesa_rc ;@;o;;o;	;
+@
+;iG\;"mesa_intr_cfg;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iU\;"const mesa_inst_t ;@;o;;o;	;
+@
+;ig\;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÉ\;"const uint32_t    ;@;o;;o;	;
+@
+;iï\;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;i±\;"const mesa_bool_t ;@;o;;o;	;
+@
+;i√\;"polarity;@;[ ;0{;{	;o;;o;	;
+@
+;i„\;"const mesa_bool_t ;@;o;;o;	;
+@
+;iı\;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;i];"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i4];"mesa_port_list_t ;@;o;;o;	;
+@
+;iE];"link_change;@;[ ;0;o;;o;	;
+@
+;i~];"mesa_intr_t ;@;[ ;o;;o;	;
+@
+;iä];"CAP(MISC_INTERRUPTS);@{;!{;{	;o;;o;	;
+@
+;i‰];"mesa_rc ;@;o;;o;	;
+@
+;iÏ];"mesa_intr_mask_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iˇ];"const mesa_inst_t ;@;o;;o;	;
+@
+;i^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i2^;"mesa_intr_t *;@;o;;o;	;
+@
+;i?^;"	mask;@;[ ;0;o;;o;	;
+@
+;iI^;"CAP(MISC_INTERRUPTS);@{;!{;{	;o;;o;	;
+@
+;i!_;"mesa_rc ;@;o;;o;	;
+@
+;i)_;"mesa_intr_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i>_;"const mesa_inst_t ;@;o;;o;	;
+@
+;iP_;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;is_;"mesa_intr_t *;@;o;;o;	;
+@
+;iÄ_;"status;@;[ ;0;o;;o;	;
+@
+;iå_;"CAP(MISC_INTERRUPTS);@{;!{;{	;o;;o;	;
+@
+;ih`;"mesa_rc ;@;o;;o;	;
+@
+;ip`;"mesa_intr_pol_negation;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iá`;"const mesa_inst_t ;@;o;;o;	;
+@
+;iô`;"	inst;@;[ ;0;o;;o;	;
+@
+;i§`;"CAP(MISC_INTERRUPTS);@{
+;o;;o;	;
+@
+;i—`;"typedef;@;{;o;;o;	;
+@
+;iŸ`;"	enum;@;[*{;{;o;;o;	;
+@
+;i‰`;"MESA_IRQ_XTR;@;0{;{;o;;o;	;
+@
+;i%a;"MESA_IRQ_FDMA_XTR;@;0{;{;o;;o;	;
+@
+;ica;"MESA_IRQ_SOFTWARE;@;0{;{;o;;o;	;
+@
+;iäa;"MESA_IRQ_PTP_RDY;@;0{;{;o;;o;	;
+@
+;i∏a;"MESA_IRQ_PTP_SYNC;@;0{;{;o;;o;	;
+@
+;iÍa;"MESA_IRQ_EXT0;@;0{;{;o;;o;	;
+@
+;ib;"MESA_IRQ_EXT1;@;0{;{;o;;o;	;
+@
+;i0b;"MESA_IRQ_OAM;@;0{;{;o;;o;	;
+@
+;iRb;"MESA_IRQ_SGPIO;@;0{;{;o;;o;	;
+@
+;i|b;"MESA_IRQ_SGPIO2;@;0{;{;o;;o;	;
+@
+;ißb;"MESA_IRQ_DPLL;@;0{;{;o;;o;	;
+@
+;i∆b;"MESA_IRQ_GPIO;@;0{;{;o;;o;	;
+@
+;iÂb;"MESA_IRQ_PUSH_BUTTON;@;0{;{;o;;o;	;
+@
+;ic;"MESA_IRQ_DEV_ALL;@;0{;{;o;;o;	;
+@
+;iIc;"MESA_IRQ_CU_PHY_0;@;0{;{;o;;o;	;
+@
+;i}c;"MESA_IRQ_CU_PHY_1;@;0{;{;o;;o;	;
+@
+;i±c;"MESA_IRQ_KR_SD10G_0;@;0{;{;o;;o;	;
+@
+;i◊c;"MESA_IRQ_KR_SD10G_1;@;0{;{;o;;o;	;
+@
+;i˝c;"MESA_IRQ_KR_SD10G_2;@;0{;{;o;;o;	;
+@
+;i#d;"MESA_IRQ_KR_SD10G_3;@;0{;{;o;;o;	;
+@
+;iId;"MESA_IRQ_KR_SD10G_4;@;0{;{;o;;o;	;
+@
+;iod;"MESA_IRQ_KR_SD10G_5;@;0{;{;o;;o;	;
+@
+;iïd;"MESA_IRQ_KR_SD10G_6;@;0{;{;o;;o;	;
+@
+;iªd;"MESA_IRQ_KR_SD10G_7;@;0{;{;o;;o;	;
+@
+;i·d;"MESA_IRQ_KR_SD10G_8;@;0{;{;o;;o;	;
+@
+;ie;"MESA_IRQ_KR_SD10G_9;@;0{;{;o;;o;	;
+@
+;i-e;"MESA_IRQ_KR_SD10G_10;@;0{;{;o;;o;	;
+@
+;iTe;"MESA_IRQ_KR_SD10G_11;@;0{;{;o;;o;	;
+@
+;i{e;"MESA_IRQ_KR_SD10G_12;@;0{;{;o;;o;	;
+@
+;i¢e;"MESA_IRQ_KR_SD10G_13;@;0{;{;o;;o;	;
+@
+;i…e;"MESA_IRQ_KR_SD10G_14;@;0{;{;o;;o;	;
+@
+;ie;"MESA_IRQ_KR_SD10G_15;@;0{;{;o;;o;	;
+@
+;if;"MESA_IRQ_KR_SD10G_16;@;0{;{;o;;o;	;
+@
+;i>f;"MESA_IRQ_KR_SD10G_17;@;0{;{;o;;o;	;
+@
+;ief;"MESA_IRQ_KR_SD10G_18;@;0{;{;o;;o;	;
+@
+;iåf;"MESA_IRQ_KR_SD10G_19;@;0{;{;o;;o;	;
+@
+;i¥f;"MESA_IRQ_MAX;@;0;o;;o;	;
+@
+;iˇf;"mesa_irq_t ;@;[ ;o;;o;	;
+@
+;i
+g;"CAP(MISC_IRQ_CONTROL);@{
+;o;;o;	;
+@
+;iFg;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i[g;"mesa_bool_t  ;@;o;;o;	;
+@
+;ihg;"external;@;[ ;0{;{;{	;o;;o;	;
+@
+;iïg;"uint8_t      ;@;o;;o;	;
+@
+;i¢g;"destination;@;[ ;0;o;;o;	;
+@
+;i g;"mesa_irq_conf_t ;@;[ ;o;;o;	;
+@
+;i⁄g;"CAP(MISC_IRQ_CONTROL);@{
+;o;;o;	;
+@
+;ih;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i&h;"uint32_t ;@;o;;o;	;
+@
+;i/h;"active;@;[ ;0{;{;{	;o;;o;	;
+@
+;iih;"uint32_t ;@;o;;o;	;
+@
+;irh;"raw_ident;@;[ ;0{;{;{	;o;;o;	;
+@
+;iæh;"uint32_t ;@;o;;o;	;
+@
+;i«h;"raw_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;ii;"uint32_t ;@;o;;o;	;
+@
+;ii;"raw_mask;@;[ ;0;o;;o;	;
+@
+;iYi;"mesa_irq_status_t ;@;[ ;o;;o;	;
+@
+;iki;"CAP(MISC_IRQ_CONTROL);@{;!{;{	;o;;o;	;
+@
+;i„i;"mesa_rc  ;@;o;;o;	;
+@
+;iÏi;"mesa_irq_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i˛i;"const mesa_inst_t ;@;o;;o;	;
+@
+;ij;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1j;"const mesa_irq_t ;@;o;;o;	;
+@
+;iBj;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;ibj;"mesa_irq_conf_t *;@;o;;o;	;
+@
+;isj;"	conf;@;[ ;0;o;;o;	;
+@
+;i}j;"CAP(MISC_IRQ_CONTROL);@{;!{;{	;o;;o;	;
+@
+;iıj;"mesa_rc  ;@;o;;o;	;
+@
+;i˛j;"mesa_irq_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ik;"const mesa_inst_t ;@;o;;o;	;
+@
+;i"k;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iCk;"const mesa_irq_t ;@;o;;o;	;
+@
+;iTk;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;itk;""const mesa_irq_conf_t *const ;@;o;;o;	;
+@
+;iëk;"	conf;@;[ ;0;o;;o;	;
+@
+;iõk;"CAP(MISC_IRQ_CONTROL);@{;!{;{	;o;;o;	;
+@
+;i	l;"mesa_rc  ;@;o;;o;	;
+@
+;il;"!mesa_irq_status_get_and_mask;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i/l;"const mesa_inst_t ;@;o;;o;	;
+@
+;iAl;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iml;"mesa_irq_status_t *;@;o;;o;	;
+@
+;iÄl;"status;@;[ ;0;o;;o;	;
+@
+;iål;"CAP(MISC_IRQ_CONTROL);@{;!{;{	;o;;o;	;
+@
+;im;"mesa_rc  ;@;o;;o;	;
+@
+;i"m;"mesa_irq_enable;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i2m;"const mesa_inst_t ;@;o;;o;	;
+@
+;iDm;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;icm;"const mesa_irq_t ;@;o;;o;	;
+@
+;itm;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;iím;"mesa_bool_t ;@;o;;o;	;
+@
+;iûm;"enable;@;[ ;0;o;;o;	;
+@
+;i™m;"CAP(MISC_IRQ_CONTROL);@{;!{;{	;o;;o;	;
+@
+;ion;"uint32_t ;@;o;;o;	;
+@
+;ixn;"mesa_tod_get_ns_cnt;@;[ ;0;"[{;o;;o;	;
+@
+;iån;"	void;@;0{;o;;o;	;
+@
+;i%o;"typedef;@;%{	;&o;;o;	;
+@
+;i-o;"uint32_t ;@;'o;;o;	;
+@
+;i8o;"tod_get_ns_cnt_cb_t;@;"[{;o;;o;	;
+@
+;iMo;"	void;@;0{;!{;{	;o;;o;	;
+@
+;i¡o;"
+void ;@;o;;o;	;
+@
+;i∆o;"mesa_tod_set_ns_cnt_cb;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i›o;"tod_get_ns_cnt_cb_t ;@;o;;o;	;
+@
+;iÒo;"cb;@;[ ;0;0{
+;o;;o;	;
+@
+;iWq;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ilq;"uint32_t ;@;o;;o;	;
+@
+;iuq;"hw_cnt;@;[ ;0;o;;o;	;
+@
+;iìq;"mesa_os_timestamp_t;@;[ ;0{;o;;o;	;
+@
+;i©q;"ã#define MESA_OS_TIMESTAMP(timestamp)                                    \
+  do { (timestamp)->hw_cnt = mesa_tod_get_ns_cnt(); } while(0);
+
+;@{;!{;{	;o;;o;	;
+@
+;iÂr;"mesa_rc ;@;o;;o;	;
+@
+;iÌr;"mesa_temp_sensor_init;@;[ ;0;"[{;{	;o;;o;	;
+@
+;is;"const mesa_inst_t ;@;o;;o;	;
+@
+;is;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i9s;"const mesa_bool_t ;@;o;;o;	;
+@
+;iKs;"enable;@;[ ;0;o;;o;	;
+@
+;iWs;"CAP(MISC_FAN);@{;!{;{	;o;;o;	;
+@
+;i◊s;"mesa_rc ;@;o;;o;	;
+@
+;iﬂs;"mesa_temp_sensor_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÙs;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i
+t;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i-t;"int16_t               *;@;o;;o;	;
+@
+;iDt;"temperature;@;[ ;0;o;;o;	;
+@
+;iUt;"CAP(MISC_FAN);@{
+;o;;o;	;
+@
+;izt;"typedef;@;{;o;;o;	;
+@
+;iÇt;"	enum;@;[{;{;o;;o;	;
+@
+;içt;"MESA_FAN_PWM_FREQ_25KHZ;@;0{;{;o;;o;	;
+@
+;i™t;"MESA_FAN_PWM_FREQ_120HZ;@;0{;{;o;;o;	;
+@
+;i«t;"MESA_FAN_PWM_FREQ_100HZ;@;0{;{;o;;o;	;
+@
+;i‰t;"MESA_FAN_PWM_FREQ_80HZ;@;0{;{;o;;o;	;
+@
+;i u;"MESA_FAN_PWM_FREQ_60HZ;@;0{;{;o;;o;	;
+@
+;iu;"MESA_FAN_PWM_FREQ_40HZ;@;0{;{;o;;o;	;
+@
+;i8u;"MESA_FAN_PWM_FREQ_20HZ;@;0{;{;o;;o;	;
+@
+;iTu;"MESA_FAN_PWM_FREQ_10HZ
+;@;0;o;;o;	;
+@
+;imu;"mesa_fan_pwd_freq_t ;@;[ ;o;;o;	;
+@
+;iÅu;"CAP(MISC_FAN);@{
+;o;;o;	;
+@
+;iûu;"typedef;@;{;o;;o;	;
+@
+;i¶u;"	enum;@;[{;{;o;;o;	;
+@
+;i±u;"MESA_FAN_2_WIRE_TYPE;@;0{;{;o;;o;	;
+@
+;iÀu;"MESA_FAN_3_WIRE_TYPE;@;0{;{;o;;o;	;
+@
+;iÂu;"MESA_FAN_4_WIRE_TYPE
+;@;0;o;;o;	;
+@
+;i¸u;"mesa_fan_type_t ;@;[ ;o;;o;	;
+@
+;iv;"CAP(MISC_FAN);@{;o;;o;	;
+@
+;iPv;"&#define MESA_FAN_SPEED_MAX 0x255
+;@{;o;;o;	;
+@
+;iôv;"%#define MESA_FAN_SPEED_MIN 0x0
+
+;@{
+;o;;o;	;
+@
+;iœv;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i‰v;"mesa_fan_pwd_freq_t ;@;o;;o;	;
+@
+;i¯v;"fan_pwm_freq;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw;"mesa_bool_t         ;@;o;;o;	;
+@
+;i3w;"fan_low_pol;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶w;"mesa_bool_t         ;@;o;;o;	;
+@
+;i∫w;"fan_open_col;@;[ ;0{;{;{	;o;;o;	;
+@
+;iıw;"mesa_fan_type_t     ;@;o;;o;	;
+@
+;i	x;"	type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5x;"uint32_t            ;@;o;;o;	;
+@
+;iIx;"ppr;@;[ ;0;o;;o;	;
+@
+;iíx;"mesa_fan_conf_t ;@;[ ;o;;o;	;
+@
+;i¢x;"CAP(MISC_FAN);@{;!{;{	;o;;o;	;
+@
+;i#y;"mesa_rc ;@;o;;o;	;
+@
+;i+y;"mesa_fan_rotation_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iAy;"const mesa_inst_t ;@;o;;o;	;
+@
+;iSy;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iwy;"uint32_t          *;@;o;;o;	;
+@
+;iäy;"rotation_count;@;[ ;0;o;;o;	;
+@
+;iûy;"CAP(MISC_FAN);@{;!{;{	;o;;o;	;
+@
+;iz;"mesa_rc ;@;o;;o;	;
+@
+;iz;"mesa_fan_cool_lvl_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i)z;"const mesa_inst_t ;@;o;;o;	;
+@
+;i;z;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i_z;"uint8_t ;@;o;;o;	;
+@
+;igz;"lvl;@;[ ;0;o;;o;	;
+@
+;ipz;"CAP(MISC_FAN);@{;!{;{	;o;;o;	;
+@
+;i¡z;"mesa_rc ;@;o;;o;	;
+@
+;i…z;"mesa_fan_controller_init;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i‚z;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i¯z;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i{;""const mesa_fan_conf_t *const ;@;o;;o;	;
+@
+;i<{;"	spec;@;[ ;0;o;;o;	;
+@
+;iF{;"CAP(MISC_FAN);@{;!{;{	;o;;o;	;
+@
+;i≥{;"mesa_rc ;@;o;;o;	;
+@
+;iª{;"mesa_fan_cool_lvl_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i—{;"const mesa_inst_t ;@;o;;o;	;
+@
+;i„{;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i|;"uint8_t *;@;o;;o;	;
+@
+;i|;"lvl;@;[ ;0;o;;o;	;
+@
+;i|;"CAP(MISC_FAN);@{
+;o;;o;	;
+@
+;iÅ|;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iñ|;"mesa_bool_t ;@;o;;o;	;
+@
+;i¢|;"eee_ena;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∆|;"uint8_t     ;@;o;;o;	;
+@
+;i“|;"eee_fast_queues;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå};"uint16_t    ;@;o;;o;	;
+@
+;iò};"
+tx_tw;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÒ};"uint8_t     ;@;o;;o;	;
+@
+;i˝};"lp_advertisement;@;[ ;0{;{;{	;o;;o;	;
+@
+;i£~;"mesa_bool_t ;@;o;;o;	;
+@
+;iØ~;"optimized_for_power;@;[ ;0;o;;o;	;
+@
+;i;"mesa_eee_port_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÖ;"mesa_rc ;@;o;;o;	;
+@
+;iç;"mesa_eee_port_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i§;" const mesa_inst_t          ;@;o;;o;	;
+@
+;iø;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‰;" const mesa_port_no_t       ;@;o;;o;	;
+@
+;iˇ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i'Ä;"'const mesa_eee_port_conf_t *const ;@;o;;o;	;
+@
+;iIÄ;"eee_conf;@;[ ;0;0{
+;o;;o;	;
+@
+;imÄ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÇÄ;"uint32_t     ;@;o;;o;	;
+@
+;ièÄ;"gpio_rs422_1588_mstoen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i·Ä;"uint32_t     ;@;o;;o;	;
+@
+;iÓÄ;"gpio_rs422_1588_slvoen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@Å;"uint32_t     ;@;o;;o;	;
+@
+;iMÅ;"ptp_pin_ldst;@;[ ;0{;{;{	;o;;o;	;
+@
+;ióÅ;"uint32_t     ;@;o;;o;	;
+@
+;i§Å;"ptp_pin_ppso;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍÅ;"uint32_t     ;@;o;;o;	;
+@
+;i˜Å;"ptp_rs422_pps_int_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i<Ç;"uint32_t     ;@;o;;o;	;
+@
+;iIÇ;"ptp_rs422_ldsv_int_id;@;[ ;0;o;;o;	;
+@
+;ióÇ;"meba_ptp_rs422_conf_t ;@;[ ;o;;o;	;
+@
+;i≠Ç;"CAP(TS_PTP_RS422);@{
+;o;;o;	;
+@
+;i;É;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iPÉ;"const char      *;@;o;;o;	;
+@
+;iaÉ;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÑÉ;"unsigned long   ;@;o;;o;	;
+@
+;iîÉ;"	addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;iªÉ;"unsigned long   ;@;o;;o;	;
+@
+;iÀÉ;"repl_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¸É;"unsigned long   ;@;o;;o;	;
+@
+;iÑ;"repl_width;@;[ ;0;o;;o;	;
+@
+;i;Ñ;"mesa_symreg_reg_t;@;[ ;0{
+;o;;o;	;
+@
+;i}Ñ;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iíÑ;"const char         *;@;o;;o;	;
+@
+;i¶Ñ;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœÑ;"unsigned long      ;@;o;;o;	;
+@
+;i‚Ñ;"base_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÖ;"unsigned long      ;@;o;;o;	;
+@
+;i'Ö;"repl_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i^Ö;"unsigned long      ;@;o;;o;	;
+@
+;iqÖ;"repl_width;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®Ö;"mesa_symreg_reg_t const *;@;o;;o;	;
+@
+;i¡Ö;"	regs;@;[ ;0;o;;o;	;
+@
+;i¸Ö;"mesa_symreg_reggrp_t;@;[ ;0{
+;o;;o;	;
+@
+;iBÜ;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iWÜ;"const char            *;@;o;;o;	;
+@
+;inÜ;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;iõÜ;"int                   ;@;o;;o;	;
+@
+;i±Ü;"repl_number;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬁÜ;"unsigned long         ;@;o;;o;	;
+@
+;iÙÜ;"tgt_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iá;"unsigned long         ;@;o;;o;	;
+@
+;i*á;"base_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;iMá;"!mesa_symreg_reggrp_t const *;@;o;;o;	;
+@
+;iiá;"reggrps;@;[ ;0;o;;o;	;
+@
+;i≠á;"mesa_symreg_target_t;@;[ ;0{
+;o;;o;	;
+@
+;i‰á;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i˘á;"!const mesa_symreg_target_t *;@;o;;o;	;
+@
+;ià;"targets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iXà;"!unsigned long               ;@;o;;o;	;
+@
+;ità;"targets_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i†à;"!unsigned long               ;@;o;;o;	;
+@
+;iºà;"io_origin1_offset;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈà;"!unsigned long               ;@;o;;o;	;
+@
+;iâ;"repl_cnt_max;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>â;"!unsigned long               ;@;o;;o;	;
+@
+;iZâ;"name_len_max;@;[ ;0;o;;o;	;
+@
+;iÇâ;"mesa_symreg_data_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iœâ;"mesa_rc ;@;o;;o;	;
+@
+;i◊â;"mesa_symreg_data_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÏâ;"const mesa_inst_t   ;@;o;;o;	;
+@
+;i ä;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i#ä;"mesa_symreg_data_t *const ;@;o;;o;	;
+@
+;i=ä;"	data;@;[ ;0;0{;o;;o;	;
+@
+;iEä;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;imä;"4#endif // _MICROCHIP_ETHERNET_SWITCH_API_MISC_
+;@

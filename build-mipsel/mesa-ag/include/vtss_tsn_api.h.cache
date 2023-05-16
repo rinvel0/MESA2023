@@ -1,0 +1,1490 @@
+{:	root[R{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"ÊS// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _VTSS_TSN_API_H_
+#define _VTSS_TSN_API_H_
+
+#if defined(VTSS_FEATURE_FRER)
+
+/* - FRER compound streams ----------------------------------------- */
+
+// Number of member streams and compound streams */
+#if defined(VTSS_ARCH_LAN966X)
+#define VTSS_MSTREAM_CNT 512
+#define VTSS_CSTREAM_CNT 256
+#else
+#define VTSS_MSTREAM_CNT 1024
+#define VTSS_CSTREAM_CNT 512
+#endif
+
+// FRER compound stream ID.
+// Sequence recovery can be enabled to eliminate duplicate frames.
+typedef u16 vtss_frer_cstream_id_t;
+
+// FRER recovery algorithm
+typedef enum {
+    VTSS_FRER_RECOVERY_ALG_VECTOR, // Vector recovery
+    VTSS_FRER_RECOVERY_ALG_MATCH,  // Match recovery
+} vtss_frer_recovery_alg_t;
+
+// FRER member/compound stream configuration
+typedef struct {
+    BOOL                     recovery;    // Enable/disable recovery
+    vtss_frer_recovery_alg_t alg;         // frerSeqRcvyAlgorithm: Algorithm
+    u8                       hlen;        // frerSeqRcvyHistoryLength: History length, 2-32 (vector algorithm)
+    u16                      reset_time;  // frerSeqRcvyResetMSec: Reset timeout (milliseconds)
+    BOOL                     take_no_seq; // frerSeqRcvyTakeNoSequence: Accept frames without R-tag
+    vtss_frer_cstream_id_t   cstream_id;  // Compound stream ID (valid for member stream only)
+} vtss_frer_stream_conf_t;
+
+// Get compound stream configuration.
+// id [IN]     Compound stream ID.
+// conf [OUT]  Compound stream configuration.
+vtss_rc vtss_frer_cstream_conf_get(const vtss_inst_t            inst,
+                                   const vtss_frer_cstream_id_t id,
+                                   vtss_frer_stream_conf_t      *const conf);
+
+// Set compound stream configuration.
+// id [IN]    Compound stream ID.
+// conf [IN]  Compound stream configuration.
+vtss_rc vtss_frer_cstream_conf_set(const vtss_inst_t             inst,
+                                   const vtss_frer_cstream_id_t  id,
+                                   const vtss_frer_stream_conf_t *const conf);
+
+// FRER recovery counters
+typedef struct {
+    vtss_counter_t out_of_order_packets; // frerCpsSeqRcvyOutOfOrderPackets
+    vtss_counter_t rogue_packets;        // frerCpsSeqRcvyRoguePackets
+    vtss_counter_t passed_packets;       // frerCpsSeqRcvyPassedPackets
+    vtss_counter_t discarded_packets;    // frerCpsSeqRcvyDiscardedPackets
+    vtss_counter_t lost_packets;         // frerCpsSeqRcvyLostPackets
+    vtss_counter_t tagless_packets;      // frerCpsSeqRcvyTaglessPackets
+    vtss_counter_t resets;               // frerCpsSeqRcvyResets
+} vtss_frer_counters_t;
+
+// Get compound stream Counters.
+// id [IN]         Compound stream ID.
+// counters [OUT]  Compund stream counters.
+vtss_rc vtss_frer_cstream_cnt_get(const vtss_inst_t            inst,
+                                  const vtss_frer_cstream_id_t id,
+                                  vtss_frer_counters_t         *const counters);
+
+// Clear compound stream Counters.
+// id [IN]  Compound stream ID.
+vtss_rc vtss_frer_cstream_cnt_clear(const vtss_inst_t            inst,
+                                    const vtss_frer_cstream_id_t id);
+
+/* - FRER member streams ------------------------------------------- */
+
+// FRER member stream ID.
+// A block of member stream IDs must be allocated for an egress port list.
+// For each stream ID and egress port, configuration and counters are available.
+// Individual recovery can be enabled to eliminate duplicate frames.
+// Frames can also be mapped to a compound stream.
+typedef u16 vtss_frer_mstream_id_t;
+
+// Allocate FRER member stream ID block.
+// port_list [IN]  Egress port list, maximum 8 ports enabled
+// id [OUT]        Member stream ID base.
+vtss_rc vtss_frer_mstream_alloc(const vtss_inst_t      inst,
+                                const BOOL             port_list[VTSS_PORTS],
+                                vtss_frer_mstream_id_t *const id);
+
+// Free FRER member stream ID block.
+// id [IN]  Member stream ID base.
+vtss_rc vtss_frer_mstream_free(const vtss_inst_t            inst,
+                               const vtss_frer_mstream_id_t id);
+
+// Get member stream configuration.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+// conf [OUT]    Member stream configuration.
+vtss_rc vtss_frer_mstream_conf_get(const vtss_inst_t            inst,
+                                   const vtss_frer_mstream_id_t id,
+                                   const vtss_port_no_t         port_no,
+                                   vtss_frer_stream_conf_t      *const conf);
+
+// Set member stream configuration.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+// conf [IN]     Member stream configuration.
+vtss_rc vtss_frer_mstream_conf_set(const vtss_inst_t             inst,
+                                   const vtss_frer_mstream_id_t  id,
+                                   const vtss_port_no_t          port_no,
+                                   const vtss_frer_stream_conf_t *const conf);
+
+// Get member stream Counters.
+// id [IN]         Member stream ID.
+// port_no [IN]    Egress port number.
+// counters [OUT]  Member stream counters.
+vtss_rc vtss_frer_mstream_cnt_get(const vtss_inst_t            inst,
+                                  const vtss_frer_mstream_id_t id,
+                                  const vtss_port_no_t         port_no,
+                                  vtss_frer_counters_t         *const counters);
+
+// Clear member stream Counters.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+vtss_rc vtss_frer_mstream_cnt_clear(const vtss_inst_t            inst,
+                                    const vtss_frer_mstream_id_t id,
+                                    const vtss_port_no_t         port_no);
+
+// FRER ingress flow configuration
+typedef struct {
+    BOOL                   mstream_enable;  // Enable/disable member stream
+    vtss_frer_mstream_id_t mstream_id;      // Member stream base ID
+    BOOL                   generation;      // Enable/disable sequence generation
+#if defined(VTSS_FEATURE_FRER_IFLOW_POP)
+    BOOL                   pop;             // R-tag popping
+#endif
+} vtss_frer_iflow_conf_t;
+#endif /* VTSS_FEATURE_FRER */
+
+/* - PSFP ---------------------------------------------------------- */
+
+#if defined(VTSS_FEATURE_PSFP)
+// PSFP gate ID
+typedef u16 vtss_psfp_gate_id_t;
+
+// Number of PSFP gates */
+#if defined(VTSS_ARCH_LAN966X)
+#define VTSS_PSFP_GATE_CNT 256
+#else
+#define VTSS_PSFP_GATE_CNT 1023
+#endif
+
+// PSFP Gate Control Entry configuration
+typedef struct {
+    BOOL            gate_open;     // StreamGateState
+    vtss_opt_prio_t prio;          // IPV: Priority
+    u32             time_interval; // TimeInterval: Time interval (nsec)
+    u32             octet_max;     // IntervalOctetMax: Maximum number of octets permitted (zero disables check)
+} vtss_psfp_gce_t;
+
+// Get PSFP Gate Control List.
+// id [IN]        Gate ID.
+// max_cnt [IN]   Size of the 'gcl' array.
+// gcl [OUT]      Gate Control List
+// gce_cnt [OUT]  Length of Gate Control List.
+vtss_rc vtss_psfp_gcl_conf_get(const vtss_inst_t         inst,
+                               const vtss_psfp_gate_id_t id,
+                               const u32                 max_cnt,
+                               vtss_psfp_gce_t           *const gcl,
+                               u32                       *const gce_cnt);
+
+// Set PSFP Gate Control List.
+// id [IN]       Gate ID.
+// gce_cnt [IN]  Length of Gate Control List.
+// gcl [IN]      Gate Control List.
+vtss_rc vtss_psfp_gcl_conf_set(const vtss_inst_t         inst,
+                               const vtss_psfp_gate_id_t id,
+                               const u32                 gce_cnt,
+                               const vtss_psfp_gce_t     *const gcl);
+
+// PSFP Gate Control List configuration
+typedef struct {
+    vtss_timestamp_t base_time;      // PSFPAdminBaseTime/PSFPOperBaseTime
+    u32              cycle_time;     // PSFPAdminCycleTime/PSFPOperCycleTime
+    u32              cycle_time_ext; // PSFPAdminCycleTimeExtension/PSFPOperCycleTimeExtension
+} vtss_psfp_gcl_conf_t;
+
+// PSFP gate configuration
+typedef struct {
+    BOOL                 enable;                // PSFPGateEnabled: Enable/disable Gate
+    BOOL                 gate_open;             // PSFPAdminGateStates: Initial gate state
+    vtss_opt_prio_t      prio;                  // PSFPAdminIPV: Priority
+    vtss_opt_bool_t      close_invalid_rx;      // PSFPGateClosedDueToInvalidRxEnable/PSFPGateClosedDueToInvalidRx
+    vtss_opt_bool_t      close_octets_exceeded; // PSFPGateClosedDueToOctetsExceededEnable/PSFPGateClosedDueOctetsExceeded
+    BOOL                 config_change;         // PSFPConfigChange: Apply the following configuration fields
+    vtss_psfp_gcl_conf_t config;                // PSFPAdmin*: Gate Control List applied if 'config_change' is set
+} vtss_psfp_gate_conf_t;
+
+// Get PSFP gate configuration.
+// id [IN]     Gate ID.
+// conf [OUT]  Gate configuration.
+vtss_rc vtss_psfp_gate_conf_get(const vtss_inst_t         inst,
+                                const vtss_psfp_gate_id_t id,
+                                vtss_psfp_gate_conf_t     *const conf);
+
+// Set PSFP gate configuration.
+// id [IN]    Gate ID.
+// conf [IN]  Gate configuration.
+vtss_rc vtss_psfp_gate_conf_set(const vtss_inst_t           inst,
+                                const vtss_psfp_gate_id_t   id,
+                                const vtss_psfp_gate_conf_t *const conf);
+
+// PSFP gate status
+typedef struct {
+    BOOL                 gate_open;             // PSFPOperGateStates: Current gate state
+    vtss_opt_prio_t      prio;                  // PSFPOperIPV: Priority
+    vtss_timestamp_t     config_change_time;    // PSFPConfigChangeTime
+    vtss_timestamp_t     current_time;          // PSFPCurrentTime
+    BOOL                 config_pending;        // PSFPConfigPending: Configuration active indication
+    BOOL                 close_invalid_rx;      // PSFPGateClosedDueToInvalidRx
+    BOOL                 close_octets_exceeded; // PSFPGateClosedDueOctetsExceeded
+} vtss_psfp_gate_status_t;
+
+// Get PSFP gate status.
+// id [IN]       Gate ID.
+// status [OUT]  Gate configuration.
+vtss_rc vtss_psfp_gate_status_get(const vtss_inst_t         inst,
+                                  const vtss_psfp_gate_id_t id,
+                                  vtss_psfp_gate_status_t   *const status);
+
+// PSFP filter ID
+typedef u16 vtss_psfp_filter_id_t;
+
+// Number of PSFP filters */
+#if defined(VTSS_ARCH_LAN966X)
+#define VTSS_PSFP_FILTER_CNT 256
+#else
+#define VTSS_PSFP_FILTER_CNT 1023
+#endif
+
+// PSFP filter configuration
+typedef struct {
+    BOOL                gate_enable;    // Enable gate mapping
+    vtss_psfp_gate_id_t gate_id;        // StreamGateInstanceID: Gate ID mapping
+    u16                 max_sdu;        // Maximum SDU size (zero disables SDU check)
+    vtss_opt_bool_t     block_oversize; // StreamBlockedDueToOversizeFrameEnable/StreamBlockedDueToOversizeFrame
+} vtss_psfp_filter_conf_t;
+
+// Get PSFP filter configuration.
+// id [IN]     Filter ID.
+// conf [OUT]  Filter configuration.
+vtss_rc vtss_psfp_filter_conf_get(const vtss_inst_t           inst,
+                                  const vtss_psfp_filter_id_t id,
+                                  vtss_psfp_filter_conf_t     *const conf);
+
+// Set PSFP filter configuration.
+// id [IN]    Filter ID.
+// conf [IN]  Filter configuration.
+vtss_rc vtss_psfp_filter_conf_set(const vtss_inst_t             inst,
+                                  const vtss_psfp_filter_id_t   id,
+                                  const vtss_psfp_filter_conf_t *const conf);
+
+// PSFP filter status
+typedef struct {
+    BOOL block_oversize; // StreamBlockedDueToOversizeFrame
+} vtss_psfp_filter_status_t;
+
+// Get PSFP filter configuration.
+// id [IN]       Filter ID.
+// status [OUT]  Filter status.
+vtss_rc vtss_psfp_filter_status_get(const vtss_inst_t           inst,
+                                    const vtss_psfp_filter_id_t id,
+                                    vtss_psfp_filter_status_t   *const status);
+
+// PSFP ingress flow configuration
+typedef struct {
+    BOOL                  filter_enable; // Enable filter mapping
+    vtss_psfp_filter_id_t filter_id;     // Filter ID mapping
+} vtss_psfp_iflow_conf_t;
+#endif
+
+#if defined(VTSS_FEATURE_QOS_TAS)
+// Time Aware Shaper (802.1Qbv) global configuration
+typedef struct {
+    // When set a quard band is implemented even for scheduled queues
+    // to scheduled queue transition.
+    // 0: Guard band is implemented for non-scheduled queues to scheduled
+    // queues transition.
+    // 1: Guard band is implemented for any queue to scheduled
+    // queues transition.
+    BOOL always_guard_band;
+} vtss_qos_tas_conf_t;
+
+// Get Time Aware Shaper (802.1Qbv) global configuration.
+// conf    [OUT] Scheduled Traffic configuration structure.
+vtss_rc vtss_qos_tas_conf_get(const vtss_inst_t    inst,
+                              vtss_qos_tas_conf_t  *const conf);
+
+// Set Time Aware Shaper (802.1Qbv) global configuration.
+// conf    [IN] Scheduled Traffic configuration structure.
+vtss_rc vtss_qos_tas_conf_set(const vtss_inst_t         inst,
+                              const vtss_qos_tas_conf_t *const conf);
+
+// Time Aware Shaper (802.1Qbv) Gate Control Operations
+typedef enum {
+    VTSS_QOS_TAS_GCO_SET_GATE_STATES,     // Set GateState
+    VTSS_QOS_TAS_GCO_SET_AND_HOLD_MAC,    // Set GateState and stop preemption
+    VTSS_QOS_TAS_GCO_SET_AND_RELEASE_MAC  // Set GateState and resume preemption
+} vtss_qos_tas_gco_t;
+
+// Time Aware Shaper (802.1Qbv) gate control list entry
+typedef struct {
+    vtss_qos_tas_gco_t gate_operation; // Gate Control Operation.
+
+    // The gate open states for the corresponding traffic classes in this interval;
+    BOOL               gate_open[VTSS_QUEUE_ARRAY_SIZE];
+
+    // A time interval that this gate_states is active before going to next GCL entry.
+    // This is in nano seconds.
+    u32                time_interval;
+} vtss_qos_tas_gce_t;
+
+// Time Aware Shaper (802.1Qbv) port configuration
+typedef struct {
+    // Maximum SDU size supported by each queue in bytes. Minimum 64 bytes.
+    // This parameter contribute to calculating the guard band time max_sdu[]*8 / LINK_SPEED
+    u16              max_sdu[VTSS_QUEUE_ARRAY_SIZE];
+
+    // The GateEnabled parameter determines whether traffic scheduling
+    // is active (true) or inactive (false).
+    BOOL             gate_enabled;
+
+    // The initial value of the port open states that is used when no GCL is active on the port.
+    BOOL             gate_open[VTSS_QUEUE_ARRAY_SIZE];
+
+    // The administrative cycle time in nanoseconds.
+    // The cycle time must be at least as long as the sum of all time_interval
+    // in the GCL configured by vtss_qos_tas_port_gcl_conf_set() and must also be less than vtss_CAP_TBD.
+    u32              cycle_time;
+
+    // In case a new GCL start time (cycle_time) is not lining up exactly with an currently active (old) GCL.
+    // This is the maximum time that current GCL will be extended. Otherwise it will be truncated.
+    u32              cycle_time_ext;
+
+    // The administrative base time. This is GCL start active time after config_change true.
+    // This time should be base_time + (N * cycle_time) of any currently active (old) GCL on this port.
+    // in order to assure time alignment of old and new GCL.
+    // Must be at least two times cycle_time in the future to assure GCL start on expected time.
+    // If base_time is in the past the actual GCL start time will be calculated. This is done in ADVANCING state.
+    vtss_timestamp_t base_time;
+
+    // The ConfigChange parameter set to TRUE, signals the start of a new GCL configured by vtss_qos_tas_port_gcl_conf_set().
+    // The actual start of the new GCL will happen at base_time time. As long as the new GCL is not active config_pending is TRUE.
+    // This should only be done when the above parameters are all set to appropriate values.
+    BOOL             config_change;
+
+    // The length of the Gate Control List
+    u32                  gcl_length;
+    // The Gate Control List
+    vtss_qos_tas_gce_t   gcl[VTSS_QOS_TAS_GCL_LEN_MAX];
+} vtss_qos_tas_port_conf_t;
+
+// Get Time Aware Shaper (802.1Qbv) port configuration.
+// port_no [IN]  Port number.
+// conf    [OUT] Scheduled Traffic configuration structure.
+vtss_rc vtss_qos_tas_port_conf_get(const vtss_inst_t         inst,
+                                   const vtss_port_no_t      port_no,
+                                   vtss_qos_tas_port_conf_t  *const conf);
+
+// Set Time Aware Shaper (802.1Qbv) port configuration.
+// port_no [IN] Port number.
+// conf    [IN] Scheduled Traffic configuration structure.
+vtss_rc vtss_qos_tas_port_conf_set(const vtss_inst_t               inst,
+                                   const vtss_port_no_t            port_no,
+                                   const vtss_qos_tas_port_conf_t  *const conf);
+
+// Time Aware Shaper (802.1Qbv) port status.
+typedef struct {
+    // The value of the ConfigPending state machine variable.
+    // The value is TRUE if a configuration change is in progress but has not yet completed.
+    BOOL                config_pending;
+
+    // A counter of the number of times that a re-configuration
+    // of the traffic schedule has been requested with the old
+    // schedule still running and the requested base time was in the past.
+    u64                 config_change_error;
+
+    // The calculated actual GCL start time in case the configured base_time is in the past
+    vtss_timestamp_t    config_change_time;
+
+    // The current port open states for the corresponding traffic classes.
+    BOOL                gate_open[VTSS_QUEUE_ARRAY_SIZE];
+} vtss_qos_tas_port_status_t;
+
+// Get Time Aware Shaper (802.1Qbv) status for port.
+// port_no [IN]  Port number.
+// status  [OUT] Scheduled Traffic status structure.
+vtss_rc vtss_qos_tas_port_status_get(const vtss_inst_t          inst,
+                                     const vtss_port_no_t       port_no,
+                                     vtss_qos_tas_port_status_t *const status);
+
+#endif /* defined(VTSS_FEATURE_QOS_TAS) */
+
+
+#if defined(VTSS_FEATURE_QOS_FRAME_PREEMPTION)
+/**
+ * \brief 802.1Qbu and 802.3br (Frame Preemption) port configuration
+ **/
+typedef struct {
+    BOOL admin_status[VTSS_QUEUE_ARRAY_SIZE]; // IEEE802.1Qbu: framePreemptionStatusTable
+    BOOL enable_tx;                           // IEEE802.3br: aMACMergeEnableTx
+    BOOL verify_disable_tx;                   // IEEE802.3br: aMACMergeVerifyDisableTx
+    u8   verify_time;                         // IEEE802.3br: aMACMergeVerifyTime [msec]
+    u8   add_frag_size;                       // IEEE802.3br: aMACMergeAddFragSize
+} vtss_qos_fp_port_conf_t;
+
+/**
+ * \brief Get 802.1Qbu and 802.3br (Frame Preemption) port configuration.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf    [OUT] Frame Preemption configuration structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_fp_port_conf_get(const vtss_inst_t       inst,
+                                  const vtss_port_no_t    port_no,
+                                  vtss_qos_fp_port_conf_t *const conf);
+
+/**
+ * \brief Set 802.1Qbu and 802.3br (Frame Preemption) port configuration.
+ *
+ * \param inst    [IN] Target instance reference.
+ * \param port_no [IN] Port number.
+ * \param conf    [IN] Frame Preemption configuration structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_fp_port_conf_set(const vtss_inst_t             inst,
+                                  const vtss_port_no_t          port_no,
+                                  const vtss_qos_fp_port_conf_t *const conf);
+
+/**
+ * \brief MAC Merge Status Verify (aMACMergeStatusVerify in 802.3br)
+ **/
+typedef enum {
+    VTSS_MM_STATUS_VERIFY_INITIAL,   /**< INIT_VERIFICATION */
+    VTSS_MM_STATUS_VERIFY_IDLE,      /**< VERIFICATION_IDLE */
+    VTSS_MM_STATUS_VERIFY_SEND,      /**< SEND_VERIFY */
+    VTSS_MM_STATUS_VERIFY_WAIT,      /**< WAIT_FOR_RESPONSE */
+    VTSS_MM_STATUS_VERIFY_SUCCEEDED, /**< VERIFIED */
+    VTSS_MM_STATUS_VERIFY_FAILED,    /**< VERIFY_FAIL */
+    VTSS_MM_STATUS_VERIFY_DISABLED   /**< Verification process is disabled */
+} vtss_mm_status_verify_t;
+
+/**
+ * \brief 802.1Qbu and 802.3br (Frame Preemption) port status
+ **/
+typedef struct {
+    u32                     hold_advance;      // TBD: IEEE802.1Qbu: holdAdvance [nsec]
+    u32                     release_advance;   // TBD: IEEE802.1Qbu: releaseAdvance [nsec]
+    BOOL                    preemption_active; // IEEE802.1Qbu: preemptionActive, IEEE802.3br: aMACMergeStatusTx
+    u8                      hold_request;      // TBD: IEEE802.1Qbu: holdRequest
+    vtss_mm_status_verify_t status_verify;     // IEEE802.3br: aMACMergeStatusVerify
+} vtss_qos_fp_port_status_t;
+
+/**
+ * \brief Get 802.1Qbu and 802.3br (Frame Preemption) port status.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param status  [OUT] Frame Preemption status structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_fp_port_status_get(const vtss_inst_t         inst,
+                                    const vtss_port_no_t      port_no,
+                                    vtss_qos_fp_port_status_t *const status);
+#endif /* defined(VTSS_FEATURE_QOS_FRAME_PREEMPTION) */
+
+#endif /* _VTSS_TSN_API_H_ */
+:@byteposir:	@str"#ifndef _VTSS_TSN_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ÂiPipiqiriÜiüi†iøi¿ii	i=i\iyiñiúi∫i◊iﬁiﬂi˚i>ibici~içi√i¯iiiBiSiòiÂiTi¥iiwiíiìiπi‹i
+iPiîi‚i„i	i+iXiüi‰i3i4iNi_i´iÚi:	iÖ	iÀ	i
+iU
+im
+in
+iè
+i∂
+i‚
+i'ijiªiºiﬂiˇiFiåiçi’i÷ii;iåi—ii(i)iRièiπiˆiDiáiài≠i–iiSiTixiõi¿iÓi4ixi¡iii4iWi|i™iÒi6iÄiœi–iÔii;ifi´iÓi6iáiài©iÃiÒi8i}i»i…iÏi˝iIiéi‡i	iFiMigiÜiáiœi–iÔiˇi i!i<i[iziÄi†ißi®i—i‚iiLiïiiii9iTii£i“iiNiêi’ii i?iYiái´iÍi'iiiØi∞iÿiÈi4iÅi‡i¯i˘i i% i} iÿ i"!iï!i"i~"iÒ"i
+#i#i+#iC#if#i¶#i‰#i,$i-$iM$id$iÜ$i»$i%iR%iS%ig%ix%i“%i&ic&i¶&i'i\'iØ'i 'iÀ'i‰'i˛'i#(ie(i•(iÒ(iÚ(i)i')i()iE)id)iÖ)iã)i≠)i¥)iµ)i“)i„)i"*is*i…*i:+iU+iV+ix+ií+i∑+i˚+i=,iâ,iä,i¨,i≈,iÈ,i/-is-i¡-i¬-iÿ-iÈ-i%.iB.iC.ie.iÅ.i°.iÁ.i+/i{/i|/iü/i∞/iÚ/i00iJ0iQ0iR0it0i©0i∫0i 1i&1ip1iä1i…1i„1iˇ1i2i2iQ2iç2i∆2i3i3iB3i}3iª3i4i4i:4iI4iÑ4i”4i$5i:5i;5is5iÑ5i∆5i«5i6iT6iU6i¨6iÃ6iÚ6i7i	7i<7iM7iô7iˆ7i+8i,8is8i†8i√8iƒ8i%9i\9i]9ií9i·9iK:il:im:i€:i>;ic;id;i¡;i)<if<i«<i9=iY=iZ=iÿ=i[>i∏>i‹>i›>i?i-?iJ?iÇ?iû?iü?i◊?iı?i1@it@i∫@iAiAi>Ai[AiñAiﬂAi+Bi|Bi}Bi™BiªBi˘BiVCi~CiCiøCi˛CiIDivDiwDi”DiˇDi EiKEiÖEi£Ei§EiŸEi˜Ei,FirFiªFiGiGi7Gi8Gi9GihGilGi±Gi∂Gi«Gi!HiqHi»Hi!IitIièIiêIiîIiﬁIi·IiJi9Ji{Ji~JiñJiõJi€JiKifKigKikKiµKi∏KiÍKiLiOLiRLijLioLiµLi˛LiLMiMMiQMiñMiõMi™MiÈMi(NiaNi†Ni÷NiOi]OixOiyOi}OiªOi¿Oi—Oi)PiÑPiıPiFQiõQi∏QiπQiΩQi RiRi6Ri[RiñRiôRi±Ri∂Ri˙RiASièSi«Si»SiÊS:@last_line_endiÊS{;o;;o;	;
+@
+;iÜ;"#define _VTSS_TSN_API_H_
+
+;@{;o;;o;	;
+@
+;i†;"%#if defined(VTSS_FEATURE_FRER)
+
+;@{;o;;o;	;
+@
+;i=;"$#if defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;i\;""#define VTSS_MSTREAM_CNT 512
+;@{;o;;o;	;
+@
+;iy;""#define VTSS_CSTREAM_CNT 256
+;@{;o;;o;	;
+@
+;iñ;"#else
+;@{;o;;o;	;
+@
+;iú;"##define VTSS_MSTREAM_CNT 1024
+;@{;o;;o;	;
+@
+;i∫;""#define VTSS_CSTREAM_CNT 512
+;@{;o;;o;	;
+@
+;i◊;"#endif
+
+;@{
+:keywordo;;o;	;
+@
+;i>;"typedef;@:type_aliaso;;o;	;
+@
+;iF;"	u16 ;@:typedef_nameo;;o;	;
+@
+;iJ;"vtss_frer_cstream_id_t;@:
+array[ :cap0{
+;o;;o;	;
+@
+;i~;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iÜ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;ië;""VTSS_FRER_RECOVERY_ALG_VECTOR;@;0{;{;o;;o;	;
+@
+;i«;"!VTSS_FRER_RECOVERY_ALG_MATCH;@;0;o;;o;	;
+@
+;i˙;"vtss_frer_recovery_alg_t;@;[ ;0{
+;o;;o;	;
+@
+;iB;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iW;"BOOL                     ;@:	nameo;;o;	;
+@
+;ip;"recovery;@;[ ;0{;{;{	;o;;o;	;
+@
+;iú;"vtss_frer_recovery_alg_t ;@; o;;o;	;
+@
+;iµ;"alg;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈ;"u8                       ;@; o;;o;	;
+@
+;i;"	hlen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iX;"u16                      ;@; o;;o;	;
+@
+;iq;"reset_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏;"BOOL                     ;@; o;;o;	;
+@
+;i—;"take_no_seq;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"vtss_frer_cstream_id_t   ;@; o;;o;	;
+@
+;i5;"cstream_id;@;[ ;0;o;;o;	;
+@
+;iy;"vtss_frer_stream_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;i
+;"vtss_rc ;@; o;;o;	;
+@
+;i;"vtss_frer_cstream_conf_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i-;""const vtss_inst_t            ;@; o;;o;	;
+@
+;iJ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;is;""const vtss_frer_cstream_id_t ;@; o;;o;	;
+@
+;iê;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i∑;")vtss_frer_stream_conf_t      *const ;@; o;;o;	;
+@
+;i€;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iX;"vtss_rc ;@; o;;o;	;
+@
+;i`;"vtss_frer_cstream_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i{;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;iô;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¬;"#const vtss_frer_cstream_id_t  ;@; o;;o;	;
+@
+;i‡;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i;"*const vtss_frer_stream_conf_t *const ;@; o;;o;	;
+@
+;i,;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iN;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ic;"vtss_counter_t ;@; o;;o;	;
+@
+;ir;"out_of_order_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØ;"vtss_counter_t ;@; o;;o;	;
+@
+;iæ;"rogue_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆ;"vtss_counter_t ;@; o;;o;	;
+@
+;i	;"passed_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>	;"vtss_counter_t ;@; o;;o;	;
+@
+;iM	;"discarded_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iâ	;"vtss_counter_t ;@; o;;o;	;
+@
+;iò	;"lost_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœ	;"vtss_counter_t ;@; o;;o;	;
+@
+;iﬁ	;"tagless_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+;"vtss_counter_t ;@; o;;o;	;
+@
+;i'
+;"resets;@;[ ;0;o;;o;	;
+@
+;iW
+;"vtss_frer_counters_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i‚
+;"vtss_rc ;@; o;;o;	;
+@
+;iÍ
+;"vtss_frer_cstream_cnt_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i!;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iI;""const vtss_frer_cstream_id_t ;@; o;;o;	;
+@
+;if;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iå;")vtss_frer_counters_t         *const ;@; o;;o;	;
+@
+;i∞;"counters;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iˇ;"vtss_rc ;@; o;;o;	;
+@
+;i;" vtss_frer_cstream_cnt_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i#;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i@;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ij;""const vtss_frer_cstream_id_t ;@; o;;o;	;
+@
+;iá;"id;@;[ ;0;0{
+;o;;o;	;
+@
+;i;"typedef;@;o;;o;	;
+@
+;i;"	u16 ;@;o;;o;	;
+@
+;i;"vtss_frer_mstream_id_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iπ;"vtss_rc ;@; o;;o;	;
+@
+;i¡;"vtss_frer_mstream_alloc;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iŸ;"const vtss_inst_t      ;@; o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"const BOOL             ;@; o;;o;	;
+@
+;i-;"port_list;@;[{:	expro;;o;	;
+@
+;i7;"VTSS_PORTS;@;0{;{	;o;;o;	;
+@
+;id;"#vtss_frer_mstream_id_t *const ;@; o;;o;	;
+@
+;iÇ;"id;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i–;"vtss_rc ;@; o;;o;	;
+@
+;iÿ;"vtss_frer_mstream_free;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÔ;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1;""const vtss_frer_mstream_id_t ;@; o;;o;	;
+@
+;iN;"id;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÓ;"vtss_rc ;@; o;;o;	;
+@
+;iˆ;"vtss_frer_mstream_conf_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iW;""const vtss_frer_mstream_id_t ;@; o;;o;	;
+@
+;it;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iõ;""const vtss_port_no_t         ;@; o;;o;	;
+@
+;i∏;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‰;")vtss_frer_stream_conf_t      *const ;@; o;;o;	;
+@
+;i;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i™;"vtss_rc ;@; o;;o;	;
+@
+;i≤;"vtss_frer_mstream_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iÕ;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;iÎ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#const vtss_frer_mstream_id_t  ;@; o;;o;	;
+@
+;i2;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iY;"#const vtss_port_no_t          ;@; o;;o;	;
+@
+;iw;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i£;"*const vtss_frer_stream_conf_t *const ;@; o;;o;	;
+@
+;i»;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;if;"vtss_rc ;@; o;;o;	;
+@
+;in;"vtss_frer_mstream_cnt_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;ià;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i•;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÕ;""const vtss_frer_mstream_id_t ;@; o;;o;	;
+@
+;iÍ;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i;""const vtss_port_no_t         ;@; o;;o;	;
+@
+;i-;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iX;")vtss_frer_counters_t         *const ;@; o;;o;	;
+@
+;i|;"counters;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÒ;"vtss_rc ;@; o;;o;	;
+@
+;i˘;" vtss_frer_mstream_cnt_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i\;""const vtss_frer_mstream_id_t ;@; o;;o;	;
+@
+;iy;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i°;""const vtss_port_no_t         ;@; o;;o;	;
+@
+;iæ;"port_no;@;[ ;0;0{
+;o;;o;	;
+@
+;iÏ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"BOOL                   ;@; o;;o;	;
+@
+;i;"mstream_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iM;"vtss_frer_mstream_id_t ;@; o;;o;	;
+@
+;id;"mstream_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;ií;"BOOL                   ;@; o;;o;	;
+@
+;i©;"generation;@;[ ;0{;o;;o;	;
+@
+;i‡;".#if defined(VTSS_FEATURE_FRER_IFLOW_POP)
+;@{;{;{	;o;;o;	;
+@
+;i;"BOOL                   ;@; o;;o;	;
+@
+;i$;"pop;@;[ ;0{;o;;o;	;
+@
+;iF;"#endif
+;@;o;;o;	;
+@
+;iO;"vtss_frer_iflow_conf_t;@;[ ;0{;o;;o;	;
+@
+;ig;"%#endif /* VTSS_FEATURE_FRER */
+
+;@{;o;;o;	;
+@
+;i–;"$#if defined(VTSS_FEATURE_PSFP)
+;@{
+;o;;o;	;
+@
+;iˇ;"typedef;@;o;;o;	;
+@
+;i;"	u16 ;@;o;;o;	;
+@
+;i;"vtss_psfp_gate_id_t;@;[ ;0{;o;;o;	;
+@
+;i<;"$#if defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;i[;"$#define VTSS_PSFP_GATE_CNT 256
+;@{;o;;o;	;
+@
+;iz;"#else
+;@{;o;;o;	;
+@
+;iÄ;"%#define VTSS_PSFP_GATE_CNT 1023
+;@{;o;;o;	;
+@
+;i†;"#endif
+
+;@{
+;o;;o;	;
+@
+;i—;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÊ;"BOOL            ;@; o;;o;	;
+@
+;iˆ;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"vtss_opt_prio_t ;@; o;;o;	;
+@
+;i,;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;iP;"u32             ;@; o;;o;	;
+@
+;i`;"time_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô;"u32             ;@; o;;o;	;
+@
+;i©;"octet_max;@;[ ;0;o;;o;	;
+@
+;i;"vtss_psfp_gce_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i“;"vtss_rc ;@; o;;o;	;
+@
+;i⁄;"vtss_psfp_gcl_conf_get;@;[ ;0;"[
+{;{	;o;;o;	;
+@
+;iÒ;"const vtss_inst_t         ;@; o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i0;"const vtss_psfp_gate_id_t ;@; o;;o;	;
+@
+;iJ;"id;@;[ ;0{;{	;o;;o;	;
+@
+;im;"const u32                 ;@; o;;o;	;
+@
+;iá;"max_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iØ;"&vtss_psfp_gce_t           *const ;@; o;;o;	;
+@
+;i–;"gcl;@;[ ;0{;{	;o;;o;	;
+@
+;iÙ;"&u32                       *const ;@; o;;o;	;
+@
+;i;"gce_cnt;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i´;"vtss_rc ;@; o;;o;	;
+@
+;i≥;"vtss_psfp_gcl_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i ;"const vtss_inst_t         ;@; o;;o;	;
+@
+;i‰;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i	;"const vtss_psfp_gate_id_t ;@; o;;o;	;
+@
+;i#;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iF;"const u32                 ;@; o;;o;	;
+@
+;i`;"gce_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ià;"&const vtss_psfp_gce_t     *const ;@; o;;o;	;
+@
+;i©;"gcl;@;[ ;0;0{
+;o;;o;	;
+@
+;iÿ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÌ;"vtss_timestamp_t ;@; o;;o;	;
+@
+;i˛;"base_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i8;"u32              ;@; o;;o;	;
+@
+;iI;"cycle_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÖ;"u32              ;@; o;;o;	;
+@
+;iñ;"cycle_time_ext;@;[ ;0;o;;o;	;
+@
+;i‚;"vtss_psfp_gcl_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i) ;"BOOL                 ;@; o;;o;	;
+@
+;i> ;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÅ ;"BOOL                 ;@; o;;o;	;
+@
+;iñ ;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‹ ;"vtss_opt_prio_t      ;@; o;;o;	;
+@
+;iÒ ;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&!;"vtss_opt_bool_t      ;@; o;;o;	;
+@
+;i;!;"close_invalid_rx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô!;"vtss_opt_bool_t      ;@; o;;o;	;
+@
+;iÆ!;"close_octets_exceeded;@;[ ;0{;{;{	;o;;o;	;
+@
+;i";"BOOL                 ;@; o;;o;	;
+@
+;i)";"config_change;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ";"vtss_psfp_gcl_conf_t ;@; o;;o;	;
+@
+;ió";"config;@;[ ;0;o;;o;	;
+@
+;iÛ";"vtss_psfp_gate_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;if#;"vtss_rc ;@; o;;o;	;
+@
+;in#;"vtss_psfp_gate_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÜ#;"const vtss_inst_t         ;@; o;;o;	;
+@
+;i†#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∆#;"const vtss_psfp_gate_id_t ;@; o;;o;	;
+@
+;i‡#;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i$;"&vtss_psfp_gate_conf_t     *const ;@; o;;o;	;
+@
+;i%$;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÜ$;"vtss_rc ;@; o;;o;	;
+@
+;ié$;"vtss_psfp_gate_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i¶$;"!const vtss_inst_t           ;@; o;;o;	;
+@
+;i¬$;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iË$;"!const vtss_psfp_gate_id_t   ;@; o;;o;	;
+@
+;i%;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i(%;"(const vtss_psfp_gate_conf_t *const ;@; o;;o;	;
+@
+;iK%;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;ig%;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i|%;"BOOL                 ;@; o;;o;	;
+@
+;ië%;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷%;"vtss_opt_prio_t      ;@; o;;o;	;
+@
+;iÎ%;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&;"vtss_timestamp_t     ;@; o;;o;	;
+@
+;i4&;"config_change_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig&;"vtss_timestamp_t     ;@; o;;o;	;
+@
+;i|&;"current_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™&;"BOOL                 ;@; o;;o;	;
+@
+;iø&;"config_pending;@;[ ;0{;{;{	;o;;o;	;
+@
+;i';"BOOL                 ;@; o;;o;	;
+@
+;i%';"close_invalid_rx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i`';"BOOL                 ;@; o;;o;	;
+@
+;iu';"close_octets_exceeded;@;[ ;0;o;;o;	;
+@
+;i±';"vtss_psfp_gate_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i#(;"vtss_rc ;@; o;;o;	;
+@
+;i+(;"vtss_psfp_gate_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iE(;"const vtss_inst_t         ;@; o;;o;	;
+@
+;i_(;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iá(;"const vtss_psfp_gate_id_t ;@; o;;o;	;
+@
+;i°(;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i«(;"&vtss_psfp_gate_status_t   *const ;@; o;;o;	;
+@
+;iË(;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i);"typedef;@;o;;o;	;
+@
+;i);"	u16 ;@;o;;o;	;
+@
+;i);"vtss_psfp_filter_id_t;@;[ ;0{;o;;o;	;
+@
+;iE);"$#if defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;id);"&#define VTSS_PSFP_FILTER_CNT 256
+;@{;o;;o;	;
+@
+;iÖ);"#else
+;@{;o;;o;	;
+@
+;iã);"'#define VTSS_PSFP_FILTER_CNT 1023
+;@{;o;;o;	;
+@
+;i≠);"#endif
+
+;@{
+;o;;o;	;
+@
+;i“);"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÁ);"BOOL                ;@; o;;o;	;
+@
+;i˚);"gate_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&*;"vtss_psfp_gate_id_t ;@; o;;o;	;
+@
+;i:*;"gate_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw*;"u16                 ;@; o;;o;	;
+@
+;iã*;"max_sdu;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÕ*;"vtss_opt_bool_t     ;@; o;;o;	;
+@
+;i·*;"block_oversize;@;[ ;0;o;;o;	;
+@
+;i<+;"vtss_psfp_filter_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∑+;"vtss_rc ;@; o;;o;	;
+@
+;iø+;"vtss_psfp_filter_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iŸ+;"!const vtss_inst_t           ;@; o;;o;	;
+@
+;iı+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i,;"!const vtss_psfp_filter_id_t ;@; o;;o;	;
+@
+;i9,;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i_,;"(vtss_psfp_filter_conf_t     *const ;@; o;;o;	;
+@
+;iÇ,;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iÈ,;"vtss_rc ;@; o;;o;	;
+@
+;iÒ,;"vtss_psfp_filter_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i-;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;i)-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iQ-;"#const vtss_psfp_filter_id_t   ;@; o;;o;	;
+@
+;io-;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iï-;"*const vtss_psfp_filter_conf_t *const ;@; o;;o;	;
+@
+;i∫-;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iÿ-;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÌ-;"
+BOOL ;@; o;;o;	;
+@
+;iÚ-;"block_oversize;@;[ ;0;o;;o;	;
+@
+;i'.;"vtss_psfp_filter_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i°.;"vtss_rc ;@; o;;o;	;
+@
+;i©.;" vtss_psfp_filter_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i≈.;"!const vtss_inst_t           ;@; o;;o;	;
+@
+;i·.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i/;"!const vtss_psfp_filter_id_t ;@; o;;o;	;
+@
+;i'/;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iO/;"(vtss_psfp_filter_status_t   *const ;@; o;;o;	;
+@
+;ir/;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;iü/;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¥/;"BOOL                  ;@; o;;o;	;
+@
+;i /;"filter_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆ/;"vtss_psfp_filter_id_t ;@; o;;o;	;
+@
+;i0;"filter_id;@;[ ;0;o;;o;	;
+@
+;i20;"vtss_psfp_iflow_conf_t;@;[ ;0{;o;;o;	;
+@
+;iJ0;"#endif
+
+;@{;o;;o;	;
+@
+;iR0;"'#if defined(VTSS_FEATURE_QOS_TAS)
+;@{
+;o;;o;	;
+@
+;i©0;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÁ1;"
+BOOL ;@; o;;o;	;
+@
+;iÏ1;"always_guard_band;@;[ ;0;o;;o;	;
+@
+;i2;"vtss_qos_tas_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iç2;"vtss_rc ;@; o;;o;	;
+@
+;iï2;"vtss_qos_tas_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i´2;"const vtss_inst_t    ;@; o;;o;	;
+@
+;i¿2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‰2;"!vtss_qos_tas_conf_t  *const ;@; o;;o;	;
+@
+;i 3;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i}3;"vtss_rc ;@; o;;o;	;
+@
+;iÖ3;"vtss_qos_tas_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iõ3;"const vtss_inst_t         ;@; o;;o;	;
+@
+;iµ3;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iŸ3;"&const vtss_qos_tas_conf_t *const ;@; o;;o;	;
+@
+;i˙3;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i:4;"typedef;@;{;o;;o;	;
+@
+;iB4;"	enum;@;[{;{;o;;o;	;
+@
+;iM4;"%VTSS_QOS_TAS_GCO_SET_GATE_STATES;@;0{;{;o;;o;	;
+@
+;ià4;"&VTSS_QOS_TAS_GCO_SET_AND_HOLD_MAC;@;0{;{;o;;o;	;
+@
+;i◊4;"+VTSS_QOS_TAS_GCO_SET_AND_RELEASE_MAC  ;@;0;o;;o;	;
+@
+;i&5;"vtss_qos_tas_gco_t;@;[ ;0{
+;o;;o;	;
+@
+;is5;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ià5;"vtss_qos_tas_gco_t ;@; o;;o;	;
+@
+;iõ5;"gate_operation;@;[ ;0{;{;{	;o;;o;	;
+@
+;i6;"BOOL               ;@; o;;o;	;
+@
+;i26;"gate_open;@;[{;#o;;o;	;
+@
+;i<6;"VTSS_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i–6;"u32                ;@; o;;o;	;
+@
+;i„6;"time_interval;@;[ ;0;o;;o;	;
+@
+;iÙ6;"vtss_qos_tas_gce_t;@;[ ;0{
+;o;;o;	;
+@
+;i<7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i˙7;"u16              ;@; o;;o;	;
+@
+;i8;"max_sdu;@;[{;#o;;o;	;
+@
+;i8;"VTSS_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i§8;"BOOL             ;@; o;;o;	;
+@
+;iµ8;"gate_enabled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i)9;"BOOL             ;@; o;;o;	;
+@
+;i:9;"gate_open;@;[{;#o;;o;	;
+@
+;iD9;"VTSS_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;iO:;"u32              ;@; o;;o;	;
+@
+;i`:;"cycle_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iB;;"u32              ;@; o;;o;	;
+@
+;iS;;"cycle_time_ext;@;[ ;0{;{;{	;o;;o;	;
+@
+;i==;"vtss_timestamp_t ;@; o;;o;	;
+@
+;iN=;"base_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iº>;"BOOL             ;@; o;;o;	;
+@
+;iÕ>;"config_change;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?;"u32                  ;@; o;;o;	;
+@
+;i!?;"gcl_length;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN?;"vtss_qos_tas_gce_t   ;@; o;;o;	;
+@
+;ic?;"gcl;@;[{;#o;;o;	;
+@
+;ig?;"VTSS_QOS_TAS_GCL_LEN_MAX;@;0;o;;o;	;
+@
+;iÑ?;"vtss_qos_tas_port_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i1@;"vtss_rc ;@; o;;o;	;
+@
+;i9@;"vtss_qos_tas_port_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iT@;"const vtss_inst_t         ;@; o;;o;	;
+@
+;in@;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ió@;"const vtss_port_no_t      ;@; o;;o;	;
+@
+;i±@;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i›@;"&vtss_qos_tas_port_conf_t  *const ;@; o;;o;	;
+@
+;i˛@;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iñA;"vtss_rc ;@; o;;o;	;
+@
+;iûA;"vtss_qos_tas_port_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iπA;"%const vtss_inst_t               ;@; o;;o;	;
+@
+;iŸA;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iB;"%const vtss_port_no_t            ;@; o;;o;	;
+@
+;i"B;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iNB;",const vtss_qos_tas_port_conf_t  *const ;@; o;;o;	;
+@
+;iuB;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i™B;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iZC;"BOOL                ;@; o;;o;	;
+@
+;inC;"config_pending;@;[ ;0{;{;{	;o;;o;	;
+@
+;iMD;"u64                 ;@; o;;o;	;
+@
+;iaD;"config_change_error;@;[ ;0{;{;{	;o;;o;	;
+@
+;i◊D;"vtss_timestamp_t    ;@; o;;o;	;
+@
+;iÎD;"config_change_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iOE;"BOOL                ;@; o;;o;	;
+@
+;icE;"gate_open;@;[{;#o;;o;	;
+@
+;imE;"VTSS_QUEUE_ARRAY_SIZE;@;0;o;;o;	;
+@
+;iáE;"vtss_qos_tas_port_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i,F;"vtss_rc ;@; o;;o;	;
+@
+;i4F;"!vtss_qos_tas_port_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iQF;" const vtss_inst_t          ;@; o;;o;	;
+@
+;ilF;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ióF;" const vtss_port_no_t       ;@; o;;o;	;
+@
+;i≤F;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‡F;"'vtss_qos_tas_port_status_t *const ;@; o;;o;	;
+@
+;iG;"status;@;[ ;0;0{;o;;o;	;
+@
+;iG;"2#endif /* defined(VTSS_FEATURE_QOS_TAS) */
+
+
+;@{;o;;o;	;
+@
+;i9G;"4#if defined(VTSS_FEATURE_QOS_FRAME_PREEMPTION)
+;@{
+;o;;o;	;
+@
+;i∂G;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iÀG;"
+BOOL ;@; o;;o;	;
+@
+;i–G;"admin_status;@;[{;#o;;o;	;
+@
+;i›G;"VTSS_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i%H;"
+BOOL ;@; o;;o;	;
+@
+;i*H;"enable_tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iuH;"
+BOOL ;@; o;;o;	;
+@
+;izH;"verify_disable_tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÃH;"
+u8   ;@; o;;o;	;
+@
+;i—H;"verify_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i%I;"
+u8   ;@; o;;o;	;
+@
+;i*I;"add_frag_size;@;[ ;0;o;;o;	;
+@
+;ivI;"vtss_qos_fp_port_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iõJ;"vtss_rc ;@; o;;o;	;
+@
+;i£J;"vtss_qos_fp_port_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iΩJ;"const vtss_inst_t       ;@; o;;o;	;
+@
+;i’J;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˝J;"const vtss_port_no_t    ;@; o;;o;	;
+@
+;iK;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i@K;"$vtss_qos_fp_port_conf_t *const ;@; o;;o;	;
+@
+;i_K;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;ioL;"vtss_rc ;@; o;;o;	;
+@
+;iwL;"vtss_qos_fp_port_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iëL;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;iØL;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i◊L;"#const vtss_port_no_t          ;@; o;;o;	;
+@
+;iıL;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i M;"*const vtss_qos_fp_port_conf_t *const ;@; o;;o;	;
+@
+;iEM;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iõM;"typedef;@;{;o;;o;	;
+@
+;i£M;"	enum;@;[{;{;o;;o;	;
+@
+;iÆM;""VTSS_MM_STATUS_VERIFY_INITIAL;@;0{;{;o;;o;	;
+@
+;iÌM;"VTSS_MM_STATUS_VERIFY_IDLE;@;0{;{;o;;o;	;
+@
+;i,N;"VTSS_MM_STATUS_VERIFY_SEND;@;0{;{;o;;o;	;
+@
+;ieN;"VTSS_MM_STATUS_VERIFY_WAIT;@;0{;{;o;;o;	;
+@
+;i§N;"$VTSS_MM_STATUS_VERIFY_SUCCEEDED;@;0{;{;o;;o;	;
+@
+;i⁄N;"!VTSS_MM_STATUS_VERIFY_FAILED;@;0{;{;o;;o;	;
+@
+;iO;"&VTSS_MM_STATUS_VERIFY_DISABLED   ;@;0;o;;o;	;
+@
+;i_O;"vtss_mm_status_verify_t;@;[ ;0{
+;o;;o;	;
+@
+;i¿O;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i’O;"u32                     ;@; o;;o;	;
+@
+;iÌO;"hold_advance;@;[ ;0{;{;{	;o;;o;	;
+@
+;i-P;"u32                     ;@; o;;o;	;
+@
+;iEP;"release_advance;@;[ ;0{;{;{	;o;;o;	;
+@
+;iàP;"BOOL                    ;@; o;;o;	;
+@
+;i†P;"preemption_active;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˘P;"u8                      ;@; o;;o;	;
+@
+;iQ;"hold_request;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJQ;"vtss_mm_status_verify_t ;@; o;;o;	;
+@
+;ibQ;"status_verify;@;[ ;0;o;;o;	;
+@
+;iùQ;"vtss_qos_fp_port_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∂R;"vtss_rc ;@; o;;o;	;
+@
+;iæR;" vtss_qos_fp_port_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i⁄R;"const vtss_inst_t         ;@; o;;o;	;
+@
+;iÙR;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iS;"const vtss_port_no_t      ;@; o;;o;	;
+@
+;i8S;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ieS;"&vtss_qos_fp_port_status_t *const ;@; o;;o;	;
+@
+;iÜS;"status;@;[ ;0;0{;o;;o;	;
+@
+;ièS;">#endif /* defined(VTSS_FEATURE_QOS_FRAME_PREEMPTION) */
+
+;@{;o;;o;	;
+@
+;i»S;"##endif /* _VTSS_TSN_API_H_ */
+;@

@@ -1,0 +1,1459 @@
+{:	root[>{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"àZ// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TSN_
+#define _MICROCHIP_ETHERNET_SWITCH_API_TSN_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+/* - FRER compound streams ----------------------------------------- */
+
+// FRER compound stream ID.
+// Sequence recovery can be enabled to eliminate duplicate frames.
+typedef uint16_t mesa_frer_cstream_id_t;
+
+// FRER recovery algorithm
+typedef enum {
+    MESA_FRER_RECOVERY_ALG_VECTOR, // Vector recovery
+    MESA_FRER_RECOVERY_ALG_MATCH,  // Match recovery
+} mesa_frer_recovery_alg_t;
+
+// FRER member/compound stream configuration
+typedef struct {
+    mesa_bool_t              recovery;    // Enable/disable recovery
+    mesa_frer_recovery_alg_t alg;         // frerSeqRcvyAlgorithm: Algorithm
+    uint8_t                  hlen;        // frerSeqRcvyHistoryLength: History length, 2-32 (vector algorithm)
+    uint16_t                 reset_time;  // frerSeqRcvyResetMSec: Reset timeout (milliseconds)
+    mesa_bool_t              take_no_seq; // frerSeqRcvyTakeNoSequence: Accept frames without R-tag
+    mesa_frer_cstream_id_t   cstream_id;  // Compound stream ID (valid for member stream only)
+} mesa_frer_stream_conf_t;
+
+// Get compound stream configuration.
+// id [IN]     Compound stream ID.
+// conf [OUT]  Compound stream configuration.
+mesa_rc mesa_frer_cstream_conf_get(const mesa_inst_t            inst,
+                                   const mesa_frer_cstream_id_t id,
+                                   mesa_frer_stream_conf_t      *const conf);
+
+// Set compound stream configuration.
+// id [IN]    Compound stream ID.
+// conf [IN]  Compound stream configuration.
+mesa_rc mesa_frer_cstream_conf_set(const mesa_inst_t             inst,
+                                   const mesa_frer_cstream_id_t  id,
+                                   const mesa_frer_stream_conf_t *const conf);
+
+// FRER recovery counters
+typedef struct {
+    mesa_counter_t out_of_order_packets; // frerCpsSeqRcvyOutOfOrderPackets
+    mesa_counter_t rogue_packets;        // frerCpsSeqRcvyRoguePackets
+    mesa_counter_t passed_packets;       // frerCpsSeqRcvyPassedPackets
+    mesa_counter_t discarded_packets;    // frerCpsSeqRcvyDiscardedPackets
+    mesa_counter_t lost_packets;         // frerCpsSeqRcvyLostPackets
+    mesa_counter_t tagless_packets;      // frerCpsSeqRcvyTaglessPackets
+    mesa_counter_t resets;               // frerCpsSeqRcvyResets
+} mesa_frer_counters_t;
+
+// Get compound stream Counters.
+// id [IN]         Compound stream ID.
+// counters [OUT]  Compund stream counters.
+mesa_rc mesa_frer_cstream_cnt_get(const mesa_inst_t            inst,
+                                  const mesa_frer_cstream_id_t id,
+                                  mesa_frer_counters_t         *const counters);
+
+// Clear compound stream Counters.
+// id [IN]  Compound stream ID.
+mesa_rc mesa_frer_cstream_cnt_clear(const mesa_inst_t            inst,
+                                    const mesa_frer_cstream_id_t id);
+
+/* - FRER member streams ------------------------------------------- */
+
+// FRER member stream ID.
+// A block of member stream IDs must be allocated for an egress port list.
+// For each stream ID and egress port, configuration and counters are available.
+// Individual recovery can be enabled to eliminate duplicate frames.
+// Frames can also be mapped to a compound stream.
+typedef uint16_t mesa_frer_mstream_id_t;
+
+// Allocate FRER member stream ID block.
+// port_list [IN]  Egress port list, maximum 8 ports enabled
+// id [OUT]        Member stream ID base.
+mesa_rc mesa_frer_mstream_alloc(const mesa_inst_t      inst,
+                                const mesa_port_list_t *port_list,
+                                mesa_frer_mstream_id_t *const id);
+
+// Free FRER member stream ID block.
+// id [IN]    Member stream ID base.
+mesa_rc mesa_frer_mstream_free(const mesa_inst_t            inst,
+                               const mesa_frer_mstream_id_t id);
+
+// Get member stream configuration.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+// conf [OUT]    Member stream configuration.
+mesa_rc mesa_frer_mstream_conf_get(const mesa_inst_t            inst,
+                                   const mesa_frer_mstream_id_t id,
+                                   const mesa_port_no_t         port_no,
+                                   mesa_frer_stream_conf_t      *const conf);
+
+// Set member stream configuration.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+// conf [IN]     Member stream configuration.
+mesa_rc mesa_frer_mstream_conf_set(const mesa_inst_t             inst,
+                                   const mesa_frer_mstream_id_t  id,
+                                   const mesa_port_no_t          port_no,
+                                   const mesa_frer_stream_conf_t *const conf);
+
+// Get member stream Counters.
+// id [IN]         Member stream ID.
+// port_no [IN]    Egress port number.
+// counters [OUT]  Member stream counters.
+mesa_rc mesa_frer_mstream_cnt_get(const mesa_inst_t            inst,
+                                  const mesa_frer_mstream_id_t id,
+                                  const mesa_port_no_t         port_no,
+                                  mesa_frer_counters_t         *const counters);
+
+// Clear member stream Counters.
+// id [IN]       Member stream ID.
+// port_no [IN]  Egress port number.
+mesa_rc mesa_frer_mstream_cnt_clear(const mesa_inst_t            inst,
+                                    const mesa_frer_mstream_id_t id,
+                                    const mesa_port_no_t         port_no);
+
+// FRER ingress flow configuration
+typedef struct {
+    mesa_bool_t            mstream_enable;             // Enable member stream
+    mesa_frer_mstream_id_t mstream_id;                 // Member stream base ID
+    mesa_bool_t            generation;                 // Enable/disable sequence generation
+    mesa_bool_t            pop CAP(L2_FRER_IFLOW_POP); // R-tag popping
+} mesa_frer_iflow_conf_t;
+
+/* - PSFP ---------------------------------------------------------- */
+
+// PSFP gate ID
+typedef uint16_t mesa_psfp_gate_id_t;
+
+// PSFP Gate Control Entry configuration
+typedef struct {
+    mesa_bool_t     gate_open;     // StreamGateState
+    mesa_opt_prio_t prio;          // IPV: Priority
+    uint32_t        time_interval; // TimeInterval: Time interval (nsec)
+    uint32_t        octet_max;     // IntervalOctetMax: Maximum number of octets permitted (zero disables check)
+} mesa_psfp_gce_t;
+
+// Get PSFP Gate Control List.
+// id [IN]        Gate ID.
+// max_cnt [IN]   Size of the 'gcl' array.
+// gcl [OUT]      Gate Control List
+// gce_cnt [OUT]  Length of Gate Control List.
+mesa_rc mesa_psfp_gcl_conf_get(const mesa_inst_t         inst,
+                               const mesa_psfp_gate_id_t id,
+                               const uint32_t            max_cnt,
+                               mesa_psfp_gce_t           *const gcl,
+                               uint32_t                  *const gce_cnt);
+
+// Set PSFP Gate Control List.
+// id [IN]       Gate ID.
+// gce_cnt [IN]  Length of Gate Control List.
+// gcl [IN]      Gate Control List.
+mesa_rc mesa_psfp_gcl_conf_set(const mesa_inst_t         inst,
+                               const mesa_psfp_gate_id_t id,
+                               const uint32_t            gce_cnt,
+                               const mesa_psfp_gce_t     *const gcl);
+
+// PSFP Gate Control List configuration
+typedef struct {
+    mesa_timestamp_t  base_time;      // PSFPAdminBaseTime/PSFPOperBaseTime
+    uint32_t          cycle_time;     // PSFPAdminCycleTime/PSFPOperCycleTime
+    uint32_t          cycle_time_ext; // PSFPAdminCycleTimeExtension/PSFPOperCycleTimeExtension
+} mesa_psfp_gcl_conf_t;
+
+// PSFP gate configuration
+typedef struct {
+    mesa_bool_t          enable;                // PSFPGateEnabled: Enable/disable Gate
+    mesa_bool_t          gate_open;             // PSFPAdminGateStates: Initial gate state
+    mesa_opt_prio_t      prio;                  // PSFPAdminIPV: Priority
+    mesa_opt_bool_t      close_invalid_rx;      // PSFPGateClosedDueToInvalidRxEnable/PSFPGateClosedDueToInvalidRx
+    mesa_opt_bool_t      close_octets_exceeded; // PSFPGateClosedDueToOctetsExceededEnable/PSFPGateClosedDueOctetsExceeded
+    mesa_bool_t          config_change;         // PSFPConfigChange: Apply the following configuration fields
+    mesa_psfp_gcl_conf_t config;                // PSFPAdmin*: Gate Control List applied if 'config_change' is set
+} mesa_psfp_gate_conf_t;
+
+// Get PSFP gate configuration.
+// id [IN]     Gate ID.
+// conf [OUT]  Gate configuration.
+mesa_rc mesa_psfp_gate_conf_get(const mesa_inst_t         inst,
+                                const mesa_psfp_gate_id_t id,
+                                mesa_psfp_gate_conf_t     *const conf);
+
+// Set PSFP gate configuration.
+// id [IN]    Gate ID.
+// conf [IN]  Gate configuration.
+mesa_rc mesa_psfp_gate_conf_set(const mesa_inst_t           inst,
+                                const mesa_psfp_gate_id_t   id,
+                                const mesa_psfp_gate_conf_t *const conf);
+
+// PSFP gate status
+typedef struct {
+    mesa_bool_t          gate_open;             // PSFPOperGateStates: Current gate state
+    mesa_opt_prio_t      prio;                  // PSFPOperIPV: Priority
+    mesa_timestamp_t     config_change_time;    // PSFPConfigChangeTime
+    mesa_timestamp_t     current_time;          // PSFPCurrentTime
+    mesa_bool_t          config_pending;        // PSFPConfigPending: Configuration active indication
+    mesa_bool_t          close_invalid_rx;      // PSFPGateClosedDueToInvalidRx
+    mesa_bool_t          close_octets_exceeded; // PSFPGateClosedDueOctetsExceeded
+} mesa_psfp_gate_status_t;
+
+// Get PSFP gate status.
+// id [IN]       Gate ID.
+// status [OUT]  Gate configuration.
+mesa_rc mesa_psfp_gate_status_get(const mesa_inst_t         inst,
+                                  const mesa_psfp_gate_id_t id,
+                                  mesa_psfp_gate_status_t   *const status);
+
+// PSFP filter ID
+typedef uint16_t mesa_psfp_filter_id_t;
+
+// PSFP filter configuration
+typedef struct {
+    mesa_bool_t         gate_enable;    // Enable gate mapping
+    mesa_psfp_gate_id_t gate_id;        // StreamGateInstanceID: Gate ID mapping
+    uint16_t            max_sdu;        // Maximum SDU size (zero disables SDU check)
+    mesa_opt_bool_t     block_oversize; // StreamBlockedDueToOversizeFrameEnable/StreamBlockedDueToOversizeFrame
+} mesa_psfp_filter_conf_t;
+
+// Get PSFP filter configuration.
+// id [IN]     Filter ID.
+// conf [OUT]  Filter configuration.
+mesa_rc mesa_psfp_filter_conf_get(const mesa_inst_t           inst,
+                                  const mesa_psfp_filter_id_t id,
+                                  mesa_psfp_filter_conf_t     *const conf);
+
+// Set PSFP filter configuration.
+// id [IN]    Filter ID.
+// conf [IN]  Filter configuration.
+mesa_rc mesa_psfp_filter_conf_set(const mesa_inst_t             inst,
+                                  const mesa_psfp_filter_id_t   id,
+                                  const mesa_psfp_filter_conf_t *const conf);
+
+// PSFP filter status
+typedef struct {
+    mesa_bool_t block_oversize; // StreamBlockedDueToOversizeFrame
+} mesa_psfp_filter_status_t;
+
+// Get PSFP filter status.
+// id [IN]       Filter ID.
+// status [OUT]  Filter status.
+mesa_rc mesa_psfp_filter_status_get(const mesa_inst_t           inst,
+                                    const mesa_psfp_filter_id_t id,
+                                    mesa_psfp_filter_status_t   *const status);
+
+// PSFP ingress flow configuration
+typedef struct {
+    mesa_bool_t           filter_enable; // Enable filter mapping
+    mesa_psfp_filter_id_t filter_id;     // Filter ID mapping
+} mesa_psfp_iflow_conf_t;
+
+/* - TAS ---------------------------------------------------------- */
+
+// Time Aware Shaper (802.1Qbv) global configuration
+typedef struct {
+    // If a GCL contains HOLD_MAC and RELEASE_MAC operation:
+    //     When TRUE a guard band is implemented on all queues, both Express and Preemptible queues.
+    //     When FALSE a guard band is only implemented on Preemptible queues.
+    // If a GCL do not contains HOLD_MAC and RELEASE_MAC operation:
+    //     Has no effect.
+    mesa_bool_t always_guard_band CAP(MESA_CAP_QOS_TAS_HOLD_REL_MAC_RESTRICT);
+} mesa_qos_tas_conf_t CAP(QOS_TAS);
+
+// Get Time Aware Shaper (802.1Qbv) global configuration.
+// conf    [OUT] Scheduled Traffic configuration structure.
+mesa_rc mesa_qos_tas_conf_get(const mesa_inst_t    inst,
+                              mesa_qos_tas_conf_t  *const conf)
+    CAP(QOS_TAS);
+
+// Set Time Aware Shaper (802.1Qbv) global configuration.
+// conf    [IN] Scheduled Traffic configuration structure.
+mesa_rc mesa_qos_tas_conf_set(const mesa_inst_t         inst,
+                              const mesa_qos_tas_conf_t *const conf)
+    CAP(QOS_TAS);
+
+// Time Aware Shaper (802.1Qbv) Gate Control Operations
+typedef enum {
+    MESA_QOS_TAS_GCO_SET_GATE_STATES,     // Set GateState
+    MESA_QOS_TAS_GCO_SET_AND_HOLD_MAC,    // Set GateState and stop preemption
+    MESA_QOS_TAS_GCO_SET_AND_RELEASE_MAC  // Set GateState and resume preemption
+} mesa_qos_tas_gco_t CAP(QOS_TAS);
+
+// Time Aware Shaper (802.1Qbv) gate control list entry
+// CAP(MESA_CAP_QOS_TAS_HOLD_REL_MAC_RESTRICT):
+//      A GCE with HOLD_MAC all queues opened must be Express queues.
+//      A GCE with RELEASE_MAC all queues opened must be Preemptable queues.
+//      The same queue cannot be open in both a HOLD_MAC and a RELEASE_MAC entry.
+// Note that if a list ends with gate operation HOLD_MAC then this MAC state is not changed when a new list is taking over.
+// To assure the MAC is released, the new list should contain a RELEASE_MAC gate operation.
+typedef struct {
+    mesa_qos_tas_gco_t gate_operation; // Gate Control Operation.
+
+    // The gate open states for the corresponding traffic classes in this interval;
+    mesa_bool_t        gate_open[MESA_QUEUE_ARRAY_SIZE];
+
+    // A time interval that the gate_open is active before going to next GCL entry.
+    // This is in nano seconds.
+    uint32_t           time_interval;
+} mesa_qos_tas_gce_t CAP(QOS_TAS);
+
+// Get Time Aware Shaper (802.1Qbv) port Gate Control List.
+// port_no    [IN]   Port number.
+// cnt        [IN]   Size of the 'gcl' array delivered by caller.
+// gcl        [OUT]  Scheduled Traffic Gate Control List array of size 'cnt' delivered by caller.
+//                   Containing returned GCL of length 'gce_cnt'.
+// gce_cnt    [OUT]  Number of GCE in returned Gate Control List.
+mesa_rc mesa_qos_tas_port_gcl_conf_get(const mesa_inst_t     inst,
+                                       const mesa_port_no_t  port_no,
+                                       const uint32_t        cnt,
+                                       mesa_qos_tas_gce_t    *const gcl,
+                                       uint32_t              *const gce_cnt)
+    CAP(QOS_TAS);
+
+// Set Time Aware Shaper (802.1Qbv) port Gate Control List.
+// port_no    [IN]  Port number.
+// gce_cnt    [IN]  Number of GCE in the 'gcl' array delivered by caller.
+// gcl        [IN]  Scheduled Traffic Gate Control List.
+mesa_rc mesa_qos_tas_port_gcl_conf_set(const mesa_inst_t          inst,
+                                       const mesa_port_no_t       port_no,
+                                       const uint32_t             gce_cnt,
+                                       const mesa_qos_tas_gce_t   *const gcl)
+    CAP(QOS_TAS);
+
+// Time Aware Shaper (802.1Qbv) port configuration
+typedef struct {
+    // Maximum SDU size supported by each queue in bytes. Minimum 64 bytes.
+    // This parameter is also used to calculate the guard band time: gbt = max_sdu[]*8 / LINK_SPEED
+    // In case of HOLD_MAC gate operaton, the guard band time in preemptable queues is automatically selected as the min fragment size plus 64 bytes.
+    // CAP(MESA_CAP_QOS_TAS_HOLD_REL_MAC_RESTRICT):
+    //      A queue is determined preemptible if it is not opened in a MAC_HOD gate operation.
+    uint16_t         max_sdu[MESA_QUEUE_ARRAY_SIZE];
+
+    // The GateEnabled parameter determines whether traffic scheduling
+    // is active (true) or inactive (false).
+    mesa_bool_t      gate_enabled;
+
+    // The initial value of the port open states that is used when no GCL is active on the port.
+    mesa_bool_t      gate_open[MESA_QUEUE_ARRAY_SIZE];
+
+    // The administrative cycle time in nanoseconds.
+    // The cycle time must be at least as long as the sum of all time_interval
+    // in the GCL configured by mesa_qos_tas_port_gcl_conf_set() and must also be larger than
+    // MESA_CAP_QOS_TAS_CT_MIN-1 and smaller MESA_CAP_QOS_TAS_CT_MAX+1.
+    uint32_t         cycle_time;
+
+    // In case a new GCL start time (cycle_time) is not lining up exactly with an currently active (old) GCL.
+    // This is the maximum time that current GCL will be extended. Otherwise it will be truncated.
+    // Must also be larger than MESA_CAP_QOS_TAS_CT_MIN-1 and smaller MESA_CAP_QOS_TAS_CT_MAX+1.
+    uint32_t         cycle_time_ext;
+
+    // The administrative base time. This is GCL start active time after config_change true.
+    // This time should be base_time + (N * cycle_time) of any currently active (old) GCL on this port.
+    // in order to assure time alignment of old and new GCL.
+    // Must be at least two times cycle_time in the future to assure GCL start on expected time.
+    // If base_time is in the past the actual GCL start time will be calculated. This is done in ADVANCING state.
+    mesa_timestamp_t base_time;
+
+    // The ConfigChange parameter set to TRUE, signals the start of a new GCL configured by mesa_qos_tas_port_gcl_conf_set().
+    // The actual start of the new GCL will happen at base_time time. As long as the new GCL is not active config_pending is TRUE.
+    // This should only be done when the above parameters are all set to appropriate values.
+    mesa_bool_t      config_change;
+} mesa_qos_tas_port_conf_t CAP(QOS_TAS);
+
+// Get Time Aware Shaper (802.1Qbv) port configuration.
+// port_no [IN]  Port number.
+// conf    [OUT] Scheduled Traffic configuration structure.
+mesa_rc mesa_qos_tas_port_conf_get(const mesa_inst_t       inst,
+                                   const mesa_port_no_t    port_no,
+                                   mesa_qos_tas_port_conf_t *const conf)
+    CAP(QOS_TAS);
+
+// Set Time Aware Shaper (802.1Qbv) port configuration.
+// port_no [IN] Port number.
+// conf    [IN] Scheduled Traffic configuration structure.
+mesa_rc mesa_qos_tas_port_conf_set(const mesa_inst_t             inst,
+                                   const mesa_port_no_t          port_no,
+                                   const mesa_qos_tas_port_conf_t *const conf)
+    CAP(QOS_TAS);
+
+// Time Aware Shaper (802.1Qbv) port status.
+typedef struct {
+    // The value of the ConfigPending state machine variable.
+    // The value is TRUE if a configuration change is in progress but has not yet completed.
+    mesa_bool_t         config_pending;
+
+    // A counter of the number of times that a re-configuration
+    // of the traffic schedule has been requested with the old
+    // schedule still running and the requested base time was in the past.
+    uint64_t            config_change_error;
+
+    // The calculated actual GCL start time in case the configured base_time is in the past
+    mesa_timestamp_t    config_change_time;
+
+    // The current port open states for the corresponding traffic classes.
+    mesa_bool_t         gate_open[MESA_QUEUE_ARRAY_SIZE];
+} mesa_qos_tas_port_status_t CAP(QOS_TAS);
+
+// Get Time Aware Shaper (802.1Qbv) status for port.
+// port_no [IN]  Port number.
+// status  [OUT] Scheduled Traffic status structure.
+mesa_rc mesa_qos_tas_port_status_get(const mesa_inst_t          inst,
+                                     const mesa_port_no_t       port_no,
+                                     mesa_qos_tas_port_status_t *const status)
+    CAP(QOS_TAS);
+
+/* - Frame Preemption ---------------------------------------------- */
+
+// 802.1Qbu and 802.3br (Frame Preemption) port configuration
+typedef struct {
+    mesa_bool_t admin_status[MESA_QUEUE_ARRAY_SIZE]; // IEEE802.1Qbu: framePreemptionStatusTable
+    mesa_bool_t enable_tx;                           // IEEE802.3br: aMACMergeEnableTx
+    mesa_bool_t verify_disable_tx;                   // IEEE802.3br: aMACMergeVerifyDisableTx
+    uint8_t     verify_time;                         // IEEE802.3br: aMACMergeVerifyTime [msec]
+    uint8_t     add_frag_size;                       // IEEE802.3br: aMACMergeAddFragSize
+} mesa_qos_fp_port_conf_t CAP(QOS_FRAME_PREEMPTION);
+
+// Get 802.1Qbu and 802.3br (Frame Preemption) port configuration.
+// port_no [IN]  Port number.
+// conf    [OUT] Frame Preemption configuration structure.
+mesa_rc mesa_qos_fp_port_conf_get(const mesa_inst_t       inst,
+                                  const mesa_port_no_t    port_no,
+                                  mesa_qos_fp_port_conf_t *const conf)
+    CAP(QOS_FRAME_PREEMPTION);
+
+// Set 802.1Qbu and 802.3br (Frame Preemption) port configuration.
+// port_no [IN] Port number.
+// conf    [IN] Frame Preemption configuration structure.
+mesa_rc mesa_qos_fp_port_conf_set(const mesa_inst_t             inst,
+                                  const mesa_port_no_t          port_no,
+                                  const mesa_qos_fp_port_conf_t *const conf)
+    CAP(QOS_FRAME_PREEMPTION);
+
+// MAC Merge Status Verify (aMACMergeStatusVerify in 802.3br)
+typedef enum {
+    MESA_MM_STATUS_VERIFY_INITIAL,   // INIT_VERIFICATION
+    MESA_MM_STATUS_VERIFY_IDLE,      // VERIFICATION_IDLE
+    MESA_MM_STATUS_VERIFY_SEND,      // SEND_VERIFY
+    MESA_MM_STATUS_VERIFY_WAIT,      // WAIT_FOR_RESPONSE.
+    MESA_MM_STATUS_VERIFY_SUCCEEDED, // VERIFIED
+    MESA_MM_STATUS_VERIFY_FAILED,    // VERIFY_FAIL
+    MESA_MM_STATUS_VERIFY_DISABLED   // Verification process is disabled
+} mesa_mm_status_verify_t CAP(QOS_FRAME_PREEMPTION);
+
+// 802.1Qbu and 802.3br (Frame Preemption) port status
+typedef struct {
+    uint32_t                hold_advance;      // TBD: IEEE802.1Qbu: holdAdvance [nsec]
+    uint32_t                release_advance;   // TBD: IEEE802.1Qbu: releaseAdvance [nsec]
+    mesa_bool_t             preemption_active; // IEEE802.1Qbu: preemptionActive, IEEE802.3br: aMACMergeStatusTx
+    uint8_t                 hold_request;      // TBD: IEEE802.1Qbu: holdRequest
+    mesa_mm_status_verify_t status_verify;     // IEEE802.3br: aMACMergeStatusVerify
+} mesa_qos_fp_port_status_t CAP(QOS_FRAME_PREEMPTION);
+
+// Get 802.1Qbu and 802.3br (Frame Preemption) port status.
+// port_no [IN]  Port number.
+// status  [OUT] Frame Preemption status structure.
+mesa_rc mesa_qos_fp_port_status_get(const mesa_inst_t         inst,
+                                    const mesa_port_no_t      port_no,
+                                    mesa_qos_fp_port_status_t *const status)
+    CAP(QOS_FRAME_PREEMPTION);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_L2_
+:@byteposir:	@str"1#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TSN_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[’iPipiqiriôi≈i∆i˜iAiBiäiãißiÍiii/i>iti©i≈i∆iÛiiIiñiiei…i(iCiDijiçiªiiEiìiîi∫i‹i	iPiïi‰iÂiˇii\i£iÎi6	i|	i≈	i
+i
+i
+i@
+ig
+iì
+iÿ
+iilimiêi∞i˜i=i>iÜiái°iÏi=iÇiµiﬁiﬂiiEioi¨iÔi2i3iXi}iøi ii%iHimiõi·i%iniºiΩi·ii)iWiûi„i-i|i}iúi¡iËiiXiõi„i4i5iViyiûiÂi*iuiviôi™i˘iIi¶iÓii	iQiRibiàiâi≤i√i˘i-iviÁi˙i˚ii5i`iÑi≥iÚi/iqi∂i ii i:ihiåiÀiiJiêiëiπi iidiƒi‹i›i¯i	iaiºi iy iÙ ib!i’!iÓ!iÔ!i"i'"iJ"iä"i»"i#i#i1#iH#ij#i¨#iÏ#i6$i7$iK$i\$i∂$iˇ$iG%iä%i%i@&iì&iÆ&iØ&i»&i‚&i'iI'iâ'i’'i÷'iË'i(i(i.(i?(i~(iœ(i%)iñ)i±)i≤)i‘)iÓ)i*iW*iô*iÂ*iÊ*i+i!+iE+iã+iœ+i,i,i4,iE,ià,i•,i¶,i¡,i›,i˝,iC-iá-i◊-iÿ-i˚-i.iN.iå.i¶.iß.iÓ.iÔ.i$/i5/ir/i◊/i%0ii0iÉ0i“0iˆ0i˜0i11im1i¶1iÊ1i¯1i˘1i32in2i¨2iÒ2i3i3i<3iK3iÜ3i’3i&4iI4iJ4iÇ4i≤4i¯4iE5ió5i6io6iÄ6i¬6i√6i7iP7iQ7i•7i≈7iÎ7i8i8iK8im8iØ8i9iS9iï9iÿ9i:i`:i©:iˆ:i;i	;iE;if;i∞;iÈ;i1<i|<i«<i=i'=i(=i[=il=i∏=i>i≤>iÊ>iE?iz?i{?i¬?iÔ?i@i@it@i´@i¨@i·@i0AiéAi÷Ai˜Ai¯AifBi…Bi*CiOCiPCi≠CiDiRDi≥Di%EiEEiFEiƒEiGFi§Fi»FiÒFiÚFi*GiHGiÑGi≈Gi	HiRHidHieHiùHi∫HiıHi<IiÜIi’IiÁIiËIiJi&JidJi¡JiÈJiÍJi*KiiKi¥Ki·Ki‚Ki>LijLikLi∂LiLiMiMiQMioMi§MiÍMi3NiÇNiîNiïNi›NiﬁNiOi-OiéOiÂOiCPi£Pi˝Pi2Qi3QivQiîQiœQiRiRRiôRi∏RiπRi¸RiSiSSiôSi‚Si/TiNTiOTiçTiúTi÷TiUiDUiUi∞Ui‰Ui-VibVicViöVi´ViWi^WiœWi XiuXi¨Xi≠XiÈXiYi;YiYi∆YiZi2Zi3Zi[ZiàZ:@last_line_endiàZ{;o;;o;	;
+@
+;iô;"2#define _MICROCHIP_ETHERNET_SWITCH_API_TSN_
+
+;@{;o;;o;	;
+@
+;i∆;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˜;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;iÍ;"typedef;@:type_aliaso;;o;	;
+@
+;iÚ;"uint16_t ;@:typedef_nameo;;o;	;
+@
+;i˚;"mesa_frer_cstream_id_t;@:
+array[ :cap0{
+;o;;o;	;
+@
+;i/;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i7;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iB;""MESA_FRER_RECOVERY_ALG_VECTOR;@;0{;{;o;;o;	;
+@
+;ix;"!MESA_FRER_RECOVERY_ALG_MATCH;@;0;o;;o;	;
+@
+;i´;"mesa_frer_recovery_alg_t;@;[ ;0{
+;o;;o;	;
+@
+;iÛ;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i;"mesa_bool_t              ;@:	nameo;;o;	;
+@
+;i!;"recovery;@;[ ;0{;{;{	;o;;o;	;
+@
+;iM;"mesa_frer_recovery_alg_t ;@; o;;o;	;
+@
+;if;"alg;@;[ ;0{;{;{	;o;;o;	;
+@
+;iö;"uint8_t                  ;@; o;;o;	;
+@
+;i≥;"	hlen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i	;"uint16_t                 ;@; o;;o;	;
+@
+;i";"reset_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ii;"mesa_bool_t              ;@; o;;o;	;
+@
+;iÇ;"take_no_seq;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÕ;"mesa_frer_cstream_id_t   ;@; o;;o;	;
+@
+;iÊ;"cstream_id;@;[ ;0;o;;o;	;
+@
+;i*;"mesa_frer_stream_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;iª;"mesa_rc ;@; o;;o;	;
+@
+;i√;"mesa_frer_cstream_conf_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iﬁ;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i˚;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i$;""const mesa_frer_cstream_id_t ;@; o;;o;	;
+@
+;iA;"id;@;[ ;0{;{	;o;;o;	;
+@
+;ih;")mesa_frer_stream_conf_t      *const ;@; o;;o;	;
+@
+;iå;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i	;"mesa_rc ;@; o;;o;	;
+@
+;i;"mesa_frer_cstream_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i,;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iJ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;is;"#const mesa_frer_cstream_id_t  ;@; o;;o;	;
+@
+;ië;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i∏;"*const mesa_frer_stream_conf_t *const ;@; o;;o;	;
+@
+;i›;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iˇ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"mesa_counter_t ;@; o;;o;	;
+@
+;i#;"out_of_order_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i`;"mesa_counter_t ;@; o;;o;	;
+@
+;io;"rogue_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iß;"mesa_counter_t ;@; o;;o;	;
+@
+;i∂;"passed_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÔ;"mesa_counter_t ;@; o;;o;	;
+@
+;i˛;"discarded_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:	;"mesa_counter_t ;@; o;;o;	;
+@
+;iI	;"lost_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÄ	;"mesa_counter_t ;@; o;;o;	;
+@
+;iè	;"tagless_packets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…	;"mesa_counter_t ;@; o;;o;	;
+@
+;iÿ	;"resets;@;[ ;0;o;;o;	;
+@
+;i
+;"mesa_frer_counters_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iì
+;"mesa_rc ;@; o;;o;	;
+@
+;iõ
+;"mesa_frer_cstream_cnt_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iµ
+;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i“
+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˙
+;""const mesa_frer_cstream_id_t ;@; o;;o;	;
+@
+;i;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i=;")mesa_frer_counters_t         *const ;@; o;;o;	;
+@
+;ia;"counters;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i∞;"mesa_rc ;@; o;;o;	;
+@
+;i∏;" mesa_frer_cstream_cnt_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i‘;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iÒ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;""const mesa_frer_cstream_id_t ;@; o;;o;	;
+@
+;i8;"id;@;[ ;0;0{
+;o;;o;	;
+@
+;iµ;"typedef;@;o;;o;	;
+@
+;iΩ;"uint16_t ;@;o;;o;	;
+@
+;i∆;"mesa_frer_mstream_id_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;io;"mesa_rc ;@; o;;o;	;
+@
+;iw;"mesa_frer_mstream_alloc;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iè;"const mesa_inst_t      ;@; o;;o;	;
+@
+;i¶;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÃ;"const mesa_port_list_t *;@; o;;o;	;
+@
+;i‰;"port_list;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#mesa_frer_mstream_id_t *const ;@; o;;o;	;
+@
+;i-;"id;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i};"mesa_rc ;@; o;;o;	;
+@
+;iÖ;"mesa_frer_mstream_free;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iú;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iπ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁ;""const mesa_frer_mstream_id_t ;@; o;;o;	;
+@
+;i˚;"id;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iõ;"mesa_rc ;@; o;;o;	;
+@
+;i£;"mesa_frer_mstream_conf_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iæ;""const mesa_inst_t            ;@; o;;o;	;
+@
+;i€;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;""const mesa_frer_mstream_id_t ;@; o;;o;	;
+@
+;i!;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iH;""const mesa_port_no_t         ;@; o;;o;	;
+@
+;ie;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ië;")mesa_frer_stream_conf_t      *const ;@; o;;o;	;
+@
+;iµ;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iW;"mesa_rc ;@; o;;o;	;
+@
+;i_;"mesa_frer_mstream_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;iz;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iò;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¡;"#const mesa_frer_mstream_id_t  ;@; o;;o;	;
+@
+;iﬂ;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#const mesa_port_no_t          ;@; o;;o;	;
+@
+;i$;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iP;"*const mesa_frer_stream_conf_t *const ;@; o;;o;	;
+@
+;iu;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;i;"mesa_rc ;@; o;;o;	;
+@
+;i;"mesa_frer_mstream_cnt_get;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i5;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iR;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iz;""const mesa_frer_mstream_id_t ;@; o;;o;	;
+@
+;ió;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iΩ;""const mesa_port_no_t         ;@; o;;o;	;
+@
+;i⁄;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i;")mesa_frer_counters_t         *const ;@; o;;o;	;
+@
+;i);"counters;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iû;"mesa_rc ;@; o;;o;	;
+@
+;i¶;" mesa_frer_mstream_cnt_clear;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i¬;""const mesa_inst_t            ;@; o;;o;	;
+@
+;iﬂ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i	;""const mesa_frer_mstream_id_t ;@; o;;o;	;
+@
+;i&;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iN;""const mesa_port_no_t         ;@; o;;o;	;
+@
+;ik;"port_no;@;[ ;0;0{
+;o;;o;	;
+@
+;iô;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÆ;"mesa_bool_t            ;@; o;;o;	;
+@
+;i≈;"mstream_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝;"mesa_frer_mstream_id_t ;@; o;;o;	;
+@
+;i;"mstream_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iM;"mesa_bool_t            ;@; o;;o;	;
+@
+;id;"generation;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™;"mesa_bool_t            ;@; o;;o;	;
+@
+;i¡;"	pop ;@;[ ;o;;o;	;
+@
+;i≈;"CAP(L2_FRER_IFLOW_POP);@;o;;o;	;
+@
+;i;"mesa_frer_iflow_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;ib;"typedef;@;o;;o;	;
+@
+;ij;"uint16_t ;@;o;;o;	;
+@
+;is;"mesa_psfp_gate_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i≤;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i«;"mesa_bool_t     ;@; o;;o;	;
+@
+;i◊;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝;"mesa_opt_prio_t ;@; o;;o;	;
+@
+;i;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1;"uint32_t        ;@; o;;o;	;
+@
+;iA;"time_interval;@;[ ;0{;{;{	;o;;o;	;
+@
+;iz;"uint32_t        ;@; o;;o;	;
+@
+;iä;"octet_max;@;[ ;0;o;;o;	;
+@
+;iÈ;"mesa_psfp_gce_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i≥;"mesa_rc ;@; o;;o;	;
+@
+;iª;"mesa_psfp_gcl_conf_get;@;[ ;0;"[
+{;{	;o;;o;	;
+@
+;i“;"const mesa_inst_t         ;@; o;;o;	;
+@
+;iÏ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"const mesa_psfp_gate_id_t ;@; o;;o;	;
+@
+;i+;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iN;"const uint32_t            ;@; o;;o;	;
+@
+;ih;"max_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iê;"&mesa_psfp_gce_t           *const ;@; o;;o;	;
+@
+;i±;"gcl;@;[ ;0{;{	;o;;o;	;
+@
+;i’;"&uint32_t                  *const ;@; o;;o;	;
+@
+;iˆ;"gce_cnt;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iå;"mesa_rc ;@; o;;o;	;
+@
+;iî;"mesa_psfp_gcl_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i´;"const mesa_inst_t         ;@; o;;o;	;
+@
+;i≈;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÍ;"const mesa_psfp_gate_id_t ;@; o;;o;	;
+@
+;i;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i';"const uint32_t            ;@; o;;o;	;
+@
+;iA;"gce_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ii;"&const mesa_psfp_gce_t     *const ;@; o;;o;	;
+@
+;iä;"gcl;@;[ ;0;0{
+;o;;o;	;
+@
+;iπ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iŒ;"mesa_timestamp_t  ;@; o;;o;	;
+@
+;i‡;"base_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t          ;@; o;;o;	;
+@
+;i,;"cycle_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih;"uint32_t          ;@; o;;o;	;
+@
+;iz;"cycle_time_ext;@;[ ;0;o;;o;	;
+@
+;i∆;"mesa_psfp_gcl_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i¯;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t          ;@; o;;o;	;
+@
+;i";"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;ie;"mesa_bool_t          ;@; o;;o;	;
+@
+;iz;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¿;"mesa_opt_prio_t      ;@; o;;o;	;
+@
+;i’;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+ ;"mesa_opt_bool_t      ;@; o;;o;	;
+@
+;i ;"close_invalid_rx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i} ;"mesa_opt_bool_t      ;@; o;;o;	;
+@
+;ií ;"close_octets_exceeded;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¯ ;"mesa_bool_t          ;@; o;;o;	;
+@
+;i!;"config_change;@;[ ;0{;{;{	;o;;o;	;
+@
+;if!;"mesa_psfp_gcl_conf_t ;@; o;;o;	;
+@
+;i{!;"config;@;[ ;0;o;;o;	;
+@
+;i◊!;"mesa_psfp_gate_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iJ";"mesa_rc ;@; o;;o;	;
+@
+;iR";"mesa_psfp_gate_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ij";"const mesa_inst_t         ;@; o;;o;	;
+@
+;iÑ";"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i™";"const mesa_psfp_gate_id_t ;@; o;;o;	;
+@
+;iƒ";"id;@;[ ;0{;{	;o;;o;	;
+@
+;iË";"&mesa_psfp_gate_conf_t     *const ;@; o;;o;	;
+@
+;i	#;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;ij#;"mesa_rc ;@; o;;o;	;
+@
+;ir#;"mesa_psfp_gate_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iä#;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;i¶#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÃ#;"!const mesa_psfp_gate_id_t   ;@; o;;o;	;
+@
+;iË#;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i$;"(const mesa_psfp_gate_conf_t *const ;@; o;;o;	;
+@
+;i/$;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iK$;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i`$;"mesa_bool_t          ;@; o;;o;	;
+@
+;iu$;"gate_open;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∫$;"mesa_opt_prio_t      ;@; o;;o;	;
+@
+;iœ$;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i%;"mesa_timestamp_t     ;@; o;;o;	;
+@
+;i%;"config_change_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iK%;"mesa_timestamp_t     ;@; o;;o;	;
+@
+;i`%;"current_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ié%;"mesa_bool_t          ;@; o;;o;	;
+@
+;i£%;"config_pending;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÙ%;"mesa_bool_t          ;@; o;;o;	;
+@
+;i	&;"close_invalid_rx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD&;"mesa_bool_t          ;@; o;;o;	;
+@
+;iY&;"close_octets_exceeded;@;[ ;0;o;;o;	;
+@
+;iï&;"mesa_psfp_gate_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i';"mesa_rc ;@; o;;o;	;
+@
+;i';"mesa_psfp_gate_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i)';"const mesa_inst_t         ;@; o;;o;	;
+@
+;iC';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ik';"const mesa_psfp_gate_id_t ;@; o;;o;	;
+@
+;iÖ';"id;@;[ ;0{;{	;o;;o;	;
+@
+;i´';"&mesa_psfp_gate_status_t   *const ;@; o;;o;	;
+@
+;iÃ';"status;@;[ ;0;0{
+;o;;o;	;
+@
+;iË';"typedef;@;o;;o;	;
+@
+;i';"uint16_t ;@;o;;o;	;
+@
+;i˘';"mesa_psfp_filter_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i.(;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iC(;"mesa_bool_t         ;@; o;;o;	;
+@
+;iW(;"gate_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ(;"mesa_psfp_gate_id_t ;@; o;;o;	;
+@
+;iñ(;"gate_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i”(;"uint16_t            ;@; o;;o;	;
+@
+;iÁ(;"max_sdu;@;[ ;0{;{;{	;o;;o;	;
+@
+;i));"mesa_opt_bool_t     ;@; o;;o;	;
+@
+;i=);"block_oversize;@;[ ;0;o;;o;	;
+@
+;iò);"mesa_psfp_filter_conf_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i*;"mesa_rc ;@; o;;o;	;
+@
+;i*;"mesa_psfp_filter_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i5*;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;iQ*;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iy*;"!const mesa_psfp_filter_id_t ;@; o;;o;	;
+@
+;iï*;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iª*;"(mesa_psfp_filter_conf_t     *const ;@; o;;o;	;
+@
+;iﬁ*;"	conf;@;[ ;0;0{;!{;{	;o;;o;	;
+@
+;iE+;"mesa_rc ;@; o;;o;	;
+@
+;iM+;"mesa_psfp_filter_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ig+;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iÖ+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≠+;"#const mesa_psfp_filter_id_t   ;@; o;;o;	;
+@
+;iÀ+;"id;@;[ ;0{;{	;o;;o;	;
+@
+;iÒ+;"*const mesa_psfp_filter_conf_t *const ;@; o;;o;	;
+@
+;i,;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i4,;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iI,;"mesa_bool_t ;@; o;;o;	;
+@
+;iU,;"block_oversize;@;[ ;0;o;;o;	;
+@
+;iä,;"mesa_psfp_filter_status_t;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˝,;"mesa_rc ;@; o;;o;	;
+@
+;i-;" mesa_psfp_filter_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i!-;"!const mesa_inst_t           ;@; o;;o;	;
+@
+;i=-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ig-;"!const mesa_psfp_filter_id_t ;@; o;;o;	;
+@
+;iÉ-;"id;@;[ ;0{;{	;o;;o;	;
+@
+;i´-;"(mesa_psfp_filter_status_t   *const ;@; o;;o;	;
+@
+;iŒ-;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i˚-;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i.;"mesa_bool_t           ;@; o;;o;	;
+@
+;i&.;"filter_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iR.;"mesa_psfp_filter_id_t ;@; o;;o;	;
+@
+;ih.;"filter_id;@;[ ;0;o;;o;	;
+@
+;ié.;"mesa_psfp_iflow_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i$/;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iá0;"mesa_bool_t ;@; o;;o;	;
+@
+;iì0;"always_guard_band ;@;[ ;o;;o;	;
+@
+;i•0;"0CAP(MESA_CAP_QOS_TAS_HOLD_REL_MAC_RESTRICT);@;o;;o;	;
+@
+;i‘0;"mesa_qos_tas_conf_t ;@;[ ;o;;o;	;
+@
+;iË0;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;im1;"mesa_rc ;@; o;;o;	;
+@
+;iu1;"mesa_qos_tas_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iã1;"const mesa_inst_t    ;@; o;;o;	;
+@
+;i†1;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iƒ1;"!mesa_qos_tas_conf_t  *const ;@; o;;o;	;
+@
+;i‡1;"	conf;@;[ ;0;o;;o;	;
+@
+;iÍ1;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;in2;"mesa_rc ;@; o;;o;	;
+@
+;iv2;"mesa_qos_tas_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iå2;"const mesa_inst_t         ;@; o;;o;	;
+@
+;i¶2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i 2;"&const mesa_qos_tas_conf_t *const ;@; o;;o;	;
+@
+;iÎ2;"	conf;@;[ ;0;o;;o;	;
+@
+;iı2;"CAP(QOS_TAS);@{
+;o;;o;	;
+@
+;i<3;"typedef;@;{;o;;o;	;
+@
+;iD3;"	enum;@;[{;{;o;;o;	;
+@
+;iO3;"%MESA_QOS_TAS_GCO_SET_GATE_STATES;@;0{;{;o;;o;	;
+@
+;iä3;"&MESA_QOS_TAS_GCO_SET_AND_HOLD_MAC;@;0{;{;o;;o;	;
+@
+;iŸ3;"+MESA_QOS_TAS_GCO_SET_AND_RELEASE_MAC  ;@;0;o;;o;	;
+@
+;i(4;"mesa_qos_tas_gco_t ;@;[ ;o;;o;	;
+@
+;i;4;"CAP(QOS_TAS);@{
+;o;;o;	;
+@
+;io6;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÑ6;"mesa_qos_tas_gco_t ;@; o;;o;	;
+@
+;ió6;"gate_operation;@;[ ;0{;{;{	;o;;o;	;
+@
+;i7;"mesa_bool_t        ;@; o;;o;	;
+@
+;i.7;"gate_open;@;[{:	expro;;o;	;
+@
+;i87;"MESA_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i…7;"uint32_t           ;@; o;;o;	;
+@
+;i‹7;"time_interval;@;[ ;0;o;;o;	;
+@
+;iÌ7;"mesa_qos_tas_gce_t ;@;[ ;o;;o;	;
+@
+;i 8;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;iï9;"mesa_rc ;@; o;;o;	;
+@
+;iù9;"#mesa_qos_tas_port_gcl_conf_get;@;[ ;0;"[
+{;{	;o;;o;	;
+@
+;iº9;"const mesa_inst_t     ;@; o;;o;	;
+@
+;i“9;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iˇ9;"const mesa_port_no_t  ;@; o;;o;	;
+@
+;i:;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iE:;"const uint32_t        ;@; o;;o;	;
+@
+;i[:;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iá:;""mesa_qos_tas_gce_t    *const ;@; o;;o;	;
+@
+;i§:;"gcl;@;[ ;0{;{	;o;;o;	;
+@
+;i–:;""uint32_t              *const ;@; o;;o;	;
+@
+;iÌ:;"gce_cnt;@;[ ;0;o;;o;	;
+@
+;i˙:;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;iÈ;;"mesa_rc ;@; o;;o;	;
+@
+;iÒ;;"#mesa_qos_tas_port_gcl_conf_set;@;[ ;0;"[	{;{	;o;;o;	;
+@
+;i<;" const mesa_inst_t          ;@; o;;o;	;
+@
+;i+<;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iX<;" const mesa_port_no_t       ;@; o;;o;	;
+@
+;is<;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i£<;" const uint32_t             ;@; o;;o;	;
+@
+;iæ<;"gce_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iÓ<;"'const mesa_qos_tas_gce_t   *const ;@; o;;o;	;
+@
+;i=;"gcl;@;[ ;0;o;;o;	;
+@
+;i=;"CAP(QOS_TAS);@{
+;o;;o;	;
+@
+;i[=;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iI?;"uint16_t         ;@; o;;o;	;
+@
+;iZ?;"max_sdu;@;[{;#o;;o;	;
+@
+;ib?;"MESA_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;iÛ?;"mesa_bool_t      ;@; o;;o;	;
+@
+;i@;"gate_enabled;@;[ ;0{;{;{	;o;;o;	;
+@
+;ix@;"mesa_bool_t      ;@; o;;o;	;
+@
+;iâ@;"gate_open;@;[{;#o;;o;	;
+@
+;iì@;"MESA_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i⁄A;"uint32_t         ;@; o;;o;	;
+@
+;iÎA;"cycle_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i.C;"uint32_t         ;@; o;;o;	;
+@
+;i?C;"cycle_time_ext;@;[ ;0{;{;{	;o;;o;	;
+@
+;i)E;"mesa_timestamp_t ;@; o;;o;	;
+@
+;i:E;"base_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®F;"mesa_bool_t      ;@; o;;o;	;
+@
+;iπF;"config_change;@;[ ;0;o;;o;	;
+@
+;i F;"mesa_qos_tas_port_conf_t ;@;[ ;o;;o;	;
+@
+;i„F;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;iÑG;"mesa_rc ;@; o;;o;	;
+@
+;iåG;"mesa_qos_tas_port_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;ißG;"const mesa_inst_t       ;@; o;;o;	;
+@
+;iøG;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iËG;"const mesa_port_no_t    ;@; o;;o;	;
+@
+;i H;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i,H;"%mesa_qos_tas_port_conf_t *const ;@; o;;o;	;
+@
+;iLH;"	conf;@;[ ;0;o;;o;	;
+@
+;iVH;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;iıH;"mesa_rc ;@; o;;o;	;
+@
+;i˝H;"mesa_qos_tas_port_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iI;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;i6I;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i_I;"#const mesa_port_no_t          ;@; o;;o;	;
+@
+;i}I;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i©I;"+const mesa_qos_tas_port_conf_t *const ;@; o;;o;	;
+@
+;iœI;"	conf;@;[ ;0;o;;o;	;
+@
+;iŸI;"CAP(QOS_TAS);@{
+;o;;o;	;
+@
+;iJ;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i≈J;"mesa_bool_t         ;@; o;;o;	;
+@
+;iŸJ;"config_pending;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏K;"uint64_t            ;@; o;;o;	;
+@
+;iÃK;"config_change_error;@;[ ;0{;{;{	;o;;o;	;
+@
+;iBL;"mesa_timestamp_t    ;@; o;;o;	;
+@
+;iVL;"config_change_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∫L;"mesa_bool_t         ;@; o;;o;	;
+@
+;iŒL;"gate_open;@;[{;#o;;o;	;
+@
+;iÿL;"MESA_QUEUE_ARRAY_SIZE;@;0;o;;o;	;
+@
+;iÚL;" mesa_qos_tas_port_status_t ;@;[ ;o;;o;	;
+@
+;iM;"CAP(QOS_TAS);@{;!{;{	;o;;o;	;
+@
+;i§M;"mesa_rc ;@; o;;o;	;
+@
+;i¨M;"!mesa_qos_tas_port_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i…M;" const mesa_inst_t          ;@; o;;o;	;
+@
+;i‰M;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iN;" const mesa_port_no_t       ;@; o;;o;	;
+@
+;i*N;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iXN;"'mesa_qos_tas_port_status_t *const ;@; o;;o;	;
+@
+;izN;"status;@;[ ;0;o;;o;	;
+@
+;iÜN;"CAP(QOS_TAS);@{
+;o;;o;	;
+@
+;iO;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i1O;"mesa_bool_t ;@; o;;o;	;
+@
+;i=O;"admin_status;@;[{;#o;;o;	;
+@
+;iJO;"MESA_QUEUE_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;iíO;"mesa_bool_t ;@; o;;o;	;
+@
+;iûO;"enable_tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈO;"mesa_bool_t ;@; o;;o;	;
+@
+;iıO;"verify_disable_tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iGP;"uint8_t     ;@; o;;o;	;
+@
+;iSP;"verify_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ißP;"uint8_t     ;@; o;;o;	;
+@
+;i≥P;"add_frag_size;@;[ ;0;o;;o;	;
+@
+;iˇP;"mesa_qos_fp_port_conf_t ;@;[ ;o;;o;	;
+@
+;iQ;"CAP(QOS_FRAME_PREEMPTION);@{;!{;{	;o;;o;	;
+@
+;iœQ;"mesa_rc ;@; o;;o;	;
+@
+;i◊Q;"mesa_qos_fp_port_conf_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iÒQ;"const mesa_inst_t       ;@; o;;o;	;
+@
+;i	R;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1R;"const mesa_port_no_t    ;@; o;;o;	;
+@
+;iIR;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;itR;"$mesa_qos_fp_port_conf_t *const ;@; o;;o;	;
+@
+;iìR;"	conf;@;[ ;0;o;;o;	;
+@
+;iùR;"CAP(QOS_FRAME_PREEMPTION);@{;!{;{	;o;;o;	;
+@
+;iSS;"mesa_rc ;@; o;;o;	;
+@
+;i[S;"mesa_qos_fp_port_conf_set;@;[ ;0;"[{;{	;o;;o;	;
+@
+;iuS;"#const mesa_inst_t             ;@; o;;o;	;
+@
+;iìS;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iªS;"#const mesa_port_no_t          ;@; o;;o;	;
+@
+;iŸS;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iT;"*const mesa_qos_fp_port_conf_t *const ;@; o;;o;	;
+@
+;i)T;"	conf;@;[ ;0;o;;o;	;
+@
+;i3T;"CAP(QOS_FRAME_PREEMPTION);@{
+;o;;o;	;
+@
+;içT;"typedef;@;{;o;;o;	;
+@
+;iïT;"	enum;@;[{;{;o;;o;	;
+@
+;i†T;""MESA_MM_STATUS_VERIFY_INITIAL;@;0{;{;o;;o;	;
+@
+;i⁄T;"MESA_MM_STATUS_VERIFY_IDLE;@;0{;{;o;;o;	;
+@
+;iU;"MESA_MM_STATUS_VERIFY_SEND;@;0{;{;o;;o;	;
+@
+;iHU;"MESA_MM_STATUS_VERIFY_WAIT;@;0{;{;o;;o;	;
+@
+;iÉU;"$MESA_MM_STATUS_VERIFY_SUCCEEDED;@;0{;{;o;;o;	;
+@
+;i¥U;"!MESA_MM_STATUS_VERIFY_FAILED;@;0{;{;o;;o;	;
+@
+;iËU;"&MESA_MM_STATUS_VERIFY_DISABLED   ;@;0;o;;o;	;
+@
+;i/V;"mesa_mm_status_verify_t ;@;[ ;o;;o;	;
+@
+;iGV;"CAP(QOS_FRAME_PREEMPTION);@{
+;o;;o;	;
+@
+;iöV;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iØV;"uint32_t                ;@; o;;o;	;
+@
+;i«V;"hold_advance;@;[ ;0{;{;{	;o;;o;	;
+@
+;iW;"uint32_t                ;@; o;;o;	;
+@
+;iW;"release_advance;@;[ ;0{;{;{	;o;;o;	;
+@
+;ibW;"mesa_bool_t             ;@; o;;o;	;
+@
+;izW;"preemption_active;@;[ ;0{;{;{	;o;;o;	;
+@
+;i”W;"uint8_t                 ;@; o;;o;	;
+@
+;iÎW;"hold_request;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$X;"mesa_mm_status_verify_t ;@; o;;o;	;
+@
+;i<X;"status_verify;@;[ ;0;o;;o;	;
+@
+;iwX;"mesa_qos_fp_port_status_t ;@;[ ;o;;o;	;
+@
+;iëX;"CAP(QOS_FRAME_PREEMPTION);@{;!{;{	;o;;o;	;
+@
+;i;Y;"mesa_rc ;@; o;;o;	;
+@
+;iCY;" mesa_qos_fp_port_status_get;@;[ ;0;"[{;{	;o;;o;	;
+@
+;i_Y;"const mesa_inst_t         ;@; o;;o;	;
+@
+;iyY;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i£Y;"const mesa_port_no_t      ;@; o;;o;	;
+@
+;iΩY;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÍY;"&mesa_qos_fp_port_status_t *const ;@; o;;o;	;
+@
+;iZ;"status;@;[ ;0;o;;o;	;
+@
+;iZ;"CAP(QOS_FRAME_PREEMPTION);@{;o;;o;	;
+@
+;i3Z;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i[Z;"2#endif // _MICROCHIP_ETHERNET_SWITCH_API_L2_
+;@

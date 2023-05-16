@@ -398,6 +398,7 @@ mesa/demo/all: mesa/demo/CMakeFiles/mesa_demo_lib.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/btsig.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/er.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/cli.dir/all
+mesa/demo/all: mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/fa_board_fpga_init.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/base64decode.dir/all
 mesa/demo/all: mesa/demo/CMakeFiles/spi_reg_read.dir/all
@@ -429,6 +430,7 @@ mesa/demo/clean: mesa/demo/CMakeFiles/app_vsc7426.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/mesa_rpc_src.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/app_vsc7424.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/app_vsc7423.dir/clean
+mesa/demo/clean: mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/fa_board_fpga_init.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/base64decode.dir/clean
 mesa/demo/clean: mesa/demo/CMakeFiles/app_vsc7427.dir/clean
@@ -4802,6 +4804,40 @@ app_vsc7423: mesa/demo/CMakeFiles/app_vsc7423.dir/rule
 mesa/demo/CMakeFiles/app_vsc7423.dir/clean:
 	$(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/app_vsc7423.dir/build.make mesa/demo/CMakeFiles/app_vsc7423.dir/clean
 .PHONY : mesa/demo/CMakeFiles/app_vsc7423.dir/clean
+
+#=============================================================================
+# Target rules for target mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir
+
+# All Build rule for target.
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: CMakeFiles/vsc7448.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/er.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/cli.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/fa_board_fpga_init.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/base64decode.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/spi_reg_read.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/init.dir/all
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all: mesa/demo/CMakeFiles/app_vsc7448.dir/all
+	$(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build.make mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/depend
+	$(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build.make mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/codrin/mesa/build-mipsel/CMakeFiles --progress-num= "Built target mipsel_vsc7448_pcb111_mfi"
+.PHONY : mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all
+
+# Build rule for subdir invocation for target.
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/codrin/mesa/build-mipsel/CMakeFiles 3
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/codrin/mesa/build-mipsel/CMakeFiles 0
+.PHONY : mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule
+
+# Convenience name for target.
+mipsel_vsc7448_pcb111_mfi: mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule
+
+.PHONY : mipsel_vsc7448_pcb111_mfi
+
+# clean rule for target.
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/clean:
+	$(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build.make mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/clean
+.PHONY : mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/clean
 
 #=============================================================================
 # Target rules for target mesa/demo/CMakeFiles/fa_board_fpga_init.dir

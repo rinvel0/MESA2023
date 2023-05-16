@@ -1,0 +1,486 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief Synchronization API
+ * \details This header file describes synchronization functions
+ */
+
+#ifndef _VTSS_SYNC_API_H_
+#define _VTSS_SYNC_API_H_
+#include "vtss/api/types.h"
+
+
+
+// ***************************************************************************
+//
+//  SYNC interface
+//
+// ***************************************************************************
+
+#if defined(VTSS_FEATURE_SYNCE)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief Identification of a output clock port */
+//typedef enum
+//{
+//    VTSS_SYNCE_CLK_A,   /**< Clock A output port */
+//    VTSS_SYNCE_CLK_B,   /**< Clock B output port */
+//} vtss_synce_clk_port_t;
+typedef u32 vtss_synce_clk_port_t;
+#define VTSS_SYNCE_CLK_A 0   /**< Clock A output port */
+#define VTSS_SYNCE_CLK_B 1   /**< Clock B output port */
+#if defined (VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+//#if defined (VTSS_ARCH_SERVAL_T)
+//#define VTSS_SYNCE_CLK_MAX 2   /**< Number of recovered clock outputs is 2 in ServalT*/
+//#else
+#define VTSS_SYNCE_CLK_MAX 4   /**< Number of recovered clock outputs is 4 in other Jagyar2 variants , serval-t case RCVRD_CLK_3 is used*/
+//#endif // (VTSS_ARCH_SERVAL_T)
+#else
+#define VTSS_SYNCE_CLK_MAX 2   /**< Number of recovered clock outputs */
+#endif
+
+/** \brief Identification of a Clock dividing value used when selected input clock goes to output. */
+typedef enum
+{
+    VTSS_SYNCE_DIVIDER_1,   /**< Divide input clock with one (no division) */
+    VTSS_SYNCE_DIVIDER_4,   /**< Divide input clock with 4 */
+    VTSS_SYNCE_DIVIDER_5,   /**< Divide input clock with 5 */
+#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+    VTSS_SYNCE_DIVIDER_2,   /**< Divide input clock with 2 */
+    VTSS_SYNCE_DIVIDER_8,   /**< Divide input clock with 8 */
+    VTSS_SYNCE_DIVIDER_16,   /**< Divide input clock with 16 */
+    VTSS_SYNCE_DIVIDER_25   /**< Divide input clock with 25 */
+#endif
+} vtss_synce_divider_t;
+
+/** \brief Struct containing configuration for a recovered clock output port */
+typedef struct
+{
+    vtss_synce_divider_t    divider;    /**< Selection the clock division. This should be set to VTSS_SYNCE_DIVIDER_1 if recovered clock is comming from internal PHY  */
+    BOOL                    enable;     /**< Enable/disable of this output clock port */
+} vtss_synce_clock_out_t;
+
+/**
+ * \brief Set the configuration of a selected output clock port - against external clock controller.
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (VTSS_SYNCE_CLK_A or VTSS_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a vtss_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_clock_out_set(const vtss_inst_t              inst,
+                                 const vtss_synce_clk_port_t    clk_port,
+                                 const vtss_synce_clock_out_t   *const conf);
+
+/**
+ * \brief Get the configuration of a selected output clock port - against external clock controller.
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (VTSS_SYNCE_CLK_A or VTSS_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a vtss_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_clock_out_get(const vtss_inst_t           inst,
+                                 const vtss_synce_clk_port_t clk_port,
+                                 vtss_synce_clock_out_t      *const conf);
+
+
+#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_SPARX5)
+/** \brief Identification of a clock oniut type. */
+typedef enum
+{
+    VTSS_SYNCE_CLOCK_INTERFACE,   /**< Traffic interface port */
+#if defined(VTSS_ARCH_SERVAL_T)
+    VTSS_SYNCE_CLOCK_STATION_CLK, /**< Station clock input */
+    VTSS_SYNCE_CLOCK_DIFF         /**< Differential clock input */
+#endif
+#if defined(VTSS_ARCH_SPARX5)
+    VTSS_SYNCE_CLOCK_AUX          /**< AUX Clock */
+#endif
+} vtss_synce_clock_in_type_t;
+#endif
+
+
+/** \brief Struct containing configuration selecting the recovered input clock port, to be delivered to a selected output clock port */
+typedef struct
+{
+    vtss_port_no_t              port_no;    /**< Selection of the input port number - must map to a SERDES port. If clk_in is VTSS_SYNCE_CLOCK_STATION_CLK this is station clock 0->3. If clk_in is VTSS_SYNCE_CLOCK_AUX this is AUX clock 0->3. */
+    BOOL                        squelsh;    /**< Enable/disable of automatic squelch */
+    BOOL                        enable;     /**< Enable/disable of delivery of recovered clock to this selected output clock port */
+#if defined (VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_SPARX5)
+    vtss_synce_clock_in_type_t  clk_in;     /**< Select clock input type (Traffic interface, station clock, differential clock input or AUX clock */
+#endif
+} vtss_synce_clock_in_t;
+
+/**
+ * \brief Set the configuration of input port for a selected output clock port
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (VTSS_SYNCE_CLK_A or VTSS_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a vtss_synce_clock_in_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_clock_in_set(const vtss_inst_t              inst,
+                                const vtss_synce_clk_port_t    clk_port,
+                                const vtss_synce_clock_in_t    *const conf);
+
+/**
+ * \brief Get the configuration of input port for a selected output clock port
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port (VTSS_SYNCE_CLK_A or VTSS_SYNCE_CLK_B)
+ * \param conf [IN]     pointer to a vtss_synce_clock_in_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_clock_in_get(const vtss_inst_t            inst,
+                                const vtss_synce_clk_port_t  clk_port,
+                                vtss_synce_clock_in_t        *const conf);
+
+/** \brief Struct containing configuration for a recovered clock output port */
+typedef struct
+{
+    vtss_synce_divider_t    divider;    /**< Selection the clock division. This should be set to VTSS_SYNCE_DIVIDER_1 if recovered clock is comming from internal PHY  */
+    BOOL                    enable;     /**< Enable/disable of this output clock port */
+    u32                    dpll_out_no;/**< The DPLL output (Synthesizer) that is connected to the station clock output */
+} vtss_synce_station_clock_out_t;
+
+/**
+ * \brief Set the configuration of a station clock output 
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port
+ * \param conf [IN]     pointer to a vtss_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_synce_station_clk_out_set(const vtss_inst_t              inst,
+        const vtss_synce_clk_port_t    clk_port,
+        const vtss_synce_station_clock_out_t   *const conf);
+
+#if defined(VTSS_ARCH_SERVAL_T)     /* TBD_henrikb */
+/**
+ * \brief Get the configuration of a station clock output
+ * \param inst [IN]     handle to an API instance.
+ * \param clk_port [IN] Selection of the output clock port
+ * \param conf [IN]     pointer to a vtss_synce_clock_out_t configuration structure.
+ *
+ * \return Return code.
+ */
+vtss_rc vtss_synce_synce_station_clk_out_get(const vtss_inst_t            inst,
+        const vtss_synce_clk_port_t  clk_port,
+        vtss_synce_station_clock_out_t       *const conf);
+#endif //VTSS_ARCH_SERVAL_T
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* VTSS_FEATURE_SYNCE */
+#endif // _VTSS_SYNC_API_H_
+
+// ***************************************************************************
+//
+//  End of file.
+//
+// ***************************************************************************
+:@byteposiÞ:	@str"#ifndef _VTSS_SYNC_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[¼iPipiqirivii˜iÙiÝiÞiøii.i/i0i1i€iƒi–i™ièiéi	ii)i0i1ieitixi®iäiÿi"i[i”iÓiöiPiXiãii
+iSiZi[iÁiÎiÐii\išiiPiŽiÎiii,i-i}iŒiŽi8	i‘	i«	i¬	i°	i
+iH
+iª
+iÿ
+iiiidi®iüiýiifi™iûiPiSikioi²iùiDiEiFiƒi·iÄiÆii'iei¨i¯iÍiii&i-i.i/i·iÆiÈi¼ii™i×ilisiŒii‘iàiiuiÉiÌiäièi-iviÃiÄiÈiiJi¬i iiiibi©iôiõiEiTiVi iYiÔiöi÷iûi6iii¤iùiüiiiji›iØiÙiiiMi€i»iii+i/ii®iéiiiii"iBi^i_i®i±iÂiÅi:@last_line_endi{;o;;o;	;
+@
+;iø;"#define _VTSS_SYNC_API_H_
+;@{;o;;o;	;
+@
+;i;"$#include "vtss/api/types.h"
+
+
+
+;@{;o;;o;	;
+@
+;ié;"%#if defined(VTSS_FEATURE_SYNCE)
+;@{;o;;o;	;
+@
+;i	;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;i;"extern;@:stringo;;o;	;
+@
+;i#;""C";@; [{;o;;o;	;
+@
+;i);"#endif
+
+;@{
+;o;;o;	;
+@
+;iÿ;"typedef;@:type_aliaso;;o;	;
+@
+;i;"	u32 ;@:typedef_nameo;;o;	;
+@
+;i;"vtss_synce_clk_port_t;@:
+array[ :cap0{;o;;o;	;
+@
+;i";">#define VTSS_SYNCE_CLK_A 0   /**< Clock A output port */
+;@{;o;;o;	;
+@
+;i[;">#define VTSS_SYNCE_CLK_B 1   /**< Clock B output port */
+;@{;o;;o;	;
+@
+;i”;"D#if defined (VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;iX;"‹#define VTSS_SYNCE_CLK_MAX 4   /**< Number of recovered clock outputs is 4 in other Jagyar2 variants , serval-t case RCVRD_CLK_3 is used*/
+;@{;o;;o;	;
+@
+;i;"#else
+;@{;o;;o;	;
+@
+;i
+;"N#define VTSS_SYNCE_CLK_MAX 2   /**< Number of recovered clock outputs */
+;@{;o;;o;	;
+@
+;iS;"#endif
+
+;@{
+;o;;o;	;
+@
+;iÁ;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iÉ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÔ;"VTSS_SYNCE_DIVIDER_1;@;0{;{;o;;o;	;
+@
+;i";"VTSS_SYNCE_DIVIDER_4;@;0{;{;o;;o;	;
+@
+;i`;"VTSS_SYNCE_DIVIDER_5;@;0{;o;;o;	;
+@
+;iš;"}#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+;@{;{;o;;o;	;
+@
+;i;"VTSS_SYNCE_DIVIDER_2;@;0{;{;o;;o;	;
+@
+;iT;"VTSS_SYNCE_DIVIDER_8;@;0{;{;o;;o;	;
+@
+;i’;"VTSS_SYNCE_DIVIDER_16;@;0{;{;o;;o;	;
+@
+;iÒ;"VTSS_SYNCE_DIVIDER_25   ;@;0{;o;;o;	;
+@
+;i;"#endif
+;@;o;;o;	;
+@
+;i;"vtss_synce_divider_t;@;[ ;0{
+;o;;o;	;
+@
+;i};"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i’;"vtss_synce_divider_t    ;@:	nameo;;o;	;
+@
+;iª;"divider;@;[ ;0{;{;{	; o;;o;	;
+@
+;i<	;"BOOL                    ;@;!o;;o;	;
+@
+;iT	;"enable;@;[ ;0;o;;o;	;
+@
+;i“	;"vtss_synce_clock_out_t;@;[ ;0{:func_proto{;{	; o;;o;	;
+@
+;i;"vtss_rc ;@;!o;;o;	;
+@
+;i&;"vtss_synce_clock_out_set;@;[ ;0:	args[{;{	; o;;o;	;
+@
+;i?;"$const vtss_inst_t              ;@;!o;;o;	;
+@
+;i^;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i…;"$const vtss_synce_clk_port_t    ;@;!o;;o;	;
+@
+;i¤;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;iÏ;"+const vtss_synce_clock_out_t   *const ;@;!o;;o;	;
+@
+;iõ;"	conf;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;io;"vtss_rc ;@;!o;;o;	;
+@
+;iw;"vtss_synce_clock_out_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i;"!const vtss_inst_t           ;@;!o;;o;	;
+@
+;i¬;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÓ;"!const vtss_synce_clk_port_t ;@;!o;;o;	;
+@
+;iï;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;i;"(vtss_synce_clock_out_t      *const ;@;!o;;o;	;
+@
+;i=;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iF;"B#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_SPARX5)
+;@{
+;o;;o;	;
+@
+;i·;"typedef;@;{;o;;o;	;
+@
+;i¿;"	enum;@;[{;{;o;;o;	;
+@
+;iÊ;"VTSS_SYNCE_CLOCK_INTERFACE;@;0{;o;;o;	;
+@
+;i;"%#if defined(VTSS_ARCH_SERVAL_T)
+;@{;{;o;;o;	;
+@
+;i+;"!VTSS_SYNCE_CLOCK_STATION_CLK;@;0{;{;o;;o;	;
+@
+;ii;"#VTSS_SYNCE_CLOCK_DIFF         ;@;0{;o;;o;	;
+@
+;i¨;"#endif
+;@{;o;;o;	;
+@
+;i¯;"##if defined(VTSS_ARCH_SPARX5)
+;@{;{;o;;o;	;
+@
+;iÑ;"#VTSS_SYNCE_CLOCK_AUX          ;@;0{;o;;o;	;
+@
+;i;"#endif
+;@;o;;o;	;
+@
+;i
+;"vtss_synce_clock_in_type_t;@;[ ;0{;o;;o;	;
+@
+;i&;"#endif
+
+
+;@{
+;o;;o;	;
+@
+;i·;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iÌ;"!vtss_port_no_t              ;@;!o;;o;	;
+@
+;iè;"port_no;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÀ;"!BOOL                        ;@;!o;;o;	;
+@
+;iÜ;"squelsh;@;[ ;0{;{;{	; o;;o;	;
+@
+;i;"!BOOL                        ;@;!o;;o;	;
+@
+;i4;"enable;@;[ ;0{;o;;o;	;
+@
+;i™;"C#if defined (VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_SPARX5)
+;@{;{;{	; o;;o;	;
+@
+;iÛ;"!vtss_synce_clock_in_type_t  ;@;!o;;o;	;
+@
+;i÷;"clk_in;@;[ ;0{;o;;o;	;
+@
+;il;"#endif
+;@;o;;o;	;
+@
+;iu;"vtss_synce_clock_in_t;@;[ ;0{;"{;{	; o;;o;	;
+@
+;iè;"vtss_rc ;@;!o;;o;	;
+@
+;ið;"vtss_synce_clock_in_set;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i;"$const vtss_inst_t              ;@;!o;;o;	;
+@
+;i';"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iM;"$const vtss_synce_clk_port_t    ;@;!o;;o;	;
+@
+;il;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;i–;"+const vtss_synce_clock_in_t    *const ;@;!o;;o;	;
+@
+;i¼;"	conf;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;i;"vtss_rc ;@;!o;;o;	;
+@
+;i';"vtss_synce_clock_in_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i?;""const vtss_inst_t            ;@;!o;;o;	;
+@
+;i\;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i‚;""const vtss_synce_clk_port_t  ;@;!o;;o;	;
+@
+;iŸ;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;iÉ;")vtss_synce_clock_in_t        *const ;@;!o;;o;	;
+@
+;ií;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iE;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iZ;"vtss_synce_divider_t    ;@;!o;;o;	;
+@
+;ir;"divider;@;[ ;0{;{;{	; o;;o;	;
+@
+;i;"BOOL                    ;@;!o;;o;	;
+@
+;i;"enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i];"u32                    ;@;!o;;o;	;
+@
+;it;"dpll_out_no;@;[ ;0;o;;o;	;
+@
+;iÖ;"#vtss_synce_station_clock_out_t;@;[ ;0{;"{;{	; o;;o;	;
+@
+;i;"vtss_rc ;@;!o;;o;	;
+@
+;i ;")vtss_synce_synce_station_clk_out_set;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iE;"$const vtss_inst_t              ;@;!o;;o;	;
+@
+;id;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ir;"$const vtss_synce_clk_port_t    ;@;!o;;o;	;
+@
+;i‘;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;i£;"3const vtss_synce_station_clock_out_t   *const ;@;!o;;o;	;
+@
+;iÑ;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iÙ;";#if defined(VTSS_ARCH_SERVAL_T)     /* TBD_henrikb */
+;@{;"{;{	; o;;o;	;
+@
+;i/;"vtss_rc ;@;!o;;o;	;
+@
+;i7;")vtss_synce_synce_station_clk_out_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i\;""const vtss_inst_t            ;@;!o;;o;	;
+@
+;iy;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i‡;""const vtss_synce_clk_port_t  ;@;!o;;o;	;
+@
+;i¤;"clk_port;@;[ ;0{;{	; o;;o;	;
+@
+;i¶;"1vtss_synce_station_clock_out_t       *const ;@;!o;;o;	;
+@
+;iâ;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;ié;""#endif //VTSS_ARCH_SERVAL_T
+
+;@{;o;;o;	;
+@
+;i;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;i;"#endif
+;@{;o;;o;	;
+@
+;i";"%#endif /* VTSS_FEATURE_SYNCE */
+;@{;o;;o;	;
+@
+;iB;""#endif // _VTSS_SYNC_API_H_
+
+;@

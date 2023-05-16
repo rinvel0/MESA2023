@@ -1,0 +1,2407 @@
+{:	root[W{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"Kk// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+#define _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+/* - Port Based Network Access Control, 802.1X --------------------- */
+
+// Authentication state
+typedef enum
+{
+    MESA_AUTH_STATE_NONE,   // Not authenticated
+    MESA_AUTH_STATE_EGRESS, // Authenticated in egress direction
+    MESA_AUTH_STATE_BOTH    // Authenticated in both directions
+} mesa_auth_state_t;
+
+// Get 802.1X Authentication state for a port.
+// port_no [IN]  Port number.
+// state [OUT]   Authentication state.
+mesa_rc mesa_auth_port_state_get(const mesa_inst_t    inst,
+                                 const mesa_port_no_t port_no,
+                                 mesa_auth_state_t    *const state);
+
+// Set 802.1X Authentication state for a port.
+// port_no [IN]  Port number.
+// state [IN]    Authentication state.
+//               By default, all ports are authenticated.
+mesa_rc mesa_auth_port_state_set(const mesa_inst_t       inst,
+                                 const mesa_port_no_t    port_no,
+                                 const mesa_auth_state_t state);
+
+/* - Access Control Lists ------------------------------------------ */
+
+// ACL policer configuration
+typedef struct {
+    mesa_bool_t        bit_rate_enable; // Use bit rate policing instead of packet rate
+    mesa_bitrate_t     bit_rate;        // Bit rate
+    mesa_packet_rate_t rate;            // Packet rate
+} mesa_acl_policer_conf_t;
+
+// Get ACL policer configuration.
+// policer_no [IN]  ACL policer number.
+// conf [OUT]       ACL policer configuration.
+mesa_rc mesa_acl_policer_conf_get(const mesa_inst_t           inst,
+                                  const mesa_acl_policer_no_t policer_no,
+                                  mesa_acl_policer_conf_t     *const conf);
+
+// Set ACL policer configuration.
+// policer_no [IN]  ACL policer number.
+// conf [IN]        ACL policer configuration.
+mesa_rc mesa_acl_policer_conf_set(const mesa_inst_t             inst,
+                                  const mesa_acl_policer_no_t   policer_no,
+                                  const mesa_acl_policer_conf_t *const conf);
+
+// ACL port action
+typedef enum
+{
+    MESA_ACL_PORT_ACTION_NONE,   // No action from port list
+    MESA_ACL_PORT_ACTION_FILTER, // Port list filter is used
+    MESA_ACL_PORT_ACTION_REDIR   // Port list redirect is used
+} mesa_acl_port_action_t;
+
+// ACL PTP action
+typedef enum
+{
+    MESA_ACL_PTP_ACTION_NONE,     // No PTP action
+    MESA_ACL_PTP_ACTION_ONE_STEP, // PTP one-step time-stamping
+    MESA_ACL_PTP_ACTION_ONE_STEP_ADD_DELAY   CAP(ACL_PTP_DELAY), // PTP one-step time-stamping, Serval: add delay, Jr2: Add EDLY
+    MESA_ACL_PTP_ACTION_ONE_STEP_SUB_DELAY_1 CAP(ACL_PTP_DELAY), // PTP one-step time-stamping, Serval: subtract delay 1, Jr2: Add IDLY1
+    MESA_ACL_PTP_ACTION_ONE_STEP_SUB_DELAY_2 CAP(ACL_PTP_DELAY), // PTP one-step time-stamping, Serval: subtract delay 2, Jr2: Add IDLY2
+    MESA_ACL_PTP_ACTION_ONE_AND_TWO_STEP     CAP(ACL_PTP_ONE_AND_TWO_STEP), // PTP one-step and two-step time-stamping
+    MESA_ACL_PTP_ACTION_TWO_STEP // PTP two-step time-stamping
+} mesa_acl_ptp_action_t;
+
+// ACL Source IP index. For IPv6 entries, it must be divisible by 4 and consumes 4 rules
+typedef uint8_t mesa_acl_sip_idx_t CAP(ACL_SIP_CNT);
+
+// ACL Source IP configuration
+typedef struct {
+    mesa_ip_addr_t sip; // Source IP address
+} mesa_acl_sip_conf_t;
+
+// Set ACL Source IP configuration for index.
+// idx  [IN]  Entry index.
+// conf [IN]  Source IP configuration.
+mesa_rc mesa_acl_sip_conf_set(const mesa_inst_t          inst,
+                              const mesa_acl_sip_idx_t   idx,
+                              const mesa_acl_sip_conf_t  *const conf)
+    CAP(ACL_SIP_CNT);
+
+// ACL PTP response action
+typedef enum
+{
+    MESA_ACL_PTP_RSP_NONE,               // No response action
+    MESA_ACL_PTP_RSP_DLY_REQ_RSP_TS_UPD, // Auto response to Delay_Req, includes receiveTimestamp update
+    MESA_ACL_PTP_RSP_DLY_REQ_RSP_NO_TS   // Auto response to Delay_Req, exludes receiveTimestamp update
+} mesa_acl_ptp_rsp_t CAP(ACL_SIP_CNT);
+
+// ACL PTP action configuration
+typedef struct {
+    mesa_acl_ptp_rsp_t response;             // PTP Delay_Req/Response action
+    int8_t             log_message_interval; // PTP logMessageInterval [-8,7] returned in the Delay_Resp message
+    mesa_bool_t        copy_smac_to_dmac;    // PTP DMAC operation
+    mesa_bool_t        set_smac_to_port_mac; // PTP SMAC operation
+    uint8_t            dom_sel;              // PTP domain selector. PTP_DOM_SEL indexes the PTP configuration
+    mesa_udp_tcp_t     sport;                // UDP source port
+    mesa_udp_tcp_t     dport;                // UDP destination port
+} mesa_acl_ptp_action_conf_t CAP(ACL_SIP_CNT);
+
+// ACL address update
+typedef enum {
+    MESA_ACL_ADDR_UPDATE_NONE,             // No SMAC/DMAC change
+    MESA_ACL_ADDR_UPDATE_MAC_SWAP,         // Swap SMAC and DMAC
+    MESA_ACL_ADDR_UPDATE_DMAC_REPLACE,     // Replace DMAC
+    MESA_ACL_ADDR_UPDATE_DMAC_REPLACE_MSB, // Replace 40 MSB of DMAC
+    MESA_ACL_ADDR_UPDATE_MAC_IP_SWAP_UC    // Swap MAC addresses if DMAC is unicast. Replace SMAC if DMAC is multicast. Same for SIP/DIP
+} mesa_acl_addr_update_t CAP(ACL_SIP_CNT);
+
+// ACL address action configuration
+typedef struct {
+    mesa_acl_addr_update_t update;  // Address update
+    mesa_mac_t             mac;     // MAC address used for replace operations
+    mesa_acl_sip_idx_t     sip_idx; // Source IP index
+} mesa_acl_addr_action_t CAP(ACL_SIP_CNT);
+
+// ACL Action
+typedef struct
+{
+    mesa_bool_t                cpu;            // Forward to CPU
+    mesa_bool_t                cpu_once;       // Only first frame forwarded to CPU
+    mesa_bool_t                cpu_disable;    // Disable CPU copy from previous forwarding decisions
+    mesa_packet_rx_queue_t     cpu_queue;      // CPU queue
+    mesa_bool_t                police;         // Enable policer
+    mesa_acl_policer_no_t      policer_no;     // Policer number
+    mesa_bool_t                evc_police     CAP(ACL_EVC_POLICER); // Enable EVC policer
+    mesa_evc_policer_id_t      evc_policer_id CAP(ACL_EVC_POLICER); // EVC policer ID
+    mesa_bool_t                learn;          // Allow learning
+    mesa_acl_port_action_t     port_action;    // Port action
+    mesa_port_list_t           port_list;      // Egress port list
+    mesa_bool_t                mirror;         // Enable mirroring
+    mesa_acl_ptp_action_t      ptp_action;     // PTP action
+    mesa_acl_ptp_action_conf_t ptp  CAP(ACL_SIP_CNT); // PTP configuration
+    mesa_acl_addr_action_t     addr CAP(ACL_SIP_CNT); // Address update configuration
+    mesa_bool_t                lm_cnt_disable CAP(ACL_LM_CNT_CTRL); // Disable OAM LM Tx counting
+    mesa_bool_t                mac_swap CAP(ACL_MAC_SWAP); // Swap SMAC and DMAC
+    mesa_bool_t                ifh_flag CAP(ACL_IFH_FLAG); // Control one target specific bit in IFH
+} mesa_acl_action_t;
+
+// ACL key generation for ARP/IPv4/IPv6 frames
+typedef enum {
+    MESA_ACL_KEY_DEFAULT, // Match MESA_ACE_TYPE_ARP/IPV4/IPV6 (default)
+    MESA_ACL_KEY_ETYPE,   // Match MESA_ACE_TYPE_ETYPE
+    MESA_ACL_KEY_EXT      // Match MESA_ACE_TYPE_IPV4/IPV6 extended rule
+} mesa_acl_key_t;
+
+// ACL key generation for ARP/IPv4/IPv6 frames
+typedef struct {
+    mesa_acl_key_t arp;  // ARP frame key
+    mesa_acl_key_t ipv4; // IPv4 frame key
+    mesa_acl_key_t ipv6; // IPv6 frame key
+} mesa_acl_frame_key_t;
+
+// ACL port configuration
+typedef struct
+{
+    mesa_acl_policy_no_t policy_no; // Policy number
+    mesa_acl_action_t    action;    // Action
+    mesa_acl_frame_key_t key;       // ACL key generation
+} mesa_acl_port_conf_t;
+
+// Get ACL configuration for port.
+// port_no [IN]  Port number.
+// conf [OUT]    Port configuration.
+mesa_rc mesa_acl_port_conf_get(const mesa_inst_t     inst,
+                               const mesa_port_no_t  port_no,
+                               mesa_acl_port_conf_t  *const conf);
+
+// Set ACL configuration for port.
+// port_no [IN]  Port number.
+// conf [IN]     Port configuration.
+mesa_rc mesa_acl_port_conf_set(const mesa_inst_t           inst,
+                               const mesa_port_no_t        port_no,
+                               const mesa_acl_port_conf_t  *const conf);
+
+// ACL port counter
+typedef uint32_t mesa_acl_port_counter_t;
+
+// Get default action counter for port.
+// port_no [IN]   Port number.
+// counter [OUT]  Default action counter for port.
+mesa_rc mesa_acl_port_counter_get(const mesa_inst_t        inst,
+                                  const mesa_port_no_t     port_no,
+                                  mesa_acl_port_counter_t  *const counter);
+
+// Clear default action counter for port.
+// port_no [IN]  Port number.
+mesa_rc mesa_acl_port_counter_clear(const mesa_inst_t     inst,
+                                    const mesa_port_no_t  port_no);
+
+// ACE frame type
+typedef enum
+{
+    MESA_ACE_TYPE_ANY,     // Any frame type
+    MESA_ACE_TYPE_ETYPE,   // Ethernet Type
+    MESA_ACE_TYPE_LLC,     // LLC
+    MESA_ACE_TYPE_SNAP,    // SNAP
+    MESA_ACE_TYPE_ARP,     // ARP/RARP
+    MESA_ACE_TYPE_IPV4,    // IPv4
+    MESA_ACE_TYPE_IPV6     // IPv6
+} mesa_ace_type_t;
+
+// ACE ID type
+typedef uint32_t mesa_ace_id_t;
+
+#define MESA_ACE_ID_LAST 0 // Special value used to add last in list
+
+// ACE 1 bit
+typedef enum
+{
+    MESA_ACE_BIT_ANY, // Value 0 or 1
+    MESA_ACE_BIT_0,   // Value 0
+    MESA_ACE_BIT_1    // Value 1
+} mesa_ace_bit_t;
+
+// ACE 8 bit value and mask
+typedef mesa_vcap_u8_t mesa_ace_u8_t;
+
+// ACE 16 bit value and mask
+typedef mesa_vcap_u16_t mesa_ace_u16_t;
+
+// ACE 32 bit value and mask
+typedef mesa_vcap_u32_t mesa_ace_u32_t;
+
+// ACE 40 bit value and mask
+typedef mesa_vcap_u40_t mesa_ace_u40_t;
+
+// ACE 48 bit value and mask
+typedef mesa_vcap_u48_t mesa_ace_u48_t;
+
+// ACE 128 bit value and mask
+typedef mesa_vcap_u128_t mesa_ace_u128_t;
+
+// ACE VLAN ID value and mask
+typedef mesa_vcap_vid_t mesa_ace_vid_t;
+
+// ACE IP address value and mask
+typedef mesa_vcap_ip_t mesa_ace_ip_t;
+
+// ACE UDP/TCP port range
+typedef mesa_vcap_udp_tcp_t mesa_ace_udp_tcp_t;
+
+// PTP header filtering
+typedef struct
+{
+    mesa_bool_t    enable; // Enable PTP header filtering
+    mesa_ace_u32_t header; // PTP header byte 0, 1, 4 and 6
+} mesa_ace_ptp_t;
+
+// SIP/SMAC filtering
+typedef struct
+{
+    mesa_bool_t enable; // Enable SIP/SMAC filtering
+    mesa_ip_t   sip;    // SIP
+    mesa_mac_t  smac;   // SMAC
+} mesa_ace_sip_smac_t;
+
+// ACE VLAN information
+typedef struct
+{
+    mesa_ace_vid_t   vid;      // VLAN ID (12 bit)
+    mesa_ace_u8_t    usr_prio; // User priority/PCP (3 bit)
+    mesa_ace_bit_t   cfi;      // CFI/DEI
+    mesa_ace_bit_t   tagged;   // Tagged/untagged frame
+} mesa_ace_vlan_t;
+
+// Frame data for MESA_ACE_TYPE_ANY
+typedef struct
+{
+    mesa_ace_u48_t dmac; // DMAC
+    mesa_ace_u48_t smac; // SMAC
+} mesa_ace_frame_any_t;
+
+// Frame data for MESA_ACE_TYPE_ETYPE
+typedef struct
+{
+    mesa_ace_u48_t dmac;  // DMAC
+    mesa_ace_u48_t smac;  // SMAC
+    mesa_ace_u16_t etype; // Ethernet Type value
+    mesa_ace_u16_t data;  // MAC data
+    mesa_ace_ptp_t ptp;   // PTP header filtering (overrides smac byte 2,4 and data fields)
+} mesa_ace_frame_etype_t;
+
+// Frame data for MESA_ACE_TYPE_LLC
+typedef struct
+{
+    mesa_ace_u48_t dmac; // DMAC
+    mesa_ace_u48_t smac; // SMAC
+    mesa_ace_u32_t llc;  // LLC header: DSAP at byte 0, SSAP at byte 1, Control at byte 2
+} mesa_ace_frame_llc_t;
+
+// Frame data for MESA_ACE_TYPE_SNAP
+typedef struct
+{
+    mesa_ace_u48_t dmac; // DMAC
+    mesa_ace_u48_t smac; // SMAC
+    mesa_ace_u40_t snap; // SNAP header: Organization Code at byte 0, Type at byte 3
+} mesa_ace_frame_snap_t;
+
+// Frame data for MESA_ACE_TYPE_ARP
+typedef struct
+{
+    mesa_ace_u48_t smac;       // SMAC
+    mesa_ace_bit_t arp;        // Opcode ARP/RARP
+    mesa_ace_bit_t req;        // Opcode request/reply
+    mesa_ace_bit_t unknown;    // Opcode unknown
+    mesa_ace_bit_t smac_match; // Sender MAC matches SMAC
+    mesa_ace_bit_t dmac_match; // Target MAC matches DMAC
+    mesa_ace_bit_t length;     // Protocol addr. length 4, hardware length 6
+    mesa_ace_bit_t ip;         // Protocol address type IP
+    mesa_ace_bit_t ethernet;   // Hardware address type Ethernet
+    mesa_ace_ip_t  sip;        // Sender IP address
+    mesa_ace_ip_t  dip;        // Target IP address
+} mesa_ace_frame_arp_t;
+
+// Frame data for MESA_ACE_TYPE_IPV4
+typedef struct
+{
+    mesa_ace_u48_t      dmac CAP(ACL_EXT_MAC); // DMAC, MESA_ACL_KEY_EXT
+    mesa_ace_u48_t      smac CAP(ACL_EXT_MAC); // SMAC, MESA_ACL_KEY_EXT
+    mesa_ace_bit_t      ttl;                   // TTL zero
+    mesa_ace_bit_t      fragment;              // Fragment
+    mesa_ace_bit_t      options;               // Header options
+    mesa_ace_u8_t       ds;                    // DS field
+    mesa_ace_u8_t       proto;                 // Protocol
+    mesa_ace_ip_t       sip;                   // Source IP address
+    mesa_ace_ip_t       dip;                   // Destination IP address
+    mesa_ace_u48_t      data;                  // Not UDP/TCP: IP data
+    mesa_ace_udp_tcp_t  sport;                 // UDP/TCP: Source port
+    mesa_ace_udp_tcp_t  dport;                 // UDP/TCP: Destination port
+    mesa_ace_bit_t      tcp_fin;               // TCP FIN
+    mesa_ace_bit_t      tcp_syn;               // TCP SYN
+    mesa_ace_bit_t      tcp_rst;               // TCP RST
+    mesa_ace_bit_t      tcp_psh;               // TCP PSH
+    mesa_ace_bit_t      tcp_ack;               // TCP ACK
+    mesa_ace_bit_t      tcp_urg;               // TCP URG
+    mesa_ace_bit_t      sip_eq_dip;            // SIP equals DIP
+    mesa_ace_bit_t      sport_eq_dport;        // SPORT equals DPORT
+    mesa_ace_bit_t      seq_zero;              // TCP sequence number is zero
+    mesa_ace_ptp_t      ptp;                   // PTP filtering (overrides sip field)
+    mesa_ace_sip_smac_t sip_smac;              // SIP/SMAC matching (overrides sip field)
+} mesa_ace_frame_ipv4_t;
+
+// Frame data for MESA_ACE_TYPE_IPV6
+typedef struct
+{
+    mesa_ace_u48_t     dmac CAP(ACL_EXT_MAC); // DMAC, MESA_ACL_KEY_EXT
+    mesa_ace_u48_t     smac CAP(ACL_EXT_MAC); // SMAC, MESA_ACL_KEY_EXT
+    mesa_ace_u8_t      proto;                 // IPv6 protocol
+    mesa_ace_u128_t    sip;                   // IPv6 source address (byte 0-7 only used for MESA_ACL_KEY_EXT)
+    mesa_ace_u128_t    dip CAP(ACL_EXT_DIP);  // IPv6 destination address, MESA_ACL_KEY_EXT
+    mesa_ace_bit_t     ttl;                   // TTL zero
+    mesa_ace_u8_t      ds;                    // DS field
+    mesa_ace_u48_t     data;                  // Not UDP/TCP: IP data
+    mesa_ace_udp_tcp_t sport;                 // UDP/TCP: Source port
+    mesa_ace_udp_tcp_t dport;                 // UDP/TCP: Destination port
+    mesa_ace_bit_t     tcp_fin;               // TCP FIN
+    mesa_ace_bit_t     tcp_syn;               // TCP SYN
+    mesa_ace_bit_t     tcp_rst;               // TCP RST
+    mesa_ace_bit_t     tcp_psh;               // TCP PSH
+    mesa_ace_bit_t     tcp_ack;               // TCP ACK
+    mesa_ace_bit_t     tcp_urg;               // TCP URG
+    mesa_ace_bit_t     sip_eq_dip;            // SIP equals DIP
+    mesa_ace_bit_t     sport_eq_dport;        // SPORT equals DPORT
+    mesa_ace_bit_t     seq_zero;              // TCP sequence number is zero
+    mesa_ace_ptp_t     ptp;                   // PTP filtering (overrides sip byte 0-3)
+} mesa_ace_frame_ipv6_t;
+
+// Access Control Entry
+typedef struct
+{
+    mesa_ace_id_t        id;           // ACE ID, must be different from MESA_ACE_ID_LAST
+    uint8_t              lookup       CAP(ACL_KEY_LOOKUP); // Lookup, any non-zero value means second lookup
+    mesa_bool_t          isdx_enable  CAP(ACL_KEY_ISDX);   // Use VID value for ISDX value
+    mesa_bool_t          isdx_disable CAP(ACL_KEY_ISDX);   // Match only frames with ISDX zero
+    mesa_port_list_t     port_list;    // Port list
+    mesa_ace_u8_t        policy;       // Policy number
+    mesa_ace_type_t      type;         // ACE frame type
+    mesa_bool_t          type_ext;     // Use extended type for IPv4/IPv6
+    mesa_acl_action_t    action;       // ACE action
+
+    mesa_ace_bit_t       dmac_mc;      // Multicast DMAC
+    mesa_ace_bit_t       dmac_bc;      // Broadcast DMAC
+
+    mesa_ace_vlan_t      vlan;         // VLAN Tag
+
+    union
+    {
+        mesa_ace_frame_any_t   any;    // MESA_ACE_TYPE_ANY
+        mesa_ace_frame_etype_t etype;  // MESA_ACE_TYPE_ETYPE
+        mesa_ace_frame_llc_t   llc;    // MESA_ACE_TYPE_LLC
+        mesa_ace_frame_snap_t  snap;   // MESA_ACE_TYPE_SNAP
+        mesa_ace_frame_arp_t   arp;    // MESA_ACE_TYPE_ARP
+        mesa_ace_frame_ipv4_t  ipv4;   // MESA_ACE_TYPE_IPV4
+        mesa_ace_frame_ipv6_t  ipv6;   // MESA_ACE_TYPE_IPV6
+    } frame; // Frame type specific data
+} mesa_ace_t;
+
+// Initialize ACE to default values.
+// type [IN]  ACE type.
+// ace [OUT]  ACE structure.
+mesa_rc mesa_ace_init(const mesa_inst_t      inst,
+                      const mesa_ace_type_t  type,
+                      mesa_ace_t             *const ace);
+
+// Add/modify ACE.
+// ace_id_next [IN]  ACE ID of next entry.
+//                   The ACE will be added before the entry with this ID.
+//                   MESA_ACE_ID_LAST is reserved for inserting last.
+// ace [IN]          ACE structure.
+mesa_rc mesa_ace_add(const mesa_inst_t    inst,
+                     const mesa_ace_id_t  ace_id_next,
+                     const mesa_ace_t     *const ace);
+
+// Delete ACE.
+// ace_id [IN]  ACE ID.
+mesa_rc mesa_ace_del(const mesa_inst_t    inst,
+                     const mesa_ace_id_t  ace_id);
+
+// ACE hit counter
+typedef uint32_t mesa_ace_counter_t;
+
+// Get ACE counter.
+// ace_id [IN]    ACE ID.
+// counter [OUT]  ACE counter.
+mesa_rc mesa_ace_counter_get(const mesa_inst_t    inst,
+                             const mesa_ace_id_t  ace_id,
+                             mesa_ace_counter_t   *const counter);
+
+// Clear ACE counter.
+// ace_id [IN]  ACE ID.
+mesa_rc mesa_ace_counter_clear(const mesa_inst_t    inst,
+                               const mesa_ace_id_t  ace_id);
+
+#define MESA_ACE_IDX_NONE 0xffff // ACE index not valid
+
+// ACE status
+typedef struct {
+    uint16_t idx[2]; // ACE hardware index table
+} mesa_ace_status_t CAP(ACL_ACE_STATUS);
+
+// Get ACE status.
+// ace_id [IN]   ACE ID.
+// status [OUT]  ACE status.
+mesa_rc mesa_ace_status_get(const mesa_inst_t    inst,
+                            const mesa_ace_id_t  ace_id,
+                            mesa_ace_status_t    *const status)
+    CAP(ACL_ACE_STATUS);
+
+// Hierarchical ACL type
+typedef enum {
+    MESA_HACL_TYPE_IPACL,   // Ingress port ACL (I-PACL)
+    MESA_HACL_TYPE_IVACL,   // Ingress VLAN ACL (I-VACL)
+    MESA_HACL_TYPE_IRACL,   // Ingress router ACL (I-RACL)
+    MESA_HACL_TYPE_ERACL,   // Egress router ACL (E-RACL)
+    MESA_HACL_TYPE_EVACL,   // Egress VLAN ACL (E-VACL)
+    MESA_HACL_TYPE_EPACL,   // Egress port ACL (E-PACL)
+} mesa_hacl_type_t CAP(ACL_HACL);
+
+#define MESA_RLEG_LIST_ARRAY_SIZE 64 // Router leg list
+
+// Router leg list
+typedef struct {
+    uint8_t _private[MESA_RLEG_LIST_ARRAY_SIZE]; // Router leg list, access using utilities below
+} mesa_rleg_list_t;
+
+// Set router leg in router leg list.
+// l     [IN]  Router leg list.
+// rleg  [IN]  Router leg ID.
+// val   [IN]  Value.
+void mesa_rleg_list_set(mesa_rleg_list_t *l, mesa_l3_rleg_id_t rleg, mesa_bool_t val);
+
+// Get router leg value from router leg list.
+// l     [IN]  Router leg list.
+// rleg  [IN]  Router leg ID.
+mesa_bool_t mesa_rleg_list_get(const mesa_rleg_list_t *l, mesa_l3_rleg_id_t rleg);
+
+// Frame data for MESA_ACE_TYPE_ETYPE
+typedef struct {
+    mesa_ace_u16_t etype; // Ethernet Type value
+    mesa_ace_u16_t data;  // MAC data
+} mesa_hace_frame_etype_t CAP(ACL_HACL);
+
+// Frame data for MESA_ACE_TYPE_LLC
+typedef struct {
+    mesa_ace_u32_t llc;  // LLC header: DSAP at byte 0, SSAP at byte 1, Control at byte 2
+} mesa_hace_frame_llc_t CAP(ACL_HACL);
+
+// Frame data for MESA_ACE_TYPE_SNAP
+typedef struct {
+    mesa_ace_u40_t snap; // SNAP header: Organization Code at byte 0, Type at byte 3
+} mesa_hace_frame_snap_t CAP(ACL_HACL);
+
+// Frame data for MESA_ACE_TYPE_ARP
+typedef struct {
+    mesa_ace_bit_t arp;        // Opcode ARP/RARP
+    mesa_ace_bit_t req;        // Opcode request/reply
+    mesa_ace_bit_t unknown;    // Opcode unknown
+    mesa_ace_bit_t smac_match; // Sender MAC matches SMAC
+    mesa_ace_bit_t dmac_match; // Target MAC matches DMAC
+    mesa_ace_bit_t length;     // Protocol addr. length 4, hardware length 6
+    mesa_ace_bit_t ip;         // Protocol address type IP
+    mesa_ace_bit_t ethernet;   // Hardware address type Ethernet
+    mesa_ace_ip_t  sip;        // Sender IP address
+    mesa_ace_ip_t  dip;        // Target IP address
+} mesa_hace_frame_arp_t CAP(ACL_HACL);
+
+// Frame data for MESA_ACE_TYPE_IPV4
+typedef struct
+{
+    mesa_ace_bit_t      ttl;      // TTL zero
+    mesa_ace_bit_t      fragment; // Fragment
+    mesa_ace_bit_t      options;  // Header options
+    mesa_ace_u8_t       ds;       // DS field
+    mesa_ace_u8_t       proto;    // Protocol
+    mesa_ace_ip_t       sip;      // Source IP address
+    mesa_ace_ip_t       dip;      // Destination IP address
+    mesa_ace_u48_t      data;     // Not UDP/TCP: IP data
+    mesa_ace_udp_tcp_t  sport;    // UDP/TCP: Source port
+    mesa_ace_udp_tcp_t  dport;    // UDP/TCP: Destination port
+    mesa_ace_bit_t      tcp_fin;  // TCP FIN
+    mesa_ace_bit_t      tcp_syn;  // TCP SYN
+    mesa_ace_bit_t      tcp_rst;  // TCP RST
+    mesa_ace_bit_t      tcp_psh;  // TCP PSH
+    mesa_ace_bit_t      tcp_ack;  // TCP ACK
+    mesa_ace_bit_t      tcp_urg;  // TCP URG
+    mesa_ace_sip_smac_t sip_smac; // SIP/SMAC matching (overrides sip field)
+} mesa_hace_frame_ipv4_t CAP(ACL_HACL);
+
+// Frame data for MESA_ACE_TYPE_IPV6
+typedef struct
+{
+    mesa_ace_bit_t     ttl;     // TTL zero
+    mesa_ace_u8_t      ds;      // DS field
+    mesa_ace_u8_t      proto;   // IPv6 protocol
+    mesa_ace_u128_t    sip;     // IPv6 source address
+    mesa_ace_u128_t    dip;     // IPv6 destination address
+    mesa_ace_u48_t     data;    // Not UDP/TCP: IP data
+    mesa_ace_udp_tcp_t sport;   // UDP/TCP: Source port
+    mesa_ace_udp_tcp_t dport;   // UDP/TCP: Destination port
+    mesa_ace_bit_t     tcp_fin; // TCP FIN
+    mesa_ace_bit_t     tcp_syn; // TCP SYN
+    mesa_ace_bit_t     tcp_rst; // TCP RST
+    mesa_ace_bit_t     tcp_psh; // TCP PSH
+    mesa_ace_bit_t     tcp_ack; // TCP ACK
+    mesa_ace_bit_t     tcp_urg; // TCP URG
+} mesa_hace_frame_ipv6_t CAP(ACL_HACL);
+
+// Hierarchical ACL key
+typedef struct {
+    mesa_port_list_t        port_list; // Ingress/egress port list (unused for RACLs)
+    mesa_rleg_list_t        rleg_list; // Ingress/egress router leg list (RACLs only)
+    mesa_ace_u8_t           policy;    // Policy number
+    mesa_ace_type_t         type;      // ACE frame type
+    mesa_bool_t             type_ext;  // Use extended type for IPv4/IPv6 (I-PACL)
+    mesa_ace_vlan_t         vlan;      // Classified VLAN tag values (unused for RACLs)
+    mesa_ace_ptp_t          ptp;       // PTP header filtering for EType/IPv4/IPv6 (unused for RACLs)
+    mesa_ace_bit_t          dmac_mc;   // Multicast DMAC (unused for RACLs)
+    mesa_ace_bit_t          dmac_bc;   // Broadcast DMAC (unused for RACLs)
+    mesa_ace_u48_t          dmac;      // DMAC (unused for RACLs)
+    mesa_ace_u48_t          smac;      // SMAC (unused for RACLs)
+    mesa_hace_frame_etype_t etype;     // MESA_ACE_TYPE_ETYPE (unused for RACLs)
+    mesa_hace_frame_llc_t   llc;       // MESA_ACE_TYPE_LLC (unused for RACLs)
+    mesa_hace_frame_snap_t  snap;      // MESA_ACE_TYPE_SNAP (unused for RACLs)
+    mesa_hace_frame_arp_t   arp;       // MESA_ACE_TYPE_ARP (unused for VACLS/RACLs)
+    mesa_hace_frame_ipv4_t  ipv4;      // MESA_ACE_TYPE_IPV4 (unused for VACLs)
+    mesa_hace_frame_ipv6_t  ipv6;      // MESA_ACE_TYPE_IPV6 (unused for VACLs)
+} mesa_hace_key_t CAP(ACL_HACL);
+
+// Hierarchical ACL action
+typedef struct {
+    mesa_acl_port_action_t     port_action; // Port action
+    mesa_port_list_t           port_list;   // Egress port list (I-PACL/I-VACL only)
+    mesa_bool_t                cpu;         // Forward to CPU (I-PACL/I-VACL only)
+    mesa_bool_t                cpu_once;    // Only first frame forwarded to CPU (I-PACL/I-VACL only)
+    mesa_bool_t                cpu_disable; // Disable CPU copy from previous forwarding decisions (I-PACL/I-VACL only)
+    mesa_packet_rx_queue_t     cpu_queue;   // CPU queue (I-PACL/I-VACL only)
+    mesa_bool_t                police;      // Enable policer (I-PACL/I-VACL only)
+    mesa_acl_policer_no_t      policer_no;  // Policer number (I-PACL/I-VACL only)
+    mesa_bool_t                mirror;      // Enable mirroring (I-PACL/I-VACL only)
+    mesa_acl_ptp_action_t      ptp_action;  // PTP action (I-PACL/I-VACL only)
+    mesa_acl_ptp_action_conf_t ptp;         // PTP configuration (I-PACL/I-VACL only)
+    mesa_acl_addr_action_t     addr;        // Address update configuration (I-PACL/I-VACL only)
+    mesa_bool_t                ifh_flag;    // Control one target specific bit in IFH (I-PACL/I-VACL only)
+} mesa_hacl_action_t CAP(ACL_HACL);
+
+// Hierarchical ACL Entry
+typedef struct {
+    mesa_ace_id_t      id;     // Entry ID
+    mesa_hace_key_t    key;    // ACE key
+    mesa_hacl_action_t action; // ACE action
+} mesa_hace_t CAP(ACL_HACL);
+
+// Initialize Hierarchical ACE to default values.
+// type [IN]   ACE type.
+// hace [OUT]  ACE structure.
+mesa_rc mesa_hace_init(const mesa_inst_t     inst,
+                       const mesa_ace_type_t type,
+                       mesa_hace_t           *const hace)
+    CAP(ACL_HACL);
+
+// Add/modify Hierarchical ACE.
+// type [IN]         Hierarcical ACL type.
+// ace_id_next [IN]  ACE ID of next entry.
+//                   The ACE will be added before the entry with this ID.
+//                   MESA_ACE_ID_LAST is reserved for inserting last.
+// hace [IN]         ACE structure.
+mesa_rc mesa_hace_add(const mesa_inst_t      inst,
+                      const mesa_hacl_type_t type,
+                      const mesa_ace_id_t    ace_id_next,
+                      const mesa_hace_t      *const hace)
+    CAP(ACL_HACL);
+
+// Delete Hierarchical ACE.
+// type [IN]    Hierarcical ACL type.
+// ace_id [IN]  ACE ID.
+mesa_rc mesa_hace_del(const mesa_inst_t      inst,
+                      const mesa_hacl_type_t type,
+                      const mesa_ace_id_t    ace_id)
+    CAP(ACL_HACL);
+
+// Get Hierarchical ACE counter.
+// type [IN]      Hierarcical ACL type.
+// ace_id [IN]    ACE ID.
+// counter [OUT]  ACE counter.
+mesa_rc mesa_hace_counter_get(const mesa_inst_t      inst,
+                              const mesa_hacl_type_t type,
+                              const mesa_ace_id_t    ace_id,
+                              mesa_ace_counter_t     *const counter)
+    CAP(ACL_HACL);
+
+// Clear Hierarchical ACE counter.
+// type [IN]    Hierarcical ACL type.
+// ace_id [IN]  ACE ID.
+mesa_rc mesa_hace_counter_clear(const mesa_inst_t      inst,
+                                const mesa_hacl_type_t type,
+                                const mesa_ace_id_t    ace_id)
+    CAP(ACL_HACL);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+:@byteposir:	@str"6#ifndef _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[éiPipiqiriûiœi–iiKiLiîiïi≠i∫iºiÌi.iniÉiÑi≥i—i¯i4isi∏iπiËii-igi¶iËi)i*irisiêi°i˘i-idiiÄi¢i i˘i=iái”i‘iˆiiMiìiﬂi-	i.	iA	iN	iP	iç	i 	i	
+i#
+i$
+i6
+iC
+iE
+ix
+i∏
+i9i¬iKi¬iiiiti©i™i…i⁄iiiiMihièiŒiiRihiiiÑiëiìi“i;i£i iÀiÎi¸iJiªi˛iAi∞ii5idiei{iäiÃiiHiçiiAiBifiwi≠i¸i3i^i_imi|i~iøiiyiµiˆi7iëiÁi(ifi©iÏi)iti i,i}i‚i˜i¯i'i6ii∂iˇiiiAiRi|ißi“iÍiÎiiiiKiyi≥iÀiÃiÔii2imi´iÓiÔi i0 iU iñ i⁄ i#!i$!i8!ib!ic!iã!i™!i›!i"ib"iÆ"iØ"iŸ"i˜"i7#i{#i|#ié#iõ#iù#i #iˆ#i$i;$ib$iÖ$i®$iª$iº$iÀ$iÎ$iÏ$i1%i2%i?%iL%iN%it%iï%i∂%i»%i…%iÂ%i&i&i)&iQ&iR&io&ió&iò&iµ&i›&iﬁ&i˚&i#'i$'iB'il'im'iã'i≥'i¥'i’'i˚'i¸'i(iF(iG(i_(in(ip(i™(iÊ(i¯(i˘(i)i)i )iU)it)iî)i´)i¨)iƒ)i”)i’)i*iD*in*i¶*iπ*i∫*iﬁ*iÌ*iÔ*i+i1+iI+iJ+ip+i+iÅ+i£+i≈+iˆ+i,ix,ií,iì,i∑,i∆,i»,iÈ,i
+-id-i|-i}-i¢-i±-i≥-i‘-iı-iJ.ic.id.ià.ió.iô.i¿.iÚ.i)/iZ/iî/iŒ/i0iV0ió0iÀ0iˇ0i1i1i=1iL1iN1ió1i‡1i2iV2ió2i“2i3iQ3iö3i·3i(4it4iÆ4iË4i"5i\5iñ5i–5i6iV6i§6i˙6iT7im7in7iì7i¢7i§7iÏ7i48is8i‚8i>9ix9i≤9i¯9i>:iâ:i¬:i˚:i4;im;i¶;iﬂ;i<ic<i∞<i=i!=i"=i:=iI=iK=i•=i>im>iÃ>i ?i8?iq?iª?i?iÒ?i*@ic@id@ió@iò@i¢@i®@i‰@i"Ai^AiõAi◊AiBiQBizBiàBiâBiÆBi∆Bi„BiCiICiÉCiÑCióCi¬CiDiRDivDi¶Di›DiEiEi$Ei<EilEiüEi†Ei≥EiÿEiŸEiÌEiFi&Fi^FiòFi€Fi‹FiÚFi
+GiDGiÅGiÇGi∫GiªGi…Gi⁄GiHi4Hi5HiHHiaHi~HiµHiÓHi.IiGIiHIiaIipIi©Ii‚IiJiWJièJi«JiÈJiÍJi"Ki#Ki6KiGKi©KiΩKiæKi‰KiLi"Li8LièLiêLiæLiﬁLi¸LiOMiPMivMiáMi∏MiﬁMiNiNi,Ni=NióNiæNiøNi‰NiıNiJOirOisOióOi®Oi⁄OiPiBPi|Pi∂PiQi>QiQi≥QiÁQiRiRi4RiCRiERisRi°Ri’RiSi1SihSi§SiﬁSiTiWTiÑTi±TiﬁTiUi8UieUi≤Ui⁄Ui€Ui ViViVi=ViiViöVi—ViWiEWi}Wi∫WiÂWiXi;XifXiëXiºXi‰XiÂXi˝XiYidYi∫YiÚYi+Zi~Zi÷Zi<[ià[i‘[i\iX\i©\i¯\iH]iù]iÌ]i=^i^^i_^iz^iã^i∆^i_in_i‘_iL`iö`iÌ`i@aiïai‰ai:biõbici*ci+ciEciVciÅci´ciÿciıciˆci(diAdi_diídi≈diˇdieiei3ei^eiâei”eifi=fipfi£fi›figi*gi+giGgimgiÖgi∏giÎgi hi3hi4hiUhi}hióhi∂hiÒhi,iiiiiÆii¡ii¬iiÂiiji#ji`jiùji‹jiÔjijikiKk:@last_line_endiKk{;o;;o;	;
+@
+;iû;"7#define _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+
+;@{;o;;o;	;
+@
+;i–;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;i≠;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iµ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i¿;"MESA_AUTH_STATE_NONE;@:cap0{;{;o;;o;	;
+@
+;iÒ;"MESA_AUTH_STATE_EGRESS;@;0{;{;o;;o;	;
+@
+;i2;"MESA_AUTH_STATE_BOTH    ;@;0:typedef_nameo;;o;	;
+@
+;ip;"mesa_auth_state_t;@:
+array[ ;0{:func_proto{:normal{	:	typeo;;o;	;
+@
+;i¯;"mesa_rc ;@:	nameo;;o;	;
+@
+;i ;"mesa_auth_port_state_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iU;"const mesa_port_no_t ;@;o;;o;	;
+@
+;ij;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iî;"!mesa_auth_state_t    *const ;@;o;;o;	;
+@
+;i∞;"
+state;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;ig;"mesa_rc ;@;o;;o;	;
+@
+;io;"mesa_auth_port_state_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;ià;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i†;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i«;"const mesa_port_no_t    ;@;o;;o;	;
+@
+;iﬂ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i	;"const mesa_auth_state_t ;@;o;;o;	;
+@
+;i!;"
+state;@;[ ;0;0{
+;o;;o;	;
+@
+;iê;"typedef;@:struct_type_declare{:struct_members[{:member{;{	;o;;o;	;
+@
+;i•;"mesa_bool_t        ;@;o;;o;	;
+@
+;i∏;"bit_rate_enable;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˝;"mesa_bitrate_t     ;@;o;;o;	;
+@
+;i;"bit_rate;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i1;"mesa_packet_rate_t ;@;o;;o;	;
+@
+;iD;"	rate;@;[ ;0;o;;o;	;
+@
+;if;"mesa_acl_policer_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˘;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_acl_policer_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;i7;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i_;"!const mesa_acl_policer_no_t ;@;o;;o;	;
+@
+;i{;"policer_no;@;[ ;0{;{	;o;;o;	;
+@
+;i©;"(mesa_acl_policer_conf_t     *const ;@;o;;o;	;
+@
+;iÃ;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iM;"mesa_rc ;@;o;;o;	;
+@
+;iU;"mesa_acl_policer_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;io;"#const mesa_inst_t             ;@;o;;o;	;
+@
+;iç;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iµ;"#const mesa_acl_policer_no_t   ;@;o;;o;	;
+@
+;i”;"policer_no;@;[ ;0{;{	;o;;o;	;
+@
+;i	;"*const mesa_acl_policer_conf_t *const ;@;o;;o;	;
+@
+;i&	;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iA	;"typedef;@;{;o;;o;	;
+@
+;iI	;"	enum;@;[{;{;o;;o;	;
+@
+;iT	;"MESA_ACL_PORT_ACTION_NONE;@;0{;{;o;;o;	;
+@
+;ië	;" MESA_ACL_PORT_ACTION_FILTER;@;0{;{;o;;o;	;
+@
+;iŒ	;""MESA_ACL_PORT_ACTION_REDIR   ;@;0;o;;o;	;
+@
+;i
+;"mesa_acl_port_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i6
+;"typedef;@;{;o;;o;	;
+@
+;i>
+;"	enum;@;[{;{;o;;o;	;
+@
+;iI
+;"MESA_ACL_PTP_ACTION_NONE;@;0{;{;o;;o;	;
+@
+;i|
+;"!MESA_ACL_PTP_ACTION_ONE_STEP;@;0{;{;o;;o;	;
+@
+;iº
+;".MESA_ACL_PTP_ACTION_ONE_STEP_ADD_DELAY   ;@;o;;o;	;
+@
+;iÂ
+;"CAP(ACL_PTP_DELAY);@{;{;o;;o;	;
+@
+;i=;".MESA_ACL_PTP_ACTION_ONE_STEP_SUB_DELAY_1 ;@;o;;o;	;
+@
+;if;"CAP(ACL_PTP_DELAY);@{;{;o;;o;	;
+@
+;i∆;".MESA_ACL_PTP_ACTION_ONE_STEP_SUB_DELAY_2 ;@;o;;o;	;
+@
+;iÔ;"CAP(ACL_PTP_DELAY);@{;{;o;;o;	;
+@
+;iO;".MESA_ACL_PTP_ACTION_ONE_AND_TWO_STEP     ;@;o;;o;	;
+@
+;ix;""CAP(ACL_PTP_ONE_AND_TWO_STEP);@{;{;o;;o;	;
+@
+;i∆;""MESA_ACL_PTP_ACTION_TWO_STEP ;@;0;o;;o;	;
+@
+;i;"mesa_acl_ptp_action_t;@;[ ;0{
+;o;;o;	;
+@
+;it;"typedef;@:type_aliaso;;o;	;
+@
+;i|;"uint8_t ;@;o;;o;	;
+@
+;iÑ;"mesa_acl_sip_idx_t ;@;[ ;o;;o;	;
+@
+;ió;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;i…;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iﬁ;"mesa_ip_addr_t ;@;o;;o;	;
+@
+;iÌ;"sip;@;[ ;0;o;;o;	;
+@
+;i	;"mesa_acl_sip_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iè;"mesa_rc ;@;o;;o;	;
+@
+;ió;"mesa_acl_sip_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i≠;" const mesa_inst_t          ;@;o;;o;	;
+@
+;i»;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÏ;" const mesa_acl_sip_idx_t   ;@;o;;o;	;
+@
+;i;"idx;@;[ ;0{;{	;o;;o;	;
+@
+;i*;"'const mesa_acl_sip_conf_t  *const ;@;o;;o;	;
+@
+;iL;"	conf;@;[ ;0;o;;o;	;
+@
+;iV;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;iÑ;"typedef;@;{;o;;o;	;
+@
+;iå;"	enum;@;[{;{;o;;o;	;
+@
+;ió;"MESA_ACL_PTP_RSP_NONE;@;0{;{;o;;o;	;
+@
+;i÷;"(MESA_ACL_PTP_RSP_DLY_REQ_RSP_TS_UPD;@;0{;{;o;;o;	;
+@
+;i?;"*MESA_ACL_PTP_RSP_DLY_REQ_RSP_NO_TS   ;@;0;o;;o;	;
+@
+;i•;"mesa_acl_ptp_rsp_t ;@;[ ;o;;o;	;
+@
+;i∏;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;iÎ;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i ;"mesa_acl_ptp_rsp_t ;@;o;;o;	;
+@
+;i;"response;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iN;"int8_t             ;@;o;;o;	;
+@
+;ia;"log_message_interval;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iø;"mesa_bool_t        ;@;o;;o;	;
+@
+;i“;"copy_smac_to_dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i;"mesa_bool_t        ;@;o;;o;	;
+@
+;i;"set_smac_to_port_mac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iE;"uint8_t            ;@;o;;o;	;
+@
+;iX;"dom_sel;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i¥;"mesa_udp_tcp_t     ;@;o;;o;	;
+@
+;i«;"
+sport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÙ;"mesa_udp_tcp_t     ;@;o;;o;	;
+@
+;i;"
+dport;@;[ ;0;o;;o;	;
+@
+;i7;" mesa_acl_ptp_action_conf_t ;@;[ ;o;;o;	;
+@
+;iR;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;i{;"typedef;@;{;o;;o;	;
+@
+;iÉ;"	enum;@;[
+{;{;o;;o;	;
+@
+;ié;"MESA_ACL_ADDR_UPDATE_NONE;@;0{;{;o;;o;	;
+@
+;i–;""MESA_ACL_ADDR_UPDATE_MAC_SWAP;@;0{;{;o;;o;	;
+@
+;i;"&MESA_ACL_ADDR_UPDATE_DMAC_REPLACE;@;0{;{;o;;o;	;
+@
+;iL;"*MESA_ACL_ADDR_UPDATE_DMAC_REPLACE_MSB;@;0{;{;o;;o;	;
+@
+;ië;",MESA_ACL_ADDR_UPDATE_MAC_IP_SWAP_UC    ;@;0;o;;o;	;
+@
+;i;"mesa_acl_addr_update_t ;@;[ ;o;;o;	;
+@
+;i/;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;if;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i{;"mesa_acl_addr_update_t ;@;o;;o;	;
+@
+;ií;"update;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i±;"mesa_mac_t             ;@;o;;o;	;
+@
+;i»;"mac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i ;"mesa_acl_sip_idx_t     ;@;o;;o;	;
+@
+;i;"sip_idx;@;[ ;0;o;;o;	;
+@
+;i5;"mesa_acl_addr_action_t ;@;[ ;o;;o;	;
+@
+;iL;"CAP(ACL_SIP_CNT);@{
+;o;;o;	;
+@
+;im;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iÇ;" mesa_bool_t                ;@;o;;o;	;
+@
+;iù;"cpu;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i√;" mesa_bool_t                ;@;o;;o;	;
+@
+;iﬁ;"cpu_once;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i;" mesa_bool_t                ;@;o;;o;	;
+@
+;i2;"cpu_disable;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i};" mesa_packet_rx_queue_t     ;@;o;;o;	;
+@
+;iò;"cpu_queue;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iπ;" mesa_bool_t                ;@;o;;o;	;
+@
+;i‘;"police;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˙;" mesa_acl_policer_no_t      ;@;o;;o;	;
+@
+;i;"policer_no;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i;;" mesa_bool_t                ;@;o;;o;	;
+@
+;iV;"evc_police     ;@;[ ;o;;o;	;
+@
+;ie;"CAP(ACL_EVC_POLICER);@{;!{;{	;o;;o;	;
+@
+;iï;" mesa_evc_policer_id_t      ;@;o;;o;	;
+@
+;i∞;"evc_policer_id ;@;[ ;o;;o;	;
+@
+;iø;"CAP(ACL_EVC_POLICER);@{;!{;{	;o;;o;	;
+@
+;iÎ;" mesa_bool_t                ;@;o;;o;	;
+@
+;i;"
+learn;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i,;" mesa_acl_port_action_t     ;@;o;;o;	;
+@
+;iG;"port_action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ij;" mesa_port_list_t           ;@;o;;o;	;
+@
+;iÖ;"port_list;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i≠;" mesa_bool_t                ;@;o;;o;	;
+@
+;i»;"mirror;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i;" mesa_acl_ptp_action_t      ;@;o;;o;	;
+@
+;i;"ptp_action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i-;" mesa_acl_ptp_action_conf_t ;@;o;;o;	;
+@
+;iH;"
+ptp  ;@;[ ;o;;o;	;
+@
+;iM;"CAP(ACL_SIP_CNT);@{;!{;{	;o;;o;	;
+@
+;ix;" mesa_acl_addr_action_t     ;@;o;;o;	;
+@
+;iì;"
+addr ;@;[ ;o;;o;	;
+@
+;iò;"CAP(ACL_SIP_CNT);@{;!{;{	;o;;o;	;
+@
+;iŒ;" mesa_bool_t                ;@;o;;o;	;
+@
+;iÈ;"lm_cnt_disable ;@;[ ;o;;o;	;
+@
+;i¯;"CAP(ACL_LM_CNT_CTRL);@{;!{;{	;o;;o;	;
+@
+;i0;" mesa_bool_t                ;@;o;;o;	;
+@
+;iK;"mac_swap ;@;[ ;o;;o;	;
+@
+;iT;"CAP(ACL_MAC_SWAP);@{;!{;{	;o;;o;	;
+@
+;iÅ;" mesa_bool_t                ;@;o;;o;	;
+@
+;iú;"ifh_flag ;@;[ ;o;;o;	;
+@
+;i•;"CAP(ACL_IFH_FLAG);@;o;;o;	;
+@
+;i‰;"mesa_acl_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i';"typedef;@;{;o;;o;	;
+@
+;i/;"	enum;@;[{;{;o;;o;	;
+@
+;i:;"MESA_ACL_KEY_DEFAULT;@;0{;{;o;;o;	;
+@
+;iÉ;"MESA_ACL_KEY_ETYPE;@;0{;{;o;;o;	;
+@
+;i∫;"MESA_ACL_KEY_EXT      ;@;0;o;;o;	;
+@
+;i;"mesa_acl_key_t;@;[ ;0{
+;o;;o;	;
+@
+;iA;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iV;"mesa_acl_key_t ;@;o;;o;	;
+@
+;ie;"arp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÄ;"mesa_acl_key_t ;@;o;;o;	;
+@
+;iè;"	ipv4;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i´;"mesa_acl_key_t ;@;o;;o;	;
+@
+;i∫;"	ipv6;@;[ ;0;o;;o;	;
+@
+;i‘;"mesa_acl_frame_key_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i;"mesa_acl_policy_no_t ;@;o;;o;	;
+@
+;i/;"policy_no;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iO;"mesa_acl_action_t    ;@;o;;o;	;
+@
+;id;"action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i};"mesa_acl_frame_key_t ;@;o;;o;	;
+@
+;ií;"key;@;[ ;0;o;;o;	;
+@
+;iµ;"mesa_acl_port_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2;"mesa_rc ;@;o;;o;	;
+@
+;i:;"mesa_acl_port_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iQ;"const mesa_inst_t     ;@;o;;o;	;
+@
+;ig;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iå;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i¢;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i ;""mesa_acl_port_conf_t  *const ;@;o;;o;	;
+@
+;iÁ;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iU ;"mesa_rc ;@;o;;o;	;
+@
+;i] ;"mesa_acl_port_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;it ;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iê ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iµ ;"!const mesa_port_no_t        ;@;o;;o;	;
+@
+;i— ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˘ ;"(const mesa_acl_port_conf_t  *const ;@;o;;o;	;
+@
+;i!;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i8!;"typedef;@;"o;;o;	;
+@
+;i@!;"uint32_t ;@;o;;o;	;
+@
+;iI!;"mesa_acl_port_counter_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i›!;"mesa_rc ;@;o;;o;	;
+@
+;iÂ!;"mesa_acl_port_counter_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iˇ!;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i";"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i@";"const mesa_port_no_t     ;@;o;;o;	;
+@
+;iY";"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÑ";"%mesa_acl_port_counter_t  *const ;@;o;;o;	;
+@
+;i§";"counter;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i˜";"mesa_rc ;@;o;;o;	;
+@
+;iˇ";" mesa_acl_port_counter_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i#;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i1#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i[#;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iq#;"port_no;@;[ ;0;0{
+;o;;o;	;
+@
+;ié#;"typedef;@;{;o;;o;	;
+@
+;iñ#;"	enum;@;[{;{;o;;o;	;
+@
+;i°#;"MESA_ACE_TYPE_ANY;@;0{;{;o;;o;	;
+@
+;iŒ#;"MESA_ACE_TYPE_ETYPE;@;0{;{;o;;o;	;
+@
+;i˙#;"MESA_ACE_TYPE_LLC;@;0{;{;o;;o;	;
+@
+;i$;"MESA_ACE_TYPE_SNAP;@;0{;{;o;;o;	;
+@
+;i?$;"MESA_ACE_TYPE_ARP;@;0{;{;o;;o;	;
+@
+;if$;"MESA_ACE_TYPE_IPV4;@;0{;{;o;;o;	;
+@
+;iâ$;"MESA_ACE_TYPE_IPV6     ;@;0;o;;o;	;
+@
+;i™$;"mesa_ace_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iÀ$;"typedef;@;"o;;o;	;
+@
+;i”$;"uint32_t ;@;o;;o;	;
+@
+;i‹$;"mesa_ace_id_t;@;[ ;0{;o;;o;	;
+@
+;iÏ$;"K#define MESA_ACE_ID_LAST 0 // Special value used to add last in list
+
+;@{
+;o;;o;	;
+@
+;i?%;"typedef;@;{;o;;o;	;
+@
+;iG%;"	enum;@;[{;{;o;;o;	;
+@
+;iR%;"MESA_ACE_BIT_ANY;@;0{;{;o;;o;	;
+@
+;ix%;"MESA_ACE_BIT_0;@;0{;{;o;;o;	;
+@
+;iô%;"MESA_ACE_BIT_1    ;@;0;o;;o;	;
+@
+;i∏%;"mesa_ace_bit_t;@;[ ;0{
+;o;;o;	;
+@
+;iÂ%;"typedef;@;"o;;o;	;
+@
+;iÌ%;"mesa_vcap_u8_t ;@;o;;o;	;
+@
+;i¸%;"mesa_ace_u8_t;@;[ ;0{
+;o;;o;	;
+@
+;i)&;"typedef;@;"o;;o;	;
+@
+;i1&;"mesa_vcap_u16_t ;@;o;;o;	;
+@
+;iA&;"mesa_ace_u16_t;@;[ ;0{
+;o;;o;	;
+@
+;io&;"typedef;@;"o;;o;	;
+@
+;iw&;"mesa_vcap_u32_t ;@;o;;o;	;
+@
+;iá&;"mesa_ace_u32_t;@;[ ;0{
+;o;;o;	;
+@
+;iµ&;"typedef;@;"o;;o;	;
+@
+;iΩ&;"mesa_vcap_u40_t ;@;o;;o;	;
+@
+;iÕ&;"mesa_ace_u40_t;@;[ ;0{
+;o;;o;	;
+@
+;i˚&;"typedef;@;"o;;o;	;
+@
+;i';"mesa_vcap_u48_t ;@;o;;o;	;
+@
+;i';"mesa_ace_u48_t;@;[ ;0{
+;o;;o;	;
+@
+;iB';"typedef;@;"o;;o;	;
+@
+;iJ';"mesa_vcap_u128_t ;@;o;;o;	;
+@
+;i[';"mesa_ace_u128_t;@;[ ;0{
+;o;;o;	;
+@
+;iã';"typedef;@;"o;;o;	;
+@
+;iì';"mesa_vcap_vid_t ;@;o;;o;	;
+@
+;i£';"mesa_ace_vid_t;@;[ ;0{
+;o;;o;	;
+@
+;i’';"typedef;@;"o;;o;	;
+@
+;i›';"mesa_vcap_ip_t ;@;o;;o;	;
+@
+;iÏ';"mesa_ace_ip_t;@;[ ;0{
+;o;;o;	;
+@
+;i(;"typedef;@;"o;;o;	;
+@
+;i(;"mesa_vcap_udp_tcp_t ;@;o;;o;	;
+@
+;i2(;"mesa_ace_udp_tcp_t;@;[ ;0{
+;o;;o;	;
+@
+;i_(;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;it(;"mesa_bool_t    ;@;o;;o;	;
+@
+;iÉ(;"enable;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÆ(;"mesa_ace_u32_t ;@;o;;o;	;
+@
+;iΩ(;"header;@;[ ;0;o;;o;	;
+@
+;iË(;"mesa_ace_ptp_t;@;[ ;0{
+;o;;o;	;
+@
+;i);"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i$);"mesa_bool_t ;@;o;;o;	;
+@
+;i0);"enable;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iY);"mesa_ip_t   ;@;o;;o;	;
+@
+;ie);"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ix);"mesa_mac_t  ;@;o;;o;	;
+@
+;iÑ);"	smac;@;[ ;0;o;;o;	;
+@
+;iñ);"mesa_ace_sip_smac_t;@;[ ;0{
+;o;;o;	;
+@
+;iƒ);"typedef;@;{; [	{;!{;{	;o;;o;	;
+@
+;iŸ);"mesa_ace_vid_t   ;@;o;;o;	;
+@
+;iÍ);"vid;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i*;"mesa_ace_u8_t    ;@;o;;o;	;
+@
+;i*;"usr_prio;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iH*;"mesa_ace_bit_t   ;@;o;;o;	;
+@
+;iY*;"cfi;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ir*;"mesa_ace_bit_t   ;@;o;;o;	;
+@
+;iÉ*;"tagged;@;[ ;0;o;;o;	;
+@
+;i®*;"mesa_ace_vlan_t;@;[ ;0{
+;o;;o;	;
+@
+;iﬁ*;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iÛ*;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i+;"	dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i+;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i#+;"	smac;@;[ ;0;o;;o;	;
+@
+;i3+;"mesa_ace_frame_any_t;@;[ ;0{
+;o;;o;	;
+@
+;ip+;"typedef;@;{; [
+{;!{;{	;o;;o;	;
+@
+;iÖ+;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;iî+;"	dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iß+;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i∂+;"	smac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i…+;"mesa_ace_u16_t ;@;o;;o;	;
+@
+;iÿ+;"
+etype;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˙+;"mesa_ace_u16_t ;@;o;;o;	;
+@
+;i	,;"	data;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i ,;"mesa_ace_ptp_t ;@;o;;o;	;
+@
+;i/,;"ptp;@;[ ;0;o;;o;	;
+@
+;iz,;"mesa_ace_frame_etype_t;@;[ ;0{
+;o;;o;	;
+@
+;i∑,;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iÃ,;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i€,;"	dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÌ,;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i¸,;"	smac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i-;"mesa_ace_u32_t ;@;o;;o;	;
+@
+;i-;"llc;@;[ ;0;o;;o;	;
+@
+;if-;"mesa_ace_frame_llc_t;@;[ ;0{
+;o;;o;	;
+@
+;i¢-;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i∑-;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i∆-;"	dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÿ-;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;iÁ-;"	smac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˘-;"mesa_ace_u40_t ;@;o;;o;	;
+@
+;i.;"	snap;@;[ ;0;o;;o;	;
+@
+;iL.;"mesa_ace_frame_snap_t;@;[ ;0{
+;o;;o;	;
+@
+;ià.;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iù.;"mesa_ace_u48_t ;@;o;;o;	;
+@
+;i¨.;"	smac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iƒ.;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i”.;"arp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iˆ.;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i/;"req;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i-/;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i</;"unknown;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i^/;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;im/;"smac_match;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iò/;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iß/;"dmac_match;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i“/;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i·/;"length;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i0;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i.0;"ip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iZ0;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;ii0;"ethernet;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iõ0;"mesa_ace_ip_t  ;@;o;;o;	;
+@
+;i™0;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iœ0;"mesa_ace_ip_t  ;@;o;;o;	;
+@
+;iﬁ0;"dip;@;[ ;0;o;;o;	;
+@
+;i1;"mesa_ace_frame_arp_t;@;[ ;0{
+;o;;o;	;
+@
+;i=1;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iR1;"mesa_ace_u48_t      ;@;o;;o;	;
+@
+;if1;"
+dmac ;@;[ ;o;;o;	;
+@
+;ik1;"CAP(ACL_EXT_MAC);@{;!{;{	;o;;o;	;
+@
+;iõ1;"mesa_ace_u48_t      ;@;o;;o;	;
+@
+;iØ1;"
+smac ;@;[ ;o;;o;	;
+@
+;i¥1;"CAP(ACL_EXT_MAC);@{;!{;{	;o;;o;	;
+@
+;i‰1;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i¯1;"ttl;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i2;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i32;"fragment;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iZ2;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;in2;"options;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iõ2;"mesa_ace_u8_t       ;@;o;;o;	;
+@
+;iØ2;"ds;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i÷2;"mesa_ace_u8_t       ;@;o;;o;	;
+@
+;iÍ2;"
+proto;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i3;"mesa_ace_ip_t       ;@;o;;o;	;
+@
+;i%3;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iU3;"mesa_ace_ip_t       ;@;o;;o;	;
+@
+;ii3;"dip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iû3;"mesa_ace_u48_t      ;@;o;;o;	;
+@
+;i≤3;"	data;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÂ3;"mesa_ace_udp_tcp_t  ;@;o;;o;	;
+@
+;i˘3;"
+sport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i,4;"mesa_ace_udp_tcp_t  ;@;o;;o;	;
+@
+;i@4;"
+dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ix4;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iå4;"tcp_fin;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i≤4;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i∆4;"tcp_syn;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÏ4;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i 5;"tcp_rst;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i&5;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i:5;"tcp_psh;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i`5;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;it5;"tcp_ack;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iö5;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iÆ5;"tcp_urg;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i‘5;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iË5;"sip_eq_dip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i6;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i)6;"sport_eq_dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iZ6;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;in6;"seq_zero;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i®6;"mesa_ace_ptp_t      ;@;o;;o;	;
+@
+;iº6;"ptp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i˛6;"mesa_ace_sip_smac_t ;@;o;;o;	;
+@
+;i7;"sip_smac;@;[ ;0;o;;o;	;
+@
+;iV7;"mesa_ace_frame_ipv4_t;@;[ ;0{
+;o;;o;	;
+@
+;iì7;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i®7;"mesa_ace_u48_t     ;@;o;;o;	;
+@
+;iª7;"
+dmac ;@;[ ;o;;o;	;
+@
+;i¿7;"CAP(ACL_EXT_MAC);@{;!{;{	;o;;o;	;
+@
+;i7;"mesa_ace_u48_t     ;@;o;;o;	;
+@
+;i8;"
+smac ;@;[ ;o;;o;	;
+@
+;i8;"CAP(ACL_EXT_MAC);@{;!{;{	;o;;o;	;
+@
+;i88;"mesa_ace_u8_t      ;@;o;;o;	;
+@
+;iK8;"
+proto;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iw8;"mesa_ace_u128_t    ;@;o;;o;	;
+@
+;iä8;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÊ8;"mesa_ace_u128_t    ;@;o;;o;	;
+@
+;i˘8;"	dip ;@;[ ;o;;o;	;
+@
+;i˝8;"CAP(ACL_EXT_DIP);@{;!{;{	;o;;o;	;
+@
+;iB9;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iU9;"ttl;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i|9;"mesa_ace_u8_t      ;@;o;;o;	;
+@
+;iè9;"ds;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∂9;"mesa_ace_u48_t     ;@;o;;o;	;
+@
+;i…9;"	data;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i¸9;"mesa_ace_udp_tcp_t ;@;o;;o;	;
+@
+;i:;"
+sport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iB:;"mesa_ace_udp_tcp_t ;@;o;;o;	;
+@
+;iU:;"
+dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iç:;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i†:;"tcp_fin;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∆:;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iŸ:;"tcp_syn;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iˇ:;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i;;"tcp_rst;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i8;;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iK;;"tcp_psh;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iq;;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iÑ;;"tcp_ack;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i™;;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iΩ;;"tcp_urg;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i„;;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iˆ;;"sip_eq_dip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i#<;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i6<;"sport_eq_dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ig<;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iz<;"seq_zero;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i¥<;"mesa_ace_ptp_t     ;@;o;;o;	;
+@
+;i«<;"ptp;@;[ ;0;o;;o;	;
+@
+;i
+=;"mesa_ace_frame_ipv6_t;@;[ ;0{
+;o;;o;	;
+@
+;i:=;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iO=;"mesa_ace_id_t        ;@;o;;o;	;
+@
+;id=;"id;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i©=;"uint8_t              ;@;o;;o;	;
+@
+;iæ=;"lookup       ;@;[ ;o;;o;	;
+@
+;iÀ=;"CAP(ACL_KEY_LOOKUP);@{;!{;{	;o;;o;	;
+@
+;i>;"mesa_bool_t          ;@;o;;o;	;
+@
+;i+>;"isdx_enable  ;@;[ ;o;;o;	;
+@
+;i8>;"CAP(ACL_KEY_ISDX);@{;!{;{	;o;;o;	;
+@
+;iq>;"mesa_bool_t          ;@;o;;o;	;
+@
+;iÜ>;"isdx_disable ;@;[ ;o;;o;	;
+@
+;iì>;"CAP(ACL_KEY_ISDX);@{;!{;{	;o;;o;	;
+@
+;i–>;"mesa_port_list_t     ;@;o;;o;	;
+@
+;iÂ>;"port_list;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i?;"mesa_ace_u8_t        ;@;o;;o;	;
+@
+;i?;"policy;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i<?;"mesa_ace_type_t      ;@;o;;o;	;
+@
+;iQ?;"	type;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iu?;"mesa_bool_t          ;@;o;;o;	;
+@
+;iä?;"type_ext;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iø?;"mesa_acl_action_t    ;@;o;;o;	;
+@
+;i‘?;"action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iı?;"mesa_ace_bit_t       ;@;o;;o;	;
+@
+;i
+@;"dmac_mc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i.@;"mesa_ace_bit_t       ;@;o;;o;	;
+@
+;iC@;"dmac_bc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ih@;"mesa_ace_vlan_t      ;@;o;;o;	;
+@
+;i}@;"	vlan;@;[ ;0{:member_union{:union_type_declare{;o;;o;	;
+@
+;iú@;"
+union;@:union_members[{;!{;{	;o;;o;	;
+@
+;i∞@;"mesa_ace_frame_any_t   ;@;o;;o;	;
+@
+;i«@;"any;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÏ@;"mesa_ace_frame_etype_t ;@;o;;o;	;
+@
+;iA;"
+etype;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i*A;"mesa_ace_frame_llc_t   ;@;o;;o;	;
+@
+;iAA;"llc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ifA;"mesa_ace_frame_snap_t  ;@;o;;o;	;
+@
+;i}A;"	snap;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i£A;"mesa_ace_frame_arp_t   ;@;o;;o;	;
+@
+;i∫A;"arp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iﬂA;"mesa_ace_frame_ipv4_t  ;@;o;;o;	;
+@
+;iˆA;"	ipv4;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iB;"mesa_ace_frame_ipv6_t  ;@;o;;o;	;
+@
+;i3B;"	ipv6;@;[ ;0;o;;o;	;
+@
+;iWB;"
+frame;@;[ ;o;;o;	;
+@
+;i|B;"mesa_ace_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i„B;"mesa_rc ;@;o;;o;	;
+@
+;iÎB;"mesa_ace_init;@;[ ;0;[{;{	;o;;o;	;
+@
+;i˘B;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iC;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i,C;"const mesa_ace_type_t  ;@;o;;o;	;
+@
+;iCC;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;i_C;"#mesa_ace_t             *const ;@;o;;o;	;
+@
+;i}C;"ace;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;ivD;"mesa_rc ;@;o;;o;	;
+@
+;i~D;"mesa_ace_add;@;[ ;0;[{;{	;o;;o;	;
+@
+;iãD;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i†D;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iªD;"const mesa_ace_id_t  ;@;o;;o;	;
+@
+;i–D;"ace_id_next;@;[ ;0{;{	;o;;o;	;
+@
+;iÚD;"!const mesa_ace_t     *const ;@;o;;o;	;
+@
+;iE;"ace;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i<E;"mesa_rc ;@;o;;o;	;
+@
+;iDE;"mesa_ace_del;@;[ ;0;[{;{	;o;;o;	;
+@
+;iQE;"const mesa_inst_t    ;@;o;;o;	;
+@
+;ifE;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÅE;"const mesa_ace_id_t  ;@;o;;o;	;
+@
+;iñE;"ace_id;@;[ ;0;0{
+;o;;o;	;
+@
+;i≥E;"typedef;@;"o;;o;	;
+@
+;iªE;"uint32_t ;@;o;;o;	;
+@
+;iƒE;"mesa_ace_counter_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&F;"mesa_rc ;@;o;;o;	;
+@
+;i.F;"mesa_ace_counter_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iCF;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iXF;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i{F;"const mesa_ace_id_t  ;@;o;;o;	;
+@
+;iêF;"ace_id;@;[ ;0{;{	;o;;o;	;
+@
+;iµF;"!mesa_ace_counter_t   *const ;@;o;;o;	;
+@
+;i—F;"counter;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i
+G;"mesa_rc ;@;o;;o;	;
+@
+;iG;"mesa_ace_counter_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i)G;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i>G;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;icG;"const mesa_ace_id_t  ;@;o;;o;	;
+@
+;ixG;"ace_id;@;[ ;0;0{;o;;o;	;
+@
+;iÇG;">#define MESA_ACE_IDX_NONE 0xffff // ACE index not valid
+
+;@{
+;o;;o;	;
+@
+;i…G;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iﬁG;"uint16_t ;@;o;;o;	;
+@
+;iÁG;"idx;@;[{:	expro;;o;	;
+@
+;iÎG;"2;@;0;o;;o;	;
+@
+;iH;"mesa_ace_status_t ;@;[ ;o;;o;	;
+@
+;iH;"CAP(ACL_ACE_STATUS);@{;{;{	;o;;o;	;
+@
+;i~H;"mesa_rc ;@;o;;o;	;
+@
+;iÜH;"mesa_ace_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iöH;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iØH;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i—H;"const mesa_ace_id_t  ;@;o;;o;	;
+@
+;iÊH;"ace_id;@;[ ;0{;{	;o;;o;	;
+@
+;i
+I;"!mesa_ace_status_t    *const ;@;o;;o;	;
+@
+;i&I;"status;@;[ ;0;o;;o;	;
+@
+;i2I;"CAP(ACL_ACE_STATUS);@{
+;o;;o;	;
+@
+;iaI;"typedef;@;{;o;;o;	;
+@
+;iiI;"	enum;@;[{;{;o;;o;	;
+@
+;itI;"MESA_HACL_TYPE_IPACL;@;0{;{;o;;o;	;
+@
+;i≠I;"MESA_HACL_TYPE_IVACL;@;0{;{;o;;o;	;
+@
+;iÊI;"MESA_HACL_TYPE_IRACL;@;0{;{;o;;o;	;
+@
+;i!J;"MESA_HACL_TYPE_ERACL;@;0{;{;o;;o;	;
+@
+;i[J;"MESA_HACL_TYPE_EVACL;@;0{;{;o;;o;	;
+@
+;iìJ;"MESA_HACL_TYPE_EPACL;@;0;o;;o;	;
+@
+;i…J;"mesa_hacl_type_t ;@;[ ;o;;o;	;
+@
+;i⁄J;"CAP(ACL_HACL);@{;o;;o;	;
+@
+;iÍJ;">#define MESA_RLEG_LIST_ARRAY_SIZE 64 // Router leg list
+
+;@{
+;o;;o;	;
+@
+;i6K;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iKK;"uint8_t ;@;o;;o;	;
+@
+;iSK;"_private;@;[{;&o;;o;	;
+@
+;i\K;"MESA_RLEG_LIST_ARRAY_SIZE;@;0;o;;o;	;
+@
+;i´K;"mesa_rleg_list_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i8L;"
+void ;@;o;;o;	;
+@
+;i=L;"mesa_rleg_list_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iPL;"mesa_rleg_list_t *;@;o;;o;	;
+@
+;ibL;"l;@;[ ;0{;{	;o;;o;	;
+@
+;ieL;"mesa_l3_rleg_id_t ;@;o;;o;	;
+@
+;iwL;"	rleg;@;[ ;0{;{	;o;;o;	;
+@
+;i}L;"mesa_bool_t ;@;o;;o;	;
+@
+;iâL;"val;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i¸L;"mesa_bool_t ;@;o;;o;	;
+@
+;iM;"mesa_rleg_list_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iM;"const mesa_rleg_list_t *;@;o;;o;	;
+@
+;i3M;"l;@;[ ;0{;{	;o;;o;	;
+@
+;i6M;"mesa_l3_rleg_id_t ;@;o;;o;	;
+@
+;iHM;"	rleg;@;[ ;0;0{
+;o;;o;	;
+@
+;ivM;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iãM;"mesa_ace_u16_t ;@;o;;o;	;
+@
+;iöM;"
+etype;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iºM;"mesa_ace_u16_t ;@;o;;o;	;
+@
+;iÀM;"	data;@;[ ;0;o;;o;	;
+@
+;i‡M;"mesa_hace_frame_etype_t ;@;[ ;o;;o;	;
+@
+;i¯M;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;i,N;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iAN;"mesa_ace_u32_t ;@;o;;o;	;
+@
+;iPN;"llc;@;[ ;0;o;;o;	;
+@
+;iôN;"mesa_hace_frame_llc_t ;@;[ ;o;;o;	;
+@
+;iØN;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;i‰N;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i˘N;"mesa_ace_u40_t ;@;o;;o;	;
+@
+;iO;"	snap;@;[ ;0;o;;o;	;
+@
+;iLO;"mesa_hace_frame_snap_t ;@;[ ;o;;o;	;
+@
+;icO;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;ióO;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;i¨O;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iªO;"arp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iﬁO;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iÌO;"req;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iP;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i$P;"unknown;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iFP;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iUP;"smac_match;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÄP;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;ièP;"dmac_match;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∫P;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;i…P;"length;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iQ;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iQ;"ip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iBQ;"mesa_ace_bit_t ;@;o;;o;	;
+@
+;iQQ;"ethernet;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÉQ;"mesa_ace_ip_t  ;@;o;;o;	;
+@
+;iíQ;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i∑Q;"mesa_ace_ip_t  ;@;o;;o;	;
+@
+;i∆Q;"dip;@;[ ;0;o;;o;	;
+@
+;iÈQ;"mesa_hace_frame_arp_t ;@;[ ;o;;o;	;
+@
+;iˇQ;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;i4R;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iIR;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i]R;"ttl;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iwR;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iãR;"fragment;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i•R;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iπR;"options;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iŸR;"mesa_ace_u8_t       ;@;o;;o;	;
+@
+;iÌR;"ds;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iS;"mesa_ace_u8_t       ;@;o;;o;	;
+@
+;iS;"
+proto;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i5S;"mesa_ace_ip_t       ;@;o;;o;	;
+@
+;iIS;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ilS;"mesa_ace_ip_t       ;@;o;;o;	;
+@
+;iÄS;"dip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i®S;"mesa_ace_u48_t      ;@;o;;o;	;
+@
+;iºS;"	data;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i‚S;"mesa_ace_udp_tcp_t  ;@;o;;o;	;
+@
+;iˆS;"
+sport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iT;"mesa_ace_udp_tcp_t  ;@;o;;o;	;
+@
+;i0T;"
+dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i[T;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;ioT;"tcp_fin;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iàT;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iúT;"tcp_syn;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iµT;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i…T;"tcp_rst;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i‚T;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iˆT;"tcp_psh;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iU;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;i#U;"tcp_ack;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i<U;"mesa_ace_bit_t      ;@;o;;o;	;
+@
+;iPU;"tcp_urg;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iiU;"mesa_ace_sip_smac_t ;@;o;;o;	;
+@
+;i}U;"sip_smac;@;[ ;0;o;;o;	;
+@
+;i¥U;"mesa_hace_frame_ipv4_t ;@;[ ;o;;o;	;
+@
+;iÀU;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;i V;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iV;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i(V;"ttl;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iAV;"mesa_ace_u8_t      ;@;o;;o;	;
+@
+;iTV;"ds;@;[ ;0{;!{;{	;o;;o;	;
+@
+;imV;"mesa_ace_u8_t      ;@;o;;o;	;
+@
+;iÄV;"
+proto;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iûV;"mesa_ace_u128_t    ;@;o;;o;	;
+@
+;i±V;"sip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i’V;"mesa_ace_u128_t    ;@;o;;o;	;
+@
+;iËV;"dip;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iW;"mesa_ace_u48_t     ;@;o;;o;	;
+@
+;i$W;"	data;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iIW;"mesa_ace_udp_tcp_t ;@;o;;o;	;
+@
+;i\W;"
+sport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÅW;"mesa_ace_udp_tcp_t ;@;o;;o;	;
+@
+;iîW;"
+dport;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iæW;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i—W;"tcp_fin;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÈW;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i¸W;"tcp_syn;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iX;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i'X;"tcp_rst;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i?X;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;iRX;"tcp_psh;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ijX;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i}X;"tcp_ack;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iïX;"mesa_ace_bit_t     ;@;o;;o;	;
+@
+;i®X;"tcp_urg;@;[ ;0;o;;o;	;
+@
+;iæX;"mesa_hace_frame_ipv6_t ;@;[ ;o;;o;	;
+@
+;i’X;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;i˝X;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iY;"mesa_port_list_t        ;@;o;;o;	;
+@
+;i*Y;"port_list;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ihY;"mesa_rleg_list_t        ;@;o;;o;	;
+@
+;iÄY;"rleg_list;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iæY;"mesa_ace_u8_t           ;@;o;;o;	;
+@
+;i÷Y;"policy;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iˆY;"mesa_ace_type_t         ;@;o;;o;	;
+@
+;iZ;"	type;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i/Z;"mesa_bool_t             ;@;o;;o;	;
+@
+;iGZ;"type_ext;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÇZ;"mesa_ace_vlan_t         ;@;o;;o;	;
+@
+;iöZ;"	vlan;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i⁄Z;"mesa_ace_ptp_t          ;@;o;;o;	;
+@
+;iÚZ;"ptp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i@[;"mesa_ace_bit_t          ;@;o;;o;	;
+@
+;iX[;"dmac_mc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iå[;"mesa_ace_bit_t          ;@;o;;o;	;
+@
+;i§[;"dmac_bc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÿ[;"mesa_ace_u48_t          ;@;o;;o;	;
+@
+;i[;"	dmac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i\;"mesa_ace_u48_t          ;@;o;;o;	;
+@
+;i2\;"	smac;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i\\;"mesa_hace_frame_etype_t ;@;o;;o;	;
+@
+;it\;"
+etype;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i≠\;"mesa_hace_frame_llc_t   ;@;o;;o;	;
+@
+;i≈\;"llc;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i¸\;"mesa_hace_frame_snap_t  ;@;o;;o;	;
+@
+;i];"	snap;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iL];"mesa_hace_frame_arp_t   ;@;o;;o;	;
+@
+;id];"arp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i°];"mesa_hace_frame_ipv4_t  ;@;o;;o;	;
+@
+;iπ];"	ipv4;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÒ];"mesa_hace_frame_ipv6_t  ;@;o;;o;	;
+@
+;i	^;"	ipv6;@;[ ;0;o;;o;	;
+@
+;i?^;"mesa_hace_key_t ;@;[ ;o;;o;	;
+@
+;iO^;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;iz^;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iè^;" mesa_acl_port_action_t     ;@;o;;o;	;
+@
+;i™^;"port_action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i ^;" mesa_port_list_t           ;@;o;;o;	;
+@
+;iÂ^;"port_list;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i_;" mesa_bool_t                ;@;o;;o;	;
+@
+;i:_;"cpu;@;[ ;0{;!{;{	;o;;o;	;
+@
+;ir_;" mesa_bool_t                ;@;o;;o;	;
+@
+;iç_;"cpu_once;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÿ_;" mesa_bool_t                ;@;o;;o;	;
+@
+;iÛ_;"cpu_disable;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iP`;" mesa_packet_rx_queue_t     ;@;o;;o;	;
+@
+;ik`;"cpu_queue;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iû`;" mesa_bool_t                ;@;o;;o;	;
+@
+;iπ`;"police;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÒ`;" mesa_acl_policer_no_t      ;@;o;;o;	;
+@
+;ia;"policer_no;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iDa;" mesa_bool_t                ;@;o;;o;	;
+@
+;i_a;"mirror;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iôa;" mesa_acl_ptp_action_t      ;@;o;;o;	;
+@
+;i¥a;"ptp_action;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iËa;" mesa_acl_ptp_action_conf_t ;@;o;;o;	;
+@
+;ib;"ptp;@;[ ;0{;!{;{	;o;;o;	;
+@
+;i>b;" mesa_acl_addr_action_t     ;@;o;;o;	;
+@
+;iYb;"	addr;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iüb;" mesa_bool_t                ;@;o;;o;	;
+@
+;i∫b;"ifh_flag;@;[ ;0;o;;o;	;
+@
+;ic;"mesa_hacl_action_t ;@;[ ;o;;o;	;
+@
+;ic;"CAP(ACL_HACL);@{
+;o;;o;	;
+@
+;iEc;"typedef;@;{; [{;!{;{	;o;;o;	;
+@
+;iZc;"mesa_ace_id_t      ;@;o;;o;	;
+@
+;imc;"id;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iÖc;"mesa_hace_key_t    ;@;o;;o;	;
+@
+;iòc;"key;@;[ ;0{;!{;{	;o;;o;	;
+@
+;iØc;"mesa_hacl_action_t ;@;o;;o;	;
+@
+;i¬c;"action;@;[ ;0;o;;o;	;
+@
+;i⁄c;"mesa_hace_t ;@;[ ;o;;o;	;
+@
+;iÊc;"CAP(ACL_HACL);@{;{;{	;o;;o;	;
+@
+;i_d;"mesa_rc ;@;o;;o;	;
+@
+;igd;"mesa_hace_init;@;[ ;0;[{;{	;o;;o;	;
+@
+;ivd;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iåd;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i©d;"const mesa_ace_type_t ;@;o;;o;	;
+@
+;iød;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;i‹d;""mesa_hace_t           *const ;@;o;;o;	;
+@
+;i˘d;"	hace;@;[ ;0;o;;o;	;
+@
+;ie;"CAP(ACL_HACL);@{;{;{	;o;;o;	;
+@
+;i=f;"mesa_rc ;@;o;;o;	;
+@
+;iEf;"mesa_hace_add;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iSf;"const mesa_inst_t      ;@;o;;o;	;
+@
+;ijf;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÜf;"const mesa_hacl_type_t ;@;o;;o;	;
+@
+;iùf;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;iπf;"const mesa_ace_id_t    ;@;o;;o;	;
+@
+;i–f;"ace_id_next;@;[ ;0{;{	;o;;o;	;
+@
+;iÛf;"#const mesa_hace_t      *const ;@;o;;o;	;
+@
+;ig;"	hace;@;[ ;0;o;;o;	;
+@
+;ig;"CAP(ACL_HACL);@{;{;{	;o;;o;	;
+@
+;iÖg;"mesa_rc ;@;o;;o;	;
+@
+;içg;"mesa_hace_del;@;[ ;0;[{;{	;o;;o;	;
+@
+;iõg;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i≤g;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iŒg;"const mesa_hacl_type_t ;@;o;;o;	;
+@
+;iÂg;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;ih;"const mesa_ace_id_t    ;@;o;;o;	;
+@
+;ih;"ace_id;@;[ ;0;o;;o;	;
+@
+;i$h;"CAP(ACL_HACL);@{;{;{	;o;;o;	;
+@
+;i∂h;"mesa_rc ;@;o;;o;	;
+@
+;iæh;"mesa_hace_counter_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i‘h;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iÎh;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ii;"const mesa_hacl_type_t ;@;o;;o;	;
+@
+;i&i;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;iJi;"const mesa_ace_id_t    ;@;o;;o;	;
+@
+;iai;"ace_id;@;[ ;0{;{	;o;;o;	;
+@
+;iái;"#mesa_ace_counter_t     *const ;@;o;;o;	;
+@
+;i•i;"counter;@;[ ;0;o;;o;	;
+@
+;i≤i;"CAP(ACL_HACL);@{;{;{	;o;;o;	;
+@
+;i#j;"mesa_rc ;@;o;;o;	;
+@
+;i+j;"mesa_hace_counter_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;iCj;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iZj;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÄj;"const mesa_hacl_type_t ;@;o;;o;	;
+@
+;iój;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;iΩj;"const mesa_ace_id_t    ;@;o;;o;	;
+@
+;i‘j;"ace_id;@;[ ;0;o;;o;	;
+@
+;i‡j;"CAP(ACL_HACL);@{;o;;o;	;
+@
+;ij;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;ik;"8#endif // _MICROCHIP_ETHERNET_SWITCH_API_SECURITY_
+;@

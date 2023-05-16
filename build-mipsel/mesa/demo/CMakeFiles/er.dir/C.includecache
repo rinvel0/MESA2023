@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/easy_run.c
+sys/signalfd.h
+-
+sys/types.h
+-
+sys/file.h
+-
+sys/wait.h
+-
+assert.h
+-
+string.h
+-
+stdlib.h
+-
+stdarg.h
+-
+unistd.h
+-
+fcntl.h
+-
+stdio.h
+-
+time.h
+-
+

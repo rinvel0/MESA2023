@@ -1,0 +1,1569 @@
+{:	root[8{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string".R// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+// Microchip is aware that some terminology used in this technical document is
+// antiquated and inappropriate. As a result of the complex nature of software
+// where seemingly simple changes have unpredictable, and often far-reaching
+// negative results on the software's functionality (requiring extensive
+// retesting and revalidation) we are unable to make the desired changes in all
+// legacy systems without compromising our product or our clients' products.
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+#define _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+
+#include <microchip/ethernet/switch/api/misc.h>
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/switch/api/port.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// Target chip type
+typedef enum {
+    MESA_TARGET_CU_PHY,                  // Cu PHY family
+    MESA_TARGET_10G_PHY,                 // 10G PHY family
+    MESA_TARGET_CARACAL_LITE  = 0x7423,  // Caracal-Lite CE switch
+    MESA_TARGET_SPARX_III_10  = 0x7424,  // SparxIII-10 switch
+    MESA_TARGET_SPARX_III_18  = 0x7425,  // SparxIII-18 switch
+    MESA_TARGET_SPARX_III_24  = 0x7426,  // SparxIII-24 switch
+    MESA_TARGET_SPARX_III_26  = 0x7427,  // SparxIII-26 switch
+    MESA_TARGET_CARACAL_1     = 0x7428,  // Caracal-1 CE switch
+    MESA_TARGET_CARACAL_2     = 0x7429,  // Caracal-2 CE switch
+    MESA_TARGET_SPARX_IV_52   = 0x7442,  // Sparx-IV-52 switch
+    MESA_TARGET_SPARX_IV_44   = 0x7444,  // Sparx-IV-44 switch
+    MESA_TARGET_SPARX_IV_80   = 0x7448,  // Sparx-IV-80 switch
+    MESA_TARGET_SPARX_IV_90   = 0x7449,  // Sparx-IV-90 switch
+    MESA_TARGET_SERVAL_2      = 0x7438,  // Serval-2 CE switch
+    MESA_TARGET_LYNX_2        = 0x7464,  // LynX-2 CE switch
+    MESA_TARGET_JAGUAR_2      = 0x7468,  // Jaguar-2 CE switch
+    MESA_TARGET_SERVAL_T      = 0x7410,  // Serval-T switch
+    MESA_TARGET_SERVAL_TP     = 0x7415,  // Serval-TP switch
+    MESA_TARGET_SERVAL_TE     = 0x7430,  // Serval-TE switch
+    MESA_TARGET_SERVAL_TEP    = 0x7435,  // Serval-TEP switch
+    MESA_TARGET_SERVAL_2_LITE = 0x7436,  // Serval-2 Lite switch
+    MESA_TARGET_SERVAL_TE10   = 0x7437,  // Serval-TE10 switch
+    MESA_TARGET_SPARX_IV_34   = 0x7440,  // Sparx-IV-34 switch
+    MESA_TARGET_7511          = 0x7511,  // VSC7511 unmgd switch
+    MESA_TARGET_7512          = 0x7512,  // VSC7512 unmgd switch
+    MESA_TARGET_7513          = 0x7513,  // VSC7513 switch
+    MESA_TARGET_7514          = 0x7514,  // VSC7514 switch
+    MESA_TARGET_7546          = 0x7546,  // SparX-5-64  Enterprise Switch
+    MESA_TARGET_7549          = 0x7549,  // SparX-5-90  Enterprise Switch
+    MESA_TARGET_7552          = 0x7552,  // SparX-5-128 Enterprise Switch
+    MESA_TARGET_7556          = 0x7556,  // SparX-5-160 Enterprise Switch
+    MESA_TARGET_7558          = 0x7558,  // SparX-5-200 Enterprise Switch
+    MESA_TARGET_7546TSN       = 0x47546, // SparX-5-64i Industrial Switch
+    MESA_TARGET_7549TSN       = 0x47549, // SparX-5-90i Industrial Switch
+    MESA_TARGET_7552TSN       = 0x47552, // SparX-5-128i Industrial Switch
+    MESA_TARGET_7556TSN       = 0x47556, // SparX-5-160i Industrial Switch
+    MESA_TARGET_7558TSN       = 0x47558, // SparX-5-200i Industrial Switch
+    MESA_TARGET_LAN9662       = 0x9662,  // LAN9662 switch
+    MESA_TARGET_LAN9668       = 0x9668,  // LAN9668 switch
+} mesa_target_type_t;
+
+// Create structure
+typedef struct {
+    mesa_target_type_t target; // Target type
+} mesa_inst_create_t;
+
+// Initialize create structure for target.
+// target [IN]   Target name
+// create [OUT]  Create structure
+mesa_rc mesa_inst_get(const mesa_target_type_t target,
+                      mesa_inst_create_t       *const create);
+
+// Create target instance.
+// create [IN] Create structure
+// inst [OUT]  Target instance reference.
+mesa_rc mesa_inst_create(const mesa_inst_create_t *const create,
+                         mesa_inst_t              *const inst);
+
+// Destroy target instance.
+// inst [IN] Target instance reference.
+mesa_rc mesa_inst_destroy(const mesa_inst_t inst);
+
+// Register read function
+// chip_no [IN] Chip number, for targets with multiple chips
+// addr [IN]    Register address
+// value [OUT]  Register value
+typedef mesa_rc (*mesa_reg_read_t)(const mesa_chip_no_t chip_no,
+                                   const uint32_t       addr,
+                                   uint32_t             *const value);
+
+// Register write function
+// chip_no [IN] Chip number, for targets with multiple chips
+// addr [IN]    Register address
+// value [IN]   Register value
+typedef mesa_rc (*mesa_reg_write_t)(const mesa_chip_no_t chip_no,
+                                    const uint32_t       addr,
+                                    const uint32_t       value);
+
+// I2C read function
+// port_no [IN] Port number
+// i2c_addr [IN] I2C device address
+// addr [IN]   Register address
+// data [OUT]  Pointer the register(s) data value.
+// cnt [IN]    Number of registers to read
+typedef mesa_rc (*mesa_i2c_read_t)(const mesa_port_no_t port_no,
+                                   const uint8_t i2c_addr,
+                                   const uint8_t addr,
+                                   uint8_t *const data,
+                                   const uint8_t cnt);
+
+// I2C write function
+// port_no [IN] Port number
+// i2c_addr [IN] I2C device address
+// data [OUT]  Pointer the data to be written.
+// cnt [IN]    Number of data bytes to write
+typedef mesa_rc (*mesa_i2c_write_t)(const mesa_port_no_t port_no,
+                                    const uint8_t i2c_addr,
+                                    uint8_t *const data,
+                                    const uint8_t cnt);
+
+// Register read function for clock chip
+// addr  [IN]  Register address
+// value [OUT] Register value
+typedef mesa_rc (*mesa_clock_read_t)(const uint32_t addr, uint32_t *const value) CAP(CLOCK);
+
+// Register write function for clock chip
+// addr  [IN] Register address
+// value [IN] Register value
+typedef mesa_rc (*mesa_clock_write_t)(const uint32_t addr, const uint32_t value) CAP(CLOCK);
+
+// SPI read/write function
+// inst [IN] Vitesse API instance.
+// port_no [IN] Port number.
+// bitsize [IN] Size (in bytes) of bitstream following this parameter.
+// data [IN|OUT] Pointer to the data to be written to SPI Client, if doing write operation.
+//               Pointer to the data read from SPI Client, if doing read operation.
+typedef mesa_rc (*mesa_spi_read_write_t)(const mesa_inst_t inst,
+                                       const mesa_port_no_t port_no,
+                                       const uint8_t bitsize,
+                                       uint8_t *const bitstream);
+
+// SPI 32 bit read/write function
+// port_no [IN] Port number.
+// read    [IN] Read/Write.
+// dev     [IN] MMD device number.
+// reg_num [IN] Register offset.
+// data [IN|OUT] Pointer to the data to be written to SPI Client, if doing write operation.
+//               Pointer to the data read from SPI Client, if doing read operation.
+typedef mesa_rc (*mesa_spi_32bit_read_write_t)(const mesa_inst_t inst,
+                                               mesa_port_no_t    port_no,
+                                               mesa_bool_t       read,
+                                               uint8_t           dev,
+                                               uint16_t          reg_num,
+                                               uint32_t          *const data);
+
+// SPI 64 bit read/write function
+// port_no [IN] Port number.
+// read    [IN] Read/Write.
+// dev     [IN] MMD device number.
+// reg_num [IN] Register offset.
+// data [IN|OUT] Pointer to the data to be written to SPI Client, if doing write operation.
+//               Pointer to the data read from SPI Client, if doing read operation.
+typedef mesa_rc (*mesa_spi_64bit_read_write_t)(const mesa_inst_t inst,
+                                               mesa_port_no_t    port_no,
+                                               mesa_bool_t       read,
+                                               uint8_t           dev,
+                                               uint16_t          reg_num,
+                                               uint64_t          *const data);
+
+// MII management read function (IEEE 802.3 clause 22)
+// port_no [IN] Port number
+// addr [IN]    Register address (0-31)
+// value [OUT]  Register value
+typedef mesa_rc (*mesa_miim_read_t)(const mesa_inst_t    inst,
+                                    const mesa_port_no_t port_no,
+                                    const uint8_t        addr,
+                                    uint16_t             *const value);
+
+// MII management write function (IEEE 802.3 clause 22)
+// port_no [IN] Port number
+// addr [IN]    Register address (0-31)
+// value [IN]   Register value
+typedef mesa_rc (*mesa_miim_write_t)(const mesa_inst_t    inst,
+                                     const mesa_port_no_t port_no,
+                                     const uint8_t        addr,
+                                     const uint16_t       value);
+
+// MMD management read function (IEEE 802.3 clause 45)
+// port_no [IN] Port number
+// mmd [IN]     MMD address (0-31)
+// addr [IN]    Register address (0-65535)
+// value [OUT]  Register value
+typedef mesa_rc (*mesa_mmd_read_t)(const mesa_inst_t    inst,
+                                   const mesa_port_no_t port_no,
+                                   const uint8_t        mmd,
+                                   const uint16_t       addr,
+                                   uint16_t             *const value);
+
+// MMD management read increment function (IEEE 802.3 clause 45)
+// port_no [IN] Port number
+// mmd [IN]     MMD address (0-31)
+// addr [IN]    Start register address (0-65535)
+// buf [OUT]    The register values (pointer provided by user)
+// count [IN]   Number of register reads (increment register reads)
+typedef mesa_rc (*mesa_mmd_read_inc_t)(const mesa_inst_t    inst,
+                                       const mesa_port_no_t port_no,
+                                       const uint8_t        mmd,
+                                       const uint16_t       addr,
+                                       uint16_t             *const buf,
+                                       uint8_t              count);
+
+// MMD management write function (IEEE 802.3 clause 45)
+// port_no [IN] Port number
+// mmd [IN]     MMD address (0-31)
+// addr [IN]    Start register address (0-65535)
+// buf [IN]     The register value
+typedef mesa_rc (*mesa_mmd_write_t)(const mesa_inst_t    inst,
+                                    const mesa_port_no_t port_no,
+                                    const uint8_t        mmd,
+                                    const uint16_t       addr,
+                                    const uint16_t       value);
+
+// Port mux_mode configuration
+//
+// The mux_mode is relevant for chips that allow muxing of port to SerDes macros.
+// The muxing takes place inside the chip and accommodates support for multiple
+// port configuration schemes. Each chip that supports muxing can use a number of
+// these modes. See below for chip-specific tables of mux modes.
+//
+// Ocelot
+// MESA_PORT_MUX_MODE_0: 4x1G Dual + 2x1G SGMII + 2.5G NPI (+ 2x2.5G SGMII for VSC7514)
+// MESA_PORT_MUX_MODE_1: 4x1G Dual + 2x1G SGMII + PCIe (+ 2x2.5G SGMII for VSC7514)x
+// MESA_PORT_MUX_MODE_2: 4x1G Dual + 1xQSGMII + 2.5G NPI (+ 1x1G SGMII + 1x2.5G SGMII for VSC7514)
+// MESA_PORT_MUX_MODE_3: 4x1G Dual + 1xQSGMII + PCIe (+ 1x1G SGMII + 1x2.5G SGMII for VSC7514)
+// MESA_PORT_MUX_MODE_4: 2x1G Dual + 2x1G CuPHY + 4x1G SGMII + 2x2.5G SGMII + 2.5G NPI (VSC7514 only)
+// MESA_PORT_MUX_MODE_5: 2x1G Dual + 2x1G CuPHY + 4x1G SGMII + 2x2.5G SGMII + PCIe (VSC7514 only)
+//
+// LAN966X
+// MESA_PORT_MUX_MODE_0: 2xQSGMII (LAN9668)
+// MESA_PORT_MUX_MODE_1: 2xCu + 2x2.5G (+ 1xQSGMII for LAN9668)
+// MESA_PORT_MUX_MODE_5: 2xCu + 3x1G (LAN9668)
+
+typedef enum {
+    MESA_PORT_MUX_MODE_AUTO CAP(PORT_MUX_AUTO),
+    MESA_PORT_MUX_MODE_0,
+    MESA_PORT_MUX_MODE_1,
+    MESA_PORT_MUX_MODE_2,
+    MESA_PORT_MUX_MODE_3,
+    MESA_PORT_MUX_MODE_4,
+    MESA_PORT_MUX_MODE_5,
+} mesa_port_mux_mode_t CAP(PORT_MUX);
+
+// Serdes fields
+typedef struct {
+    uint32_t ob_post0; // Trace length
+    uint32_t ob_sr;    // Slew Rate
+} mesa_serdes_fields_t;
+
+// Serdes macro configuration
+typedef struct {
+    mesa_vdd_t           serdes1g_vdd; // Serdes1g supply
+    mesa_vdd_t           serdes6g_vdd; // Serdes6g supply
+    mesa_bool_t          ib_cterm_ena; // AC(0)/DC(1) coupled
+    mesa_serdes_fields_t qsgmii;       // Appl/Board specific fields for QSGMII
+} mesa_serdes_macro_conf_t;
+
+// Restart information source
+typedef enum {
+    MESA_RESTART_INFO_SRC_NONE,   // Restart information not stored in PHYs
+    MESA_RESTART_INFO_SRC_CU_PHY, // Restart information stored in 1G PHY
+    MESA_RESTART_INFO_SRC_10G_PHY // Restart information stored in 10G PHY
+} mesa_restart_info_src_t;
+
+// Queue System modes
+typedef enum {
+    MESA_QS_MODE_DEFAULT,   // Defaults settings are used
+    MESA_QS_MODE_QUEUE_LIM  // Queue Limitiation settings are enabled.
+} mesa_qs_mode_t CAP(PORT_QS_CONF);
+
+// Queue System settings
+typedef struct {
+    mesa_qs_mode_t mode; // The mode of the queue system
+    uint32_t       wm1;  // Generic Watermark parameter 1
+    uint32_t       wm2;  // Generic Watermark parameter 2
+} mesa_qs_conf_t CAP(PORT_QS_CONF);
+
+// Core clock frequency
+typedef enum {
+    MESA_CORE_CLOCK_DEFAULT,  // Defaults to the highest supported frequency
+    MESA_CORE_CLOCK_250MHZ,   // 250MHZ core clock frequency
+    MESA_CORE_CLOCK_500MHZ,   // 500MHZ core clock frequency
+    MESA_CORE_CLOCK_625MHZ,   // 625MHZ core clock frequency
+} mesa_core_clock_freq_t CAP(INIT_CORE_CLOCK);
+
+// Core clock configuration
+typedef struct {
+    mesa_core_clock_freq_t freq;   // The frequency of the core clock (LC-PLL)
+} mesa_core_clock_conf_t CAP(INIT_CORE_CLOCK);
+
+// Initialization configuration.
+typedef struct {
+    // Register access function are not used for MESA_TARGET_CU_PHY
+    mesa_reg_read_t   reg_read;     // Register read function
+    mesa_reg_write_t  reg_write;    // Register write function
+
+    mesa_clock_read_t  clock_read  CAP(CLOCK); // Clock-chip read function
+    mesa_clock_write_t clock_write CAP(CLOCK); // Clock-chip write function
+
+    // MII management access must be setup for MESA_TARGET_CU_PHY
+    mesa_miim_read_t  miim_read;    // MII management read function
+    mesa_miim_write_t miim_write;   // MII management write function
+
+    // MMD management access must be setup for 10G phys
+    mesa_mmd_read_t     mmd_read;     // MMD management read function
+    mesa_mmd_read_inc_t mmd_read_inc; // MMD management read increment function
+    mesa_mmd_write_t    mmd_write;    // MMD management write function
+
+    // Board specific SPI read/write callout functions
+    mesa_spi_read_write_t   spi_read_write;
+    mesa_spi_32bit_read_write_t   spi_32bit_read_write;
+    mesa_spi_64bit_read_write_t   spi_64bit_read_write;
+
+    // GPIO functionallity information get callout function
+    mesa_gpio_func_info_get_t gpio_func_info_get;
+
+    // Serdes tap value get callout function
+    mesa_port_serdes_tap_get_t serdes_tap_get;
+
+    // Do not reset the switch core when calling vtss_init_conf_set. This
+    // assumes someone else is doing the reset.
+    //
+    // NOTE: Only the JR2 family supports resetting. This setting has no effect
+    // on non-JR2 designs.
+    mesa_bool_t             skip_switch_reset;
+
+    mesa_bool_t             spi_bus;           // Using SPI bus interface for reg_read/reg_write
+    mesa_bool_t             warm_start_enable; // Allow warm start
+    mesa_restart_info_src_t restart_info_src;  // Source of restart information
+    mesa_port_no_t          restart_info_port; // Port used to store PHY restart information
+
+    mesa_port_mux_mode_t mux_mode CAP(PORT_MUX); // Mux mode (port connection to Serdes Macroes)
+
+    mesa_serdes_macro_conf_t serdes; // Serdes macro configuration
+
+    mesa_bool_t using_ufdma; // Set to TRUE if using the uFDMA driver to Rx and Tx frames (typically used under Linux)
+
+    // Reserve bandwidth for Up-MEPs and service activation tests.
+    // Example: To get support for 10Gbps Y.1564, set loopback_bw_mbps to 10000.
+    uint32_t loopback_bw_mbps;
+
+    mesa_qs_conf_t qs_conf CAP(PORT_QS_CONF); // Queue system configuration
+
+    mesa_bool_t vlan_counters_disable; // Disable VLAN counters (OAM uses the counter resources)
+    mesa_bool_t psfp_counters_enable;  // Enable PSFP counter mode for ingress counters
+
+    mesa_core_clock_conf_t core_clock CAP(INIT_CORE_CLOCK); // Core clock (LCPLL) configuration
+    mesa_bool_t packet_init_disable; // Skip initilization of packet interface (no CPU packet support, L26/MESA-354/BZ24450)
+} mesa_init_conf_t;
+
+// Get default initialization configuration
+// conf [OUT] Initialization configuration
+mesa_rc mesa_init_conf_get(const mesa_inst_t inst,
+                           mesa_init_conf_t  *const conf);
+
+// Set initialization configuration.
+// conf [IN] Initialization configuration
+mesa_rc mesa_init_conf_set(const mesa_inst_t      inst,
+                           const mesa_init_conf_t *const conf);
+
+// Change access interface to either use SPI or another interface.
+//
+// Registers in the VCore register space are not directly accessible when using
+// the SPI interface, so multiple chip-accesses are required in order to read
+// and write registers in that space when using SPI, whereas such registers are
+// directly accessible when using PCI-E or the internal CPU.
+//
+// When this function is invoked with \p spi_bus set to TRUE, the API will
+// detect register accesses to the VCore register space and make the required
+// indirect access through multiple calls to the application-installed register
+// read/write functions.
+//
+// When \p spi_bus is set to FALSE, the API will perform any type of access in
+// one single call to the application-installed register read/write functions.
+//
+// Normally, you will control the access mode once at API instantiation time
+// through the mesa_init_conf_t::spi_bus member, but in certain applications
+// it might be desirable to be able to change it dynamically - hence this
+// function.
+//
+// spi_bus [IN] Control the access mode.
+mesa_rc mesa_register_access_mode_set(const mesa_inst_t inst, mesa_bool_t spi_bus);
+
+// Get current way of accessing registers.
+// spi_bus [OUT] Pointer to a mesa_bool_t receiving current access mode.
+mesa_rc mesa_register_access_mode_get(const mesa_inst_t inst, mesa_bool_t *spi_bus);
+
+// SPI Client endian configuration
+typedef enum {
+    MESA_SPI_ENDIAN_LITTLE, // Use little endian
+    MESA_SPI_ENDIAN_BIG     // Use big endian
+} mesa_spi_endian_t;
+
+// SPI Client bit order configuration
+typedef enum {
+    MESA_SPI_BIT_ORDER_MSB_FIRST, // Transfer MSB first
+    MESA_SPI_BIT_ORDER_LSB_FIRST  // Transfer LSB first
+} mesa_spi_bit_order_t;
+
+// SPI Client initialization configuration.
+typedef struct {
+    mesa_reg_write_t     reg_write; // Register write function
+    mesa_reg_read_t      reg_read;  // Register read function
+    mesa_spi_endian_t    endian;    // Endian configuration
+    mesa_spi_bit_order_t bit_order; // Bit order configuration
+    uint8_t              padding;   // Number of padding bytes to insert before read-data is shifted out
+} mesa_spi_slave_init_t;
+
+// Initialize SPI Client interface when using an external CPU.
+// This must always be the first call into the API.
+// conf [IN] Initialization configuration
+mesa_rc mesa_spi_slave_init(const mesa_spi_slave_init_t *const conf);
+
+// Indicate configuration end.
+// If a warm start has been done, the stored configuration will be applied.
+mesa_rc mesa_restart_conf_end(const mesa_inst_t inst);
+
+// API version
+typedef uint16_t mesa_version_t;
+
+// Restart type
+typedef enum {
+    MESA_RESTART_COLD = 0, // Cold: Chip and CPU restart, e.g. power cycling
+    MESA_RESTART_COOL,     // Cool: Chip and CPU restart done by CPU
+    MESA_RESTART_WARM      // Warm: CPU restart only
+} mesa_restart_t;
+
+// Restart status
+typedef struct {
+    mesa_restart_t restart;      // Previous restart mode
+    mesa_version_t prev_version; // Previous API version
+    mesa_version_t cur_version;  // Current API version
+} mesa_restart_status_t;
+
+// Get restart status
+// status [OUT] Restart status
+mesa_rc mesa_restart_status_get(const mesa_inst_t inst,
+                                mesa_restart_status_t *const status);
+
+// Get restart configuration (next restart mode)
+// restart [OUT] Restart mode
+mesa_rc mesa_restart_conf_get(const mesa_inst_t inst,
+                              mesa_restart_t *const restart);
+
+// Set restart configuration (next restart mode)
+// restart [IN] Restart mode
+mesa_rc mesa_restart_conf_set(const mesa_inst_t inst,
+                              const mesa_restart_t restart);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+:@byteposi>:	@str"2#ifndef _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ÃiPipiqiªi
+iWi†ii=i>ikiòiôi…i˙i*itiuiâiòi“iiPièiŒiiLiåiÃiiJiâi»iiDiÉiøi¸i9iwi∏i˜i6	iw	i∏	iÛ	i.
+ix
+i¬
+iiVi†iÍi4ii iiPiãi°i¢i∂i«iıiii7iTivi≠iÏiÌii(iRiìi”i‘iiiKiLifi£iƒi„i$ibi©i™i≈ii#iBiÑi√iiii6iZizi≠iÿiiTiãi√i˙i˚ii-iQiÄi≠iÔi+idiúiùi∆iÊiiaibiåi´i»i%i&iAidiÅi»i$ixiπi˛i<i~ii°iæi⁄i˝iiziŒii_i¶iÏi6iÖiÜi®i≈i·ii%iÅi’iifi≠iÛi= iå iç iƒ i‡ i!i'!if!i®!iÁ!i/"i0"ih"iÑ"i¨"iÀ"i#iN#ié#i–#i—#i$i$$iG$ir$ië$iœ$i%iM%iã%i“%i”%i&i0&iS&iÑ&i√&i'iI'ié'iœ'i(iY(iù(iû(i÷(iÚ(i)iF)ii)i®)iÍ)i(*ig*i®*i©*i»*iÀ*i+im+iø+i ,i,i,ie,i∫,i-i|-i‚-iD.iG.iR.i~.iæ.iÌ.iÓ.i˝.i-/iG/ia/i{/iï/iØ/i…/iÔ/i/i0i0i90i]0iu0iv0iî0i•0iﬂ0i1iW1iß1i√1iƒ1i‚1iÒ1i=2iá2i“2iÌ2iÓ2i3i3iM3iî3i∏3iπ3i“3i„3i4iV4iê4i¥4iµ4iÕ4i‹4i)5if5i£5i‡5i6i6i,6i=6iå6iª6iº6i›6iÓ6i27ip7iØ7i∞7i˚7iG8iH8iä8iŒ8i9i9iL9ií9i‚9i):i*:ia:iç:i≈:i˝:i˛:i:;il;im;iö;i…;i ;i<iD<iK<iõ<i∂<iÂ<iÊ<iG=iä=i⁄=i7>i8>iô>iö>i›>iﬁ>iU?iV?iô?iÍ?i	@i
+@iV@iW@i∏@iAiAiqAiÓAiBiBi/BiZBiçBi»Bi…BiÓBiCiPCiêCiëCi‘Ci◊Ci'DiuDi≈DiEiEiPEiûEiÓEiFi
+FiYFi®Fi´Fi¯FiEGièGiúGiüGi»GiHiHiHHiëHiÊHiÁHi
+IiIiJIixIiçIiéIi¥Ii√Ii˚Ii3JiKJiLJixJiâJi»JiKiBKiÅKiÍKiLiLiCLiwLi°LiÁLiËLiMiSMiäMiãMiöMiªMiºMiÃMi€Mi(NimNi¢Ni¥NiµNi«NiÿNiOiKOiÉOiúOiùOi≥Oi“Oi
+PiPPiQPiÇPi†Pi÷PiQiQiFQicQiôQi÷Qi◊QiˇQi.R:@last_line_endi.R{;o;;o;	;
+@
+;ik;"3#define _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+
+;@{;o;;o;	;
+@
+;iô;"5#include <microchip/ethernet/switch/api/misc.h>
+;@{;o;;o;	;
+@
+;i…;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˙;"5#include <microchip/ethernet/switch/api/port.h>
+;@{;o;;o;	;
+@
+;i*;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;iâ;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;ië;"	enum;@:
+enums[,{:	enum{:enum_nameo;;o;	;
+@
+;iú;"MESA_TARGET_CU_PHY;@:cap0{;{;o;;o;	;
+@
+;i÷;"MESA_TARGET_10G_PHY;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_CARACAL_LITE  ;@:operatoro;;o;	;
+@
+;i+;"=;@:	expro;;o;	;
+@
+;i-;"0x7423;@;0{;{	;o;;o;	;
+@
+;iT;"MESA_TARGET_SPARX_III_10  ;@;o;;o;	;
+@
+;in;"=;@;o;;o;	;
+@
+;ip;"0x7424;@;0{;{	;o;;o;	;
+@
+;iì;"MESA_TARGET_SPARX_III_18  ;@;o;;o;	;
+@
+;i≠;"=;@;o;;o;	;
+@
+;iØ;"0x7425;@;0{;{	;o;;o;	;
+@
+;i“;"MESA_TARGET_SPARX_III_24  ;@;o;;o;	;
+@
+;iÏ;"=;@;o;;o;	;
+@
+;iÓ;"0x7426;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_SPARX_III_26  ;@;o;;o;	;
+@
+;i+;"=;@;o;;o;	;
+@
+;i-;"0x7427;@;0{;{	;o;;o;	;
+@
+;iP;"MESA_TARGET_CARACAL_1     ;@;o;;o;	;
+@
+;ij;"=;@;o;;o;	;
+@
+;il;"0x7428;@;0{;{	;o;;o;	;
+@
+;iê;"MESA_TARGET_CARACAL_2     ;@;o;;o;	;
+@
+;i™;"=;@;o;;o;	;
+@
+;i¨;"0x7429;@;0{;{	;o;;o;	;
+@
+;i–;"MESA_TARGET_SPARX_IV_52   ;@;o;;o;	;
+@
+;iÍ;"=;@;o;;o;	;
+@
+;iÏ;"0x7442;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_SPARX_IV_44   ;@;o;;o;	;
+@
+;i);"=;@;o;;o;	;
+@
+;i+;"0x7444;@;0{;{	;o;;o;	;
+@
+;iN;"MESA_TARGET_SPARX_IV_80   ;@;o;;o;	;
+@
+;ih;"=;@;o;;o;	;
+@
+;ij;"0x7448;@;0{;{	;o;;o;	;
+@
+;iç;"MESA_TARGET_SPARX_IV_90   ;@;o;;o;	;
+@
+;iß;"=;@;o;;o;	;
+@
+;i©;"0x7449;@;0{;{	;o;;o;	;
+@
+;iÃ;"MESA_TARGET_SERVAL_2      ;@;o;;o;	;
+@
+;iÊ;"=;@;o;;o;	;
+@
+;iË;"0x7438;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_LYNX_2        ;@;o;;o;	;
+@
+;i%;"=;@;o;;o;	;
+@
+;i';"0x7464;@;0{;{	;o;;o;	;
+@
+;iH;"MESA_TARGET_JAGUAR_2      ;@;o;;o;	;
+@
+;ib;"=;@;o;;o;	;
+@
+;id;"0x7468;@;0{;{	;o;;o;	;
+@
+;iá;"MESA_TARGET_SERVAL_T      ;@;o;;o;	;
+@
+;i°;"=;@;o;;o;	;
+@
+;i£;"0x7410;@;0{;{	;o;;o;	;
+@
+;i√;"MESA_TARGET_SERVAL_TP     ;@;o;;o;	;
+@
+;i›;"=;@;o;;o;	;
+@
+;iﬂ;"0x7415;@;0{;{	;o;;o;	;
+@
+;i ;"MESA_TARGET_SERVAL_TE     ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"0x7430;@;0{;{	;o;;o;	;
+@
+;i=;"MESA_TARGET_SERVAL_TEP    ;@;o;;o;	;
+@
+;iW;"=;@;o;;o;	;
+@
+;iY;"0x7435;@;0{;{	;o;;o;	;
+@
+;i{;"MESA_TARGET_SERVAL_2_LITE ;@;o;;o;	;
+@
+;iï;"=;@;o;;o;	;
+@
+;ió;"0x7436;@;0{;{	;o;;o;	;
+@
+;iº;"MESA_TARGET_SERVAL_TE10   ;@;o;;o;	;
+@
+;i÷;"=;@;o;;o;	;
+@
+;iÿ;"0x7437;@;0{;{	;o;;o;	;
+@
+;i˚;"MESA_TARGET_SPARX_IV_34   ;@;o;;o;	;
+@
+;i	;"=;@;o;;o;	;
+@
+;i	;"0x7440;@;0{;{	;o;;o;	;
+@
+;i:	;"MESA_TARGET_7511          ;@;o;;o;	;
+@
+;iT	;"=;@;o;;o;	;
+@
+;iV	;"0x7511;@;0{;{	;o;;o;	;
+@
+;i{	;"MESA_TARGET_7512          ;@;o;;o;	;
+@
+;iï	;"=;@;o;;o;	;
+@
+;ió	;"0x7512;@;0{;{	;o;;o;	;
+@
+;iº	;"MESA_TARGET_7513          ;@;o;;o;	;
+@
+;i÷	;"=;@;o;;o;	;
+@
+;iÿ	;"0x7513;@;0{;{	;o;;o;	;
+@
+;i˜	;"MESA_TARGET_7514          ;@;o;;o;	;
+@
+;i
+;"=;@;o;;o;	;
+@
+;i
+;"0x7514;@;0{;{	;o;;o;	;
+@
+;i2
+;"MESA_TARGET_7546          ;@;o;;o;	;
+@
+;iL
+;"=;@;o;;o;	;
+@
+;iN
+;"0x7546;@;0{;{	;o;;o;	;
+@
+;i|
+;"MESA_TARGET_7549          ;@;o;;o;	;
+@
+;iñ
+;"=;@;o;;o;	;
+@
+;iò
+;"0x7549;@;0{;{	;o;;o;	;
+@
+;i∆
+;"MESA_TARGET_7552          ;@;o;;o;	;
+@
+;i‡
+;"=;@;o;;o;	;
+@
+;i‚
+;"0x7552;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_7556          ;@;o;;o;	;
+@
+;i*;"=;@;o;;o;	;
+@
+;i,;"0x7556;@;0{;{	;o;;o;	;
+@
+;iZ;"MESA_TARGET_7558          ;@;o;;o;	;
+@
+;it;"=;@;o;;o;	;
+@
+;iv;"0x7558;@;0{;{	;o;;o;	;
+@
+;i§;"MESA_TARGET_7546TSN       ;@;o;;o;	;
+@
+;iæ;"=;@;o;;o;	;
+@
+;i¿;"0x47546;@;0{;{	;o;;o;	;
+@
+;iÓ;"MESA_TARGET_7549TSN       ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i
+;"0x47549;@;0{;{	;o;;o;	;
+@
+;i8;"MESA_TARGET_7552TSN       ;@;o;;o;	;
+@
+;iR;"=;@;o;;o;	;
+@
+;iT;"0x47552;@;0{;{	;o;;o;	;
+@
+;iÉ;"MESA_TARGET_7556TSN       ;@;o;;o;	;
+@
+;iù;"=;@;o;;o;	;
+@
+;iü;"0x47556;@;0{;{	;o;;o;	;
+@
+;iŒ;"MESA_TARGET_7558TSN       ;@;o;;o;	;
+@
+;iË;"=;@;o;;o;	;
+@
+;iÍ;"0x47558;@;0{;{	;o;;o;	;
+@
+;i;"MESA_TARGET_LAN9662       ;@;o;;o;	;
+@
+;i3;"=;@;o;;o;	;
+@
+;i5;"0x9662;@;0{;{	;o;;o;	;
+@
+;iT;"MESA_TARGET_LAN9668       ;@;o;;o;	;
+@
+;in;"=;@;o;;o;	;
+@
+;ip;"0x9668;@;0:typedef_nameo;;o;	;
+@
+;iç;"mesa_target_type_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;i∂;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iÀ;"mesa_target_type_t ;@:	nameo;;o;	;
+@
+;iﬁ;"target;@;[ ;0;o;;o;	;
+@
+;i˜;"mesa_inst_create_t;@;[ ;0{:func_proto{;{	; o;;o;	;
+@
+;iv;"mesa_rc ;@;!o;;o;	;
+@
+;i~;"mesa_inst_get;@;[ ;0:	args[{;{	; o;;o;	;
+@
+;iå;"const mesa_target_type_t ;@;!o;;o;	;
+@
+;i•;"target;@;[ ;0{;{	; o;;o;	;
+@
+;i√;"%mesa_inst_create_t       *const ;@;!o;;o;	;
+@
+;i„;"create;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;iR;"mesa_rc ;@;!o;;o;	;
+@
+;iZ;"mesa_inst_create;@;[ ;0;#[{;{	; o;;o;	;
+@
+;ik;"%const mesa_inst_create_t *const ;@;!o;;o;	;
+@
+;iã;"create;@;[ ;0{;{	; o;;o;	;
+@
+;i¨;"%mesa_inst_t              *const ;@;!o;;o;	;
+@
+;iÃ;"	inst;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;i;"mesa_rc ;@;!o;;o;	;
+@
+;i ;"mesa_inst_destroy;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i2;"const mesa_inst_t ;@;!o;;o;	;
+@
+;iD;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;i„;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;iÎ;"mesa_rc ;@:fptr_nameo;;o;	;
+@
+;iı;"mesa_reg_read_t;@;#[{;{	; o;;o;	;
+@
+;i;"const mesa_chip_no_t ;@;!o;;o;	;
+@
+;i;"chip_no;@;[ ;0{;{	; o;;o;	;
+@
+;iG;"const uint32_t       ;@;!o;;o;	;
+@
+;i\;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;iÖ;"!uint32_t             *const ;@;!o;;o;	;
+@
+;i°;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iB;"typedef;@;${	;%o;;o;	;
+@
+;iJ;"mesa_rc ;@;&o;;o;	;
+@
+;iT;"mesa_reg_write_t;@;#[{;{	; o;;o;	;
+@
+;if;"const mesa_chip_no_t ;@;!o;;o;	;
+@
+;i{;"chip_no;@;[ ;0{;{	; o;;o;	;
+@
+;i®;"const uint32_t       ;@;!o;;o;	;
+@
+;iΩ;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;iÁ;"const uint32_t       ;@;!o;;o;	;
+@
+;i¸;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iÿ;"typedef;@;${	;%o;;o;	;
+@
+;i‡;"mesa_rc ;@;&o;;o;	;
+@
+;iÍ;"mesa_i2c_read_t;@;#[
+{;{	; o;;o;	;
+@
+;i˚;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;i;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i<;"const uint8_t ;@;!o;;o;	;
+@
+;iJ;"i2c_addr;@;[ ;0{;{	; o;;o;	;
+@
+;iw;"const uint8_t ;@;!o;;o;	;
+@
+;iÖ;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;iÆ;"uint8_t *const ;@;!o;;o;	;
+@
+;iΩ;"	data;@;[ ;0{;{	; o;;o;	;
+@
+;iÊ;"const uint8_t ;@;!o;;o;	;
+@
+;iÙ;"cnt;@;[ ;0;0{;o;;o;	;
+@
+;i≠;"typedef;@;${	;%o;;o;	;
+@
+;iµ;"mesa_rc ;@;&o;;o;	;
+@
+;iø;"mesa_i2c_write_t;@;#[	{;{	; o;;o;	;
+@
+;i—;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;iÊ;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i;"const uint8_t ;@;!o;;o;	;
+@
+;i!;"i2c_addr;@;[ ;0{;{	; o;;o;	;
+@
+;iO;"uint8_t *const ;@;!o;;o;	;
+@
+;i^;"	data;@;[ ;0{;{	; o;;o;	;
+@
+;ià;"const uint8_t ;@;!o;;o;	;
+@
+;iñ;"cnt;@;[ ;0;0{;o;;o;	;
+@
+;i;"typedef;@;${	;%o;;o;	;
+@
+;i;"mesa_rc ;@;&o;;o;	;
+@
+;i;"mesa_clock_read_t;@;#[{;{	; o;;o;	;
+@
+;i);"const uint32_t ;@;!o;;o;	;
+@
+;i8;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;i>;"uint32_t *const ;@;!o;;o;	;
+@
+;iN;"
+value;@;[ ;0;o;;o;	;
+@
+;iU;"CAP(CLOCK);@{;o;;o;	;
+@
+;i»;"typedef;@;${	;%o;;o;	;
+@
+;i–;"mesa_rc ;@;&o;;o;	;
+@
+;i⁄;"mesa_clock_write_t;@;#[{;{	; o;;o;	;
+@
+;iÓ;"const uint32_t ;@;!o;;o;	;
+@
+;i˝;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;i;"const uint32_t ;@;!o;;o;	;
+@
+;i;"
+value;@;[ ;0;o;;o;	;
+@
+;i;"CAP(CLOCK);@{;o;;o;	;
+@
+;ix;"typedef;@;${	;%o;;o;	;
+@
+;iÄ;"mesa_rc ;@;&o;;o;	;
+@
+;iä;"mesa_spi_read_write_t;@;#[	{;{	; o;;o;	;
+@
+;i°;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i≥;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i‡;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;iı;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i%;"const uint8_t ;@;!o;;o;	;
+@
+;i3;"bitsize;@;[ ;0{;{	; o;;o;	;
+@
+;ic;"uint8_t *const ;@;!o;;o;	;
+@
+;ir;"bitstream;@;[ ;0;0{;o;;o;	;
+@
+;iŒ;"typedef;@;${	;%o;;o;	;
+@
+;i÷;"mesa_rc ;@;&o;;o;	;
+@
+;i‡;" mesa_spi_32bit_read_write_t;@;#[{;{	; o;;o;	;
+@
+;i˝;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iD;"mesa_port_no_t    ;@;!o;;o;	;
+@
+;iV;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;ié;"mesa_bool_t       ;@;!o;;o;	;
+@
+;i†;"	read;@;[ ;0{;{	; o;;o;	;
+@
+;i’;"uint8_t           ;@;!o;;o;	;
+@
+;iÁ;"dev;@;[ ;0{;{	; o;;o;	;
+@
+;i;"uint16_t          ;@;!o;;o;	;
+@
+;i-;"reg_num;@;[ ;0{;{	; o;;o;	;
+@
+;ie;"uint32_t          *const ;@;!o;;o;	;
+@
+;i~;"	data;@;[ ;0;0{;o;;o;	;
+@
+;i’;"typedef;@;${	;%o;;o;	;
+@
+;i›;"mesa_rc ;@;&o;;o;	;
+@
+;iÁ;" mesa_spi_64bit_read_write_t;@;#[{;{	; o;;o;	;
+@
+;i;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iK;"mesa_port_no_t    ;@;!o;;o;	;
+@
+;i];"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;iï;"mesa_bool_t       ;@;!o;;o;	;
+@
+;iß;"	read;@;[ ;0{;{	; o;;o;	;
+@
+;i‹;"uint8_t           ;@;!o;;o;	;
+@
+;iÓ;"dev;@;[ ;0{;{	; o;;o;	;
+@
+;i" ;"uint16_t          ;@;!o;;o;	;
+@
+;i4 ;"reg_num;@;[ ;0{;{	; o;;o;	;
+@
+;il ;"uint64_t          *const ;@;!o;;o;	;
+@
+;iÖ ;"	data;@;[ ;0;0{;o;;o;	;
+@
+;i'!;"typedef;@;${	;%o;;o;	;
+@
+;i/!;"mesa_rc ;@;&o;;o;	;
+@
+;i9!;"mesa_miim_read_t;@;#[	{;{	; o;;o;	;
+@
+;iK!;"const mesa_inst_t    ;@;!o;;o;	;
+@
+;i`!;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iä!;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;iü!;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;iÃ!;"const uint8_t        ;@;!o;;o;	;
+@
+;i·!;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;i";"!uint16_t             *const ;@;!o;;o;	;
+@
+;i'";"
+value;@;[ ;0;0{;o;;o;	;
+@
+;iÀ";"typedef;@;${	;%o;;o;	;
+@
+;i”";"mesa_rc ;@;&o;;o;	;
+@
+;i›";"mesa_miim_write_t;@;#[	{;{	; o;;o;	;
+@
+;i";"const mesa_inst_t    ;@;!o;;o;	;
+@
+;i#;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i0#;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;iE#;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;is#;"const uint8_t        ;@;!o;;o;	;
+@
+;ià#;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;i≥#;"const uint16_t       ;@;!o;;o;	;
+@
+;i»#;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;ië$;"typedef;@;${	;%o;;o;	;
+@
+;iô$;"mesa_rc ;@;&o;;o;	;
+@
+;i£$;"mesa_mmd_read_t;@;#[
+{;{	; o;;o;	;
+@
+;i¥$;"const mesa_inst_t    ;@;!o;;o;	;
+@
+;i…$;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÚ$;"const mesa_port_no_t ;@;!o;;o;	;
+@
+;i%;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i3%;"const uint8_t        ;@;!o;;o;	;
+@
+;iH%;"mmd;@;[ ;0{;{	; o;;o;	;
+@
+;ip%;"const uint16_t       ;@;!o;;o;	;
+@
+;iÖ%;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;iÆ%;"!uint16_t             *const ;@;!o;;o;	;
+@
+;i %;"
+value;@;[ ;0;0{;o;;o;	;
+@
+;i';"typedef;@;${	;%o;;o;	;
+@
+;i';"mesa_rc ;@;&o;;o;	;
+@
+;i';"mesa_mmd_read_inc_t;@;#[{;{	; o;;o;	;
+@
+;i.';"const mesa_inst_t    ;@;!o;;o;	;
+@
+;iC';"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ip';"const mesa_port_no_t ;@;!o;;o;	;
+@
+;iÖ';"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;iµ';"const uint8_t        ;@;!o;;o;	;
+@
+;i ';"mmd;@;[ ;0{;{	; o;;o;	;
+@
+;iˆ';"const uint16_t       ;@;!o;;o;	;
+@
+;i(;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;i8(;"!uint16_t             *const ;@;!o;;o;	;
+@
+;iT(;"buf;@;[ ;0{;{	; o;;o;	;
+@
+;iÄ(;"uint8_t              ;@;!o;;o;	;
+@
+;iï(;"
+count;@;[ ;0;0{;o;;o;	;
+@
+;ii);"typedef;@;${	;%o;;o;	;
+@
+;iq);"mesa_rc ;@;&o;;o;	;
+@
+;i{);"mesa_mmd_write_t;@;#[
+{;{	; o;;o;	;
+@
+;iç);"const mesa_inst_t    ;@;!o;;o;	;
+@
+;i¢);"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÃ);"const mesa_port_no_t ;@;!o;;o;	;
+@
+;i·);"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i*;"const uint8_t        ;@;!o;;o;	;
+@
+;i#*;"mmd;@;[ ;0{;{	; o;;o;	;
+@
+;iL*;"const uint16_t       ;@;!o;;o;	;
+@
+;ia*;"	addr;@;[ ;0{;{	; o;;o;	;
+@
+;iã*;"const uint16_t       ;@;!o;;o;	;
+@
+;i†*;"
+value;@;[ ;0;0{
+;o;;o;	;
+@
+;iÓ.;"typedef;@;{;o;;o;	;
+@
+;iˆ.;"	enum;@;[{;{;o;;o;	;
+@
+;i/;"MESA_PORT_MUX_MODE_AUTO ;@;o;;o;	;
+@
+;i/;"CAP(PORT_MUX_AUTO);@{;{;o;;o;	;
+@
+;i1/;"MESA_PORT_MUX_MODE_0;@;0{;{;o;;o;	;
+@
+;iK/;"MESA_PORT_MUX_MODE_1;@;0{;{;o;;o;	;
+@
+;ie/;"MESA_PORT_MUX_MODE_2;@;0{;{;o;;o;	;
+@
+;i/;"MESA_PORT_MUX_MODE_3;@;0{;{;o;;o;	;
+@
+;iô/;"MESA_PORT_MUX_MODE_4;@;0{;{;o;;o;	;
+@
+;i≥/;"MESA_PORT_MUX_MODE_5;@;0;o;;o;	;
+@
+;iÀ/;"mesa_port_mux_mode_t ;@;[ ;o;;o;	;
+@
+;i‡/;"CAP(PORT_MUX);@{
+;o;;o;	;
+@
+;i0;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i0;"uint32_t ;@;!o;;o;	;
+@
+;i0;"ob_post0;@;[ ;0{;{;{	; o;;o;	;
+@
+;i=0;"uint32_t ;@;!o;;o;	;
+@
+;iF0;"
+ob_sr;@;[ ;0;o;;o;	;
+@
+;i_0;"mesa_serdes_fields_t;@;[ ;0{
+;o;;o;	;
+@
+;iî0;"typedef;@;{;[	{;{;{	; o;;o;	;
+@
+;i©0;"mesa_vdd_t           ;@;!o;;o;	;
+@
+;iæ0;"serdes1g_vdd;@;[ ;0{;{;{	; o;;o;	;
+@
+;i„0;"mesa_vdd_t           ;@;!o;;o;	;
+@
+;i¯0;"serdes6g_vdd;@;[ ;0{;{;{	; o;;o;	;
+@
+;i1;"mesa_bool_t          ;@;!o;;o;	;
+@
+;i21;"ib_cterm_ena;@;[ ;0{;{;{	; o;;o;	;
+@
+;i[1;"mesa_serdes_fields_t ;@;!o;;o;	;
+@
+;ip1;"qsgmii;@;[ ;0;o;;o;	;
+@
+;i©1;"mesa_serdes_macro_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i‚1;"typedef;@;{;o;;o;	;
+@
+;iÍ1;"	enum;@;[{;{;o;;o;	;
+@
+;iı1;"MESA_RESTART_INFO_SRC_NONE;@;0{;{;o;;o;	;
+@
+;iA2;"!MESA_RESTART_INFO_SRC_CU_PHY;@;0{;{;o;;o;	;
+@
+;iã2;"#MESA_RESTART_INFO_SRC_10G_PHY ;@;0;o;;o;	;
+@
+;i‘2;"mesa_restart_info_src_t;@;[ ;0{
+;o;;o;	;
+@
+;i3;"typedef;@;{;o;;o;	;
+@
+;i3;"	enum;@;[{;{;o;;o;	;
+@
+;i3;"MESA_QS_MODE_DEFAULT;@;0{;{;o;;o;	;
+@
+;iQ3;"MESA_QS_MODE_QUEUE_LIM  ;@;0;o;;o;	;
+@
+;iñ3;"mesa_qs_mode_t ;@;[ ;o;;o;	;
+@
+;i•3;"CAP(PORT_QS_CONF);@{
+;o;;o;	;
+@
+;i“3;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iÁ3;"mesa_qs_mode_t ;@;!o;;o;	;
+@
+;iˆ3;"	mode;@;[ ;0{;{;{	; o;;o;	;
+@
+;i 4;"uint32_t       ;@;!o;;o;	;
+@
+;i/4;"wm1;@;[ ;0{;{;{	; o;;o;	;
+@
+;iZ4;"uint32_t       ;@;!o;;o;	;
+@
+;ii4;"wm2;@;[ ;0;o;;o;	;
+@
+;ií4;"mesa_qs_conf_t ;@;[ ;o;;o;	;
+@
+;i°4;"CAP(PORT_QS_CONF);@{
+;o;;o;	;
+@
+;iÕ4;"typedef;@;{;o;;o;	;
+@
+;i’4;"	enum;@;[	{;{;o;;o;	;
+@
+;i‡4;"MESA_CORE_CLOCK_DEFAULT;@;0{;{;o;;o;	;
+@
+;i-5;"MESA_CORE_CLOCK_250MHZ;@;0{;{;o;;o;	;
+@
+;ij5;"MESA_CORE_CLOCK_500MHZ;@;0{;{;o;;o;	;
+@
+;iß5;"MESA_CORE_CLOCK_625MHZ;@;0;o;;o;	;
+@
+;i‚5;"mesa_core_clock_freq_t ;@;[ ;o;;o;	;
+@
+;i˘5;"CAP(INIT_CORE_CLOCK);@{
+;o;;o;	;
+@
+;i,6;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iA6;"mesa_core_clock_freq_t ;@;!o;;o;	;
+@
+;iX6;"	freq;@;[ ;0;o;;o;	;
+@
+;ié6;"mesa_core_clock_conf_t ;@;[ ;o;;o;	;
+@
+;i•6;"CAP(INIT_CORE_CLOCK);@{
+;o;;o;	;
+@
+;i›6;"typedef;@;{;[!{;{;{	; o;;o;	;
+@
+;i67;"mesa_reg_read_t   ;@;!o;;o;	;
+@
+;iH7;"reg_read;@;[ ;0{;{;{	; o;;o;	;
+@
+;it7;"mesa_reg_write_t  ;@;!o;;o;	;
+@
+;iÜ7;"reg_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¥7;"mesa_clock_read_t  ;@;!o;;o;	;
+@
+;i«7;"clock_read  ;@;[ ;o;;o;	;
+@
+;i”7;"CAP(CLOCK);@{;{;{	; o;;o;	;
+@
+;iˇ7;"mesa_clock_write_t ;@;!o;;o;	;
+@
+;i8;"clock_write ;@;[ ;o;;o;	;
+@
+;i8;"CAP(CLOCK);@{;{;{	; o;;o;	;
+@
+;ié8;"mesa_miim_read_t  ;@;!o;;o;	;
+@
+;i†8;"miim_read;@;[ ;0{;{;{	; o;;o;	;
+@
+;i“8;"mesa_miim_write_t ;@;!o;;o;	;
+@
+;i‰8;"miim_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;iP9;"mesa_mmd_read_t     ;@;!o;;o;	;
+@
+;id9;"mmd_read;@;[ ;0{;{;{	; o;;o;	;
+@
+;iñ9;"mesa_mmd_read_inc_t ;@;!o;;o;	;
+@
+;i™9;"mmd_read_inc;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÊ9;"mesa_mmd_write_t    ;@;!o;;o;	;
+@
+;i˙9;"mmd_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;ie:;"mesa_spi_read_write_t   ;@;!o;;o;	;
+@
+;i}:;"spi_read_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;ië:;"#mesa_spi_32bit_read_write_t   ;@;!o;;o;	;
+@
+;iØ:;"spi_32bit_read_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;i…:;"#mesa_spi_64bit_read_write_t   ;@;!o;;o;	;
+@
+;iÁ:;"spi_64bit_read_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;i>;;"mesa_gpio_func_info_get_t ;@;!o;;o;	;
+@
+;iX;;"gpio_func_info_get;@;[ ;0{;{;{	; o;;o;	;
+@
+;iû;;" mesa_port_serdes_tap_get_t ;@;!o;;o;	;
+@
+;iπ;;"serdes_tap_get;@;[ ;0{;{;{	; o;;o;	;
+@
+;i∫<;"mesa_bool_t             ;@;!o;;o;	;
+@
+;i“<;"skip_switch_reset;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÍ<;"mesa_bool_t             ;@;!o;;o;	;
+@
+;i=;"spi_bus;@;[ ;0{;{;{	; o;;o;	;
+@
+;iK=;"mesa_bool_t             ;@;!o;;o;	;
+@
+;ic=;"warm_start_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;ié=;"mesa_restart_info_src_t ;@;!o;;o;	;
+@
+;i¶=;"restart_info_src;@;[ ;0{;{;{	; o;;o;	;
+@
+;iﬁ=;"mesa_port_no_t          ;@;!o;;o;	;
+@
+;iˆ=;"restart_info_port;@;[ ;0{;{;{	; o;;o;	;
+@
+;i<>;"mesa_port_mux_mode_t ;@;!o;;o;	;
+@
+;iQ>;"mux_mode ;@;[ ;o;;o;	;
+@
+;iZ>;"CAP(PORT_MUX);@{;{;{	; o;;o;	;
+@
+;iû>;"mesa_serdes_macro_conf_t ;@;!o;;o;	;
+@
+;i∑>;"serdes;@;[ ;0{;{;{	; o;;o;	;
+@
+;i‚>;"mesa_bool_t ;@;!o;;o;	;
+@
+;iÓ>;"using_ufdma;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÓ?;"uint32_t ;@;!o;;o;	;
+@
+;i˜?;"loopback_bw_mbps;@;[ ;0{;{;{	; o;;o;	;
+@
+;i@;"mesa_qs_conf_t ;@;!o;;o;	;
+@
+;i@;"qs_conf ;@;[ ;o;;o;	;
+@
+;i%@;"CAP(PORT_QS_CONF);@{;{;{	; o;;o;	;
+@
+;i[@;"mesa_bool_t ;@;!o;;o;	;
+@
+;ig@;"vlan_counters_disable;@;[ ;0{;{;{	; o;;o;	;
+@
+;iº@;"mesa_bool_t ;@;!o;;o;	;
+@
+;i»@;"psfp_counters_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;iA;"mesa_core_clock_conf_t ;@;!o;;o;	;
+@
+;i,A;"core_clock ;@;[ ;o;;o;	;
+@
+;i7A;"CAP(INIT_CORE_CLOCK);@{;{;{	; o;;o;	;
+@
+;iuA;"mesa_bool_t ;@;!o;;o;	;
+@
+;iÅA;"packet_init_disable;@;[ ;0;o;;o;	;
+@
+;iA;"mesa_init_conf_t;@;[ ;0{;"{;{	; o;;o;	;
+@
+;iZB;"mesa_rc ;@;!o;;o;	;
+@
+;ibB;"mesa_init_conf_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iuB;"const mesa_inst_t ;@;!o;;o;	;
+@
+;iáB;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i®B;"mesa_init_conf_t  *const ;@;!o;;o;	;
+@
+;i¡B;"	conf;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;iC;"mesa_rc ;@;!o;;o;	;
+@
+;i C;"mesa_init_conf_set;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i3C;"const mesa_inst_t      ;@;!o;;o;	;
+@
+;iJC;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ikC;"#const mesa_init_conf_t *const ;@;!o;;o;	;
+@
+;iâC;"	conf;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;i»G;"mesa_rc ;@;!o;;o;	;
+@
+;i–G;""mesa_register_access_mode_set;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iÓG;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i H;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iH;"mesa_bool_t ;@;!o;;o;	;
+@
+;iH;"spi_bus;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;iëH;"mesa_rc ;@;!o;;o;	;
+@
+;iôH;""mesa_register_access_mode_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;i∑H;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i…H;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iœH;"mesa_bool_t *;@;!o;;o;	;
+@
+;i‹H;"spi_bus;@;[ ;0;0{
+;o;;o;	;
+@
+;i
+I;"typedef;@;{;o;;o;	;
+@
+;iI;"	enum;@;[{;{;o;;o;	;
+@
+;iI;"MESA_SPI_ENDIAN_LITTLE;@;0{;{;o;;o;	;
+@
+;iNI;"MESA_SPI_ENDIAN_BIG     ;@;0;o;;o;	;
+@
+;izI;"mesa_spi_endian_t;@;[ ;0{
+;o;;o;	;
+@
+;i¥I;"typedef;@;{;o;;o;	;
+@
+;iºI;"	enum;@;[{;{;o;;o;	;
+@
+;i«I;"!MESA_SPI_BIT_ORDER_MSB_FIRST;@;0{;{;o;;o;	;
+@
+;iˇI;"#MESA_SPI_BIT_ORDER_LSB_FIRST  ;@;0;o;;o;	;
+@
+;i5J;"mesa_spi_bit_order_t;@;[ ;0{
+;o;;o;	;
+@
+;ixJ;"typedef;@;{;[
+{;{;{	; o;;o;	;
+@
+;içJ;"mesa_reg_write_t     ;@;!o;;o;	;
+@
+;i¢J;"reg_write;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÃJ;"mesa_reg_read_t      ;@;!o;;o;	;
+@
+;i·J;"reg_read;@;[ ;0{;{;{	; o;;o;	;
+@
+;i
+K;"mesa_spi_endian_t    ;@;!o;;o;	;
+@
+;iK;"endian;@;[ ;0{;{;{	; o;;o;	;
+@
+;iFK;"mesa_spi_bit_order_t ;@;!o;;o;	;
+@
+;i[K;"bit_order;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÖK;"uint8_t              ;@;!o;;o;	;
+@
+;iöK;"padding;@;[ ;0;o;;o;	;
+@
+;iÏK;"mesa_spi_slave_init_t;@;[ ;0{;"{;{	; o;;o;	;
+@
+;i°L;"mesa_rc ;@;!o;;o;	;
+@
+;i©L;"mesa_spi_slave_init;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iΩL;"(const mesa_spi_slave_init_t *const ;@;!o;;o;	;
+@
+;i‡L;"	conf;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;iSM;"mesa_rc ;@;!o;;o;	;
+@
+;i[M;"mesa_restart_conf_end;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iqM;"const mesa_inst_t ;@;!o;;o;	;
+@
+;iÉM;"	inst;@;[ ;0;0{
+;o;;o;	;
+@
+;iöM;"typedef;@:type_aliaso;;o;	;
+@
+;i¢M;"uint16_t ;@;o;;o;	;
+@
+;i´M;"mesa_version_t;@;[ ;0{
+;o;;o;	;
+@
+;iÃM;"typedef;@;{;o;;o;	;
+@
+;i‘M;"	enum;@;[{;{	;o;;o;	;
+@
+;iﬂM;"MESA_RESTART_COLD ;@;o;;o;	;
+@
+;iÒM;"=;@;o;;o;	;
+@
+;iÛM;"0;@;0{;{;o;;o;	;
+@
+;i,N;"MESA_RESTART_COOL;@;0{;{;o;;o;	;
+@
+;iqN;"MESA_RESTART_WARM      ;@;0;o;;o;	;
+@
+;i§N;"mesa_restart_t;@;[ ;0{
+;o;;o;	;
+@
+;i«N;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i‹N;"mesa_restart_t ;@;!o;;o;	;
+@
+;iÎN;"restart;@;[ ;0{;{;{	; o;;o;	;
+@
+;iO;"mesa_version_t ;@;!o;;o;	;
+@
+;i%O;"prev_version;@;[ ;0{;{;{	; o;;o;	;
+@
+;iOO;"mesa_version_t ;@;!o;;o;	;
+@
+;i^O;"cur_version;@;[ ;0;o;;o;	;
+@
+;iÖO;"mesa_restart_status_t;@;[ ;0{;"{;{	; o;;o;	;
+@
+;i“O;"mesa_rc ;@;!o;;o;	;
+@
+;i⁄O;"mesa_restart_status_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iÚO;"const mesa_inst_t ;@;!o;;o;	;
+@
+;iP;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i*P;""mesa_restart_status_t *const ;@;!o;;o;	;
+@
+;iGP;"status;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;i†P;"mesa_rc ;@;!o;;o;	;
+@
+;i®P;"mesa_restart_conf_get;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iæP;"const mesa_inst_t ;@;!o;;o;	;
+@
+;i–P;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÙP;"mesa_restart_t *const ;@;!o;;o;	;
+@
+;i
+Q;"restart;@;[ ;0;0{;"{;{	; o;;o;	;
+@
+;icQ;"mesa_rc ;@;!o;;o;	;
+@
+;ikQ;"mesa_restart_conf_set;@;[ ;0;#[{;{	; o;;o;	;
+@
+;iÅQ;"const mesa_inst_t ;@;!o;;o;	;
+@
+;iìQ;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i∑Q;"const mesa_restart_t ;@;!o;;o;	;
+@
+;iÃQ;"restart;@;[ ;0;0{;o;;o;	;
+@
+;i◊Q;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;iˇQ;"4#endif // _MICROCHIP_ETHERNET_SWITCH_API_INIT_
+;@

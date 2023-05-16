@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/spi_reg_read.c
+stdio.h
+-
+stdlib.h
+-
+errno.h
+-
+fcntl.h
+-
+getopt.h
+-
+unistd.h
+-
+stdint.h
+-
+string.h
+-
+sys/ioctl.h
+-
+linux/types.h
+-
+linux/spi/spidev.h
+-
+
