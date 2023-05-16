@@ -87,4 +87,6 @@ eaf10f125324052a5f3f024f5785c8b5 mesa-ag/mesa/include/microchip/ethernet/switch/
 9e281878ad3b3f49c8ab5f460832f2e9 mesa-ag/mesa/include/microchip/ethernet/switch/api/types.h.cache
 209fb438d6ef0cf3d7e7f72747a9bc2e mesa-ag/mesa/include/microchip/ethernet/switch/api/vop.h.cache
 0af9df2db5847dd419694d649178a91c mesa/demo/CMakeFiles/mesa_rpc_src
+0af9df2db5847dd419694d649178a91c mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi
 0ee24deffefe0c25cb125a4b55f6225d mesa/demo/mesa-ag/mesa-rpc.h
+9908434592eef720eb4b302e7e1bbfad mesa/demo/mipsel_vsc7448_pcb111.mfi

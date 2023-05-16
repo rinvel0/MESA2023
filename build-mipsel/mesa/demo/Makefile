@@ -385,6 +385,21 @@ app_vsc7423/fast:
 .PHONY : app_vsc7423/fast
 
 # Convenience name for target.
+mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule:
+	cd /home/codrin/mesa/build-mipsel && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule
+.PHONY : mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule
+
+# Convenience name for target.
+mipsel_vsc7448_pcb111_mfi: mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/rule
+
+.PHONY : mipsel_vsc7448_pcb111_mfi
+
+# fast build rule for target.
+mipsel_vsc7448_pcb111_mfi/fast:
+	cd /home/codrin/mesa/build-mipsel && $(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build.make mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build
+.PHONY : mipsel_vsc7448_pcb111_mfi/fast
+
+# Convenience name for target.
 mesa/demo/CMakeFiles/fa_board_fpga_init.dir/rule:
 	cd /home/codrin/mesa/build-mipsel && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mesa/demo/CMakeFiles/fa_board_fpga_init.dir/rule
 .PHONY : mesa/demo/CMakeFiles/fa_board_fpga_init.dir/rule
@@ -3755,6 +3770,7 @@ help:
 	@echo "... mesa_rpc_src"
 	@echo "... app_vsc7424"
 	@echo "... app_vsc7423"
+	@echo "... mipsel_vsc7448_pcb111_mfi"
 	@echo "... fa_board_fpga_init"
 	@echo "... base64decode"
 	@echo "... app_vsc7427"

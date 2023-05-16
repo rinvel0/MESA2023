@@ -213,7 +213,7 @@ CMAKE_C_COMPILER_AR:FILEPATH=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2
 // for the GCC compiler
 CMAKE_C_COMPILER_RANLIB:FILEPATH=/opt/mscc/mscc-brsdk-mipsel-2023.03/mipsel-mips32r2-linux-gnu/xstax/release/x86_64-linux/bin/mipsel-linux-gcc-ranlib
 
-CMAKE_C_FLAGS:STRING=-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG
+CMAKE_C_FLAGS:STRING=-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -g0 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -Wall -Wno-array-bounds -Wno-stringop-overflow -fasynchronous-unwind-tables -std=c99 -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE -ldl -O3 -DNDEBUG
 
 //Debug CFLAGS
 CMAKE_C_FLAGS_DEBUG:STRING=
@@ -410,8 +410,14 @@ IMG_mipsel_vsc7444_mfi:BOOL=OFF
 //Build the MESA DEMO firmware image for lan966x_ad/meba_lan966x
 IMG_mipsel_vsc7448_pcb110_mfi:BOOL=OFF
 
+//No help, variable specified on the command line.
+IMG_mipsel_vsc7448_pcb111:UNINITIALIZED=ON
+
+//No help, variable specified on the command line.
+IMG_mipsel_vsc7448_pcb111.mfi:UNINITIALIZED=ON
+
 //Build the MESA DEMO firmware image for lan966x_ad/meba_lan966x
-IMG_mipsel_vsc7448_pcb111_mfi:BOOL=OFF
+IMG_mipsel_vsc7448_pcb111_mfi:BOOL=ON
 
 //Build the MESA DEMO firmware image for lan966x_ad/meba_lan966x
 IMG_mipsel_vsc7464_mfi:BOOL=OFF

@@ -2182,6 +2182,19 @@ app_vsc7423/fast:
 .PHONY : app_vsc7423/fast
 
 #=============================================================================
+# Target rules for targets named mipsel_vsc7448_pcb111_mfi
+
+# Build rule for target.
+mipsel_vsc7448_pcb111_mfi: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mipsel_vsc7448_pcb111_mfi
+.PHONY : mipsel_vsc7448_pcb111_mfi
+
+# fast build rule for target.
+mipsel_vsc7448_pcb111_mfi/fast:
+	$(MAKE) $(MAKESILENT) -f mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build.make mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir/build
+.PHONY : mipsel_vsc7448_pcb111_mfi/fast
+
+#=============================================================================
 # Target rules for targets named fa_board_fpga_init
 
 # Build rule for target.
@@ -29372,6 +29385,7 @@ help:
 	@echo "... mesa_rpc_src"
 	@echo "... app_vsc7424"
 	@echo "... app_vsc7423"
+	@echo "... mipsel_vsc7448_pcb111_mfi"
 	@echo "... fa_board_fpga_init"
 	@echo "... base64decode"
 	@echo "... app_vsc7427"

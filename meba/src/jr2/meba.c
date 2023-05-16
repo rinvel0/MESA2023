@@ -3370,10 +3370,10 @@ meba_inst_t meba_initialize(size_t callouts_size,
         case BOARD_TYPE_SERVAL2_NID:
             board->port_cnt = 15;
             break;
-        case BOARD_TYPE_JAGUAR2_CU48:
-            if (inst->props.target == MESA_TARGET_SPARX_IV_90 || inst->props.target == MESA_TARGET_SPARX_IV_52) {
+        case BOARD_TYPE_JAGUAR2_CU48: //CPMO added 80
+            if (inst->props.target == MESA_TARGET_SPARX_IV_90 || inst->props.target == MESA_TARGET_SPARX_IV_52 || MESA_TARGET_SPARX_IV_80) {
                 board->port_cnt = 53;
-                inst->props.mux_mode = MESA_PORT_MUX_MODE_2;
+                //inst->props.mux_mode = MESA_PORT_MUX_MODE_2; //CPMOD commented
             } else {
                 board->port_cnt = 51;
             }

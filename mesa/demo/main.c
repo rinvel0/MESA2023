@@ -447,7 +447,7 @@ static mesa_rc board_conf_get(const char *tag, char *buf, size_t bufsize, size_t
         }
         if (REF_BOARD_PCB == 111) {
             board = "Jaguar2-cu48";
-            target = 0x7449;
+            target = 0x7448; //CPMOD
             type = 1;
         } else if (REF_BOARD_PCB == 116) {
             board = "Serval2 NID";

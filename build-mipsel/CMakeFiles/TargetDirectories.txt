@@ -179,6 +179,7 @@
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/mesa_rpc_src.dir
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/app_vsc7424.dir
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/app_vsc7423.dir
+/home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/mipsel_vsc7448_pcb111_mfi.dir
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/fa_board_fpga_init.dir
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/base64decode.dir
 /home/codrin/mesa/build-mipsel/mesa/demo/CMakeFiles/app_vsc7427.dir
