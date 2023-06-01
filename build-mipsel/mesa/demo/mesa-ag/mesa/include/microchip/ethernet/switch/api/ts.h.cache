@@ -1,0 +1,2209 @@
+{:	root[S{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"çç// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+// Microchip is aware that some terminology used in this technical document is
+// antiquated and inappropriate. As a result of the complex nature of software
+// where seemingly simple changes have unpredictable, and often far-reaching
+// negative results on the software's functionality (requiring extensive
+// retesting and revalidation) we are unable to make the desired changes in all
+// legacy systems without compromising our product or our clients' products.
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TS_
+#define _MICROCHIP_ETHERNET_SWITCH_API_TS_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/switch/api/security.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+/** \brief This is the max time offset adjustment that os done without setting ports in disabled state */
+#define MESA_HW_TIME_MAX_FINE_ADJ   25
+
+/**
+ * \brief Set the current time in a Timestamp format.
+ * \param inst [IN]     handle to an API instance.
+ * \param ts [IN]       pointer to a TimeStamp structure.
+ * Architecture:
+ *   All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_set(const mesa_inst_t      inst,
+                              const mesa_timestamp_t *const ts)
+    CAP(TS);
+
+/**
+ * \brief Set the current time in a Timestamp format for a domain.
+ * \param inst   [IN]   handle to an API instance.
+ * \param domain [IN]   Clock domain.
+ * \param ts     [IN]   pointer to a TimeStamp structure.
+ * Architecture:
+ *   Jaguar2: domain 0..2
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_timeofday_set(const mesa_inst_t      inst,
+                                     const uint32_t         domain,
+                                     const mesa_timestamp_t *const ts)
+    CAP(TS);
+
+/**
+ * \brief Set delta the current time in a Timestamp format.
+ * \param inst     [IN] handle to an API instance.
+ * \param ts       [IN] pointer to a TimeStamp structure.
+ * \param negative [IN] True if ts is subtracted from current time, else ts is added.
+ * Architecture:
+ *   All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_set_delta(const mesa_inst_t      inst,
+                                    const mesa_timestamp_t *ts,
+                                    mesa_bool_t            negative)
+    CAP(TS);
+
+/**
+ * \brief Set delta the current time in a Timestamp format.
+ * \param inst     [IN] handle to an API instance.
+ * \param domain   [IN] Clock domain.
+ * \param ts       [IN] pointer to a TimeStamp structure.
+ * \param negative [IN] True if ts is subtracted from current time, else ts is added.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_timeofday_set_delta(const mesa_inst_t      inst,
+                                           const uint32_t         domain,
+                                           const mesa_timestamp_t *ts,
+                                           mesa_bool_t            negative)
+    CAP(TS);
+
+/**
+ * \brief Subtract offset from the current time.
+ * \param inst [IN]     handle to an API instance.
+ * \param offset [IN]   offset in ns. The offset is subtracted from current TOD
+ * Architecture:
+ *   All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_offset_set(const mesa_inst_t inst,
+                                     const int32_t     offset)
+    CAP(TS);
+
+/**
+ * \brief Subtract offset from the current time.
+ * \param inst   [IN]   handle to an API instance.
+ * \param domain [IN]   Clock domain.
+ * \param offset [IN]   offset in ns. The offset is subtracted from current TOD
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_timeofday_offset_set(const mesa_inst_t inst,
+                                            const uint32_t    domain,
+                                            const int32_t     offset)
+    CAP(TS);
+
+/**
+ * \brief Do the one sec administration in the Timestamp function.
+ * On Serval1:
+ * Must be called after every one-second timer synchronization pulse interrupt (MEBA_EVENT_SYNC)
+ *
+ * This function is driving register update with parameters given by calling
+ * mesa_ts_timeofday_set_delta() + mesa_ts_domain_timeofday_set_delta()
+ * in order to make the TOD delta adjustment happen.
+ *
+ * This function is driving register update with parameters given by calling
+ * mesa_ts_timeofday_offset_set()
+ * in order to make the TOD offset configuration happen.
+ *
+ * After calling 
+ * mesa_ts_timeofday_offset_set() + mesa_ts_timeofday_next_pps_set()
+ * until this function is called, the functions
+ * srvl_ts_timeofday_offset_set() + srvl_ts_timeofday_set() + srvl_ts_timeofday_set_delta()
+ * will return error code
+ *
+ * \param inst [IN]     handle to an API instance.
+ * \param ongoing_adjustment [OUT]  True if clock adjustment is ongoing
+ *
+ * \return Return code.
+ *
+ * Architecture:
+ *  Jr1    : Maintains the clock setting process
+ *  Caracal: Maintains the clock setting process
+ *  Serval1: Maintains the clock setting process
+ *  JR2,
+ *  S5     : it must only be called when the PPS output pin is low, therefore it shall be called at least 200 microseconds after the 1PPS interrupt
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_adjtimer_one_sec(const mesa_inst_t inst,
+                                 mesa_bool_t       *const ongoing_adjustment)
+    CAP(TS);
+
+/**
+ * \brief Check if the clock adjustment is ongoing.
+ * \param inst [IN]     handle to an API instance.
+ * \param ongoing_adjustment [OUT]  True if clock adjustment is ongoing
+ * Architecture:
+ *  Jr1    ,
+ *  Caracal,
+ *  Serval1: Checks if the clock setting process is ongoing.
+ *  JR2,
+ *  S5     : Always returns False, as the time can be set immediately.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_ongoing_adjustment(const mesa_inst_t inst,
+                                   mesa_bool_t       *const ongoing_adjustment)
+    CAP(TS);
+
+/**
+ * \brief Get the current time in a Timestamp format, and the corresponding
+ *        time counter.
+ * \param inst [IN]     handle to an API instance
+ * \param ts [OUT]      pointer to a TimeStamp structure
+ * \param tc [OUT]      pointer to a time counter (internal hw format)
+ * Architecture:
+ *  Caracal: tc = free running clock cycle counter
+ *  Ocelot:
+ *  Serval:  tc = (seconds + nanoseconds).  In 16 bit fraction of nano seconds.
+ *  Jaguar2: tc = free running nanoseconds counter.  In 16 bit fraction of nano seconds.
+ *  SparX-5: tc = (seconds + nanoseconds + fractional nanoseconds). In 16 bit fraction of nano seconds.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_get(const mesa_inst_t inst,
+                              mesa_timestamp_t  *const ts,
+                              uint64_t          *const tc)
+    CAP(TS);
+
+/**
+ * \brief Get the current raw time in a Timestamp format, and the corresponding
+ *        time counter. (like mesa_ts_timeofday_get but without correction for outstanding adjustments.)
+ *        Used to be able to poll the time and call the onsec function in architectures that do not support interrupt.
+ * \param inst [IN]     handle to an API instance
+ * \param ts [OUT]      pointer to a TimeStamp structure
+ * \param tc [OUT]      pointer to a time counter (internal hw format)
+ * Architecture:
+ *  Ocelot:
+ *  Serval:  tc = (seconds + nanoseconds).  In 16 bit fraction of nano seconds.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_raw(const mesa_inst_t inst,
+                              mesa_timestamp_t  *const ts,
+                              uint64_t          *const tc)
+    CAP(TS_MISSING_ONE_SEC_INTERRUPT);
+
+/**
+ * \brief Get the current time in a Timestamp format, and the corresponding
+ *        time counter.
+ * \param inst   [IN]   handle to an API instance
+ * \param domain [IN]   Clock domain.
+ * \param ts     [OUT]  pointer to a TimeStamp structure
+ * \param tc     [OUT]  pointer to a time counter (internal hw format)
+ * Architecture:
+ *  Same as mesa_ts_timeofday_get
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_timeofday_get(const mesa_inst_t inst,
+                                     const uint32_t    domain,
+                                     mesa_timestamp_t  *const ts,
+                                     uint64_t          *const tc)
+    CAP(TS);
+
+/**
+ * \brief Get the time at the next 1PPS pulse edge in a Timestamp format.
+ * \param inst [IN]     handle to an API instance
+ * \param ts   [OUT]    pointer to a TimeStamp structure
+ * Architecture:
+ *  All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_next_pps_get(const mesa_inst_t inst,
+                                       mesa_timestamp_t  *const ts)
+    CAP(TS);
+
+/**
+ * \brief Get the time at the prev 1PPS pulse edge in a Timestamp format.
+ * \param inst [IN]     handle to an API instance
+ * \param ts   [OUT]    pointer to a TimeStamp structure
+ * Architecture:
+ *  All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_prev_pps_get(const mesa_inst_t inst,
+                                       mesa_timestamp_t  *const ts)
+    CAP(TS);
+
+/**
+ * \brief Get the time at the next 1PPS pulse edge in a Timestamp format.
+ * \param inst   [IN]   handle to an API instance
+ * \param domain [IN]   Clock domain.
+ * \param ts     [OUT]  pointer to a TimeStamp structure
+ * Architecture:
+ *  All
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_timeofday_next_pps_get(const mesa_inst_t inst,
+                                              const uint32_t    domain,
+                                              mesa_timestamp_t  *const ts)
+    CAP(TS);
+
+/**
+ * \brief Adjust the clock timer ratio.
+ * \param inst [IN]     handle to an API instance.
+ * \param adj [IN]      Clock ratio frequency offset in units of 0,1 ppb (parts pr billion).
+ *                      ratio > 0 => clock runs faster
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_adjtimer_set(const mesa_inst_t inst,
+                             const int32_t     adj)
+    CAP(TS);
+
+/**
+* \brief get the clock timer ratio.
+*
+* \param inst [IN]     handle to an API instance.
+* \param adj [OUT]     Clock ratio frequency offset in ppb (parts pr billion).
+*                      ratio > 0 => clock runs faster
+*
+* \return Return code.
+*/
+mesa_rc mesa_ts_adjtimer_get(const mesa_inst_t inst,
+                             int32_t           *const adj)
+    CAP(TS);
+
+/**
+ * \brief Adjust the clock timer ratio for a domain.
+ * Architecture:
+ *   Jaguar2: domain 0..2
+ *   Luton26, Serval1: domain 0
+ *
+ * \param inst   [IN]     handle to an API instance.
+ * \param domain [IN]     Clock domain.
+ * \param adj    [IN]     Clock ratio frequency offset in units of 0,1 ppb (parts pr billion).
+ *                      ratio > 0 => clock runs faster
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_adjtimer_set(const mesa_inst_t inst,
+                                    const uint32_t    domain,
+                                    const int32_t     adj)
+    CAP(TS);
+
+/**
+ * \brief get the clock timer ratio for a domain.
+ * Architecture:
+ *   Jaguar2: domain 0..2
+ *   Luton26, Serval1: domain 0
+ *
+ * \param inst   [IN]     handle to an API instance.
+ * \param domain [IN]     Clock domain.
+ * \param adj    [OUT]    Clock ratio frequency offset in units of 0,1 ppb (parts pr billion).
+ *                        ratio > 0 => clock runs faster
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_domain_adjtimer_get(const mesa_inst_t inst,
+                                    const uint32_t    domain,
+                                    int32_t           *const adj)
+    CAP(TS);
+
+/**
+* \brief get the clock internal timer frequency offset, compared to external clock input.
+*
+* \param inst [IN]     handle to an API instance.
+* \param adj [OUT]     Clock ratio frequency offset in ppb (parts pr billion).
+*                      ratio > 0 => internal clock runs faster than external clock
+*
+* \return Return code.
+*/
+mesa_rc mesa_ts_freq_offset_get(const mesa_inst_t inst,
+                                int32_t           *const adj)
+    CAP(TS);
+
+/**
+ * \brief Get the latest saved nanosec counter from the alternative clock.
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param saved [OUT]           latest saved value. In 16 bit fraction of nano seconds.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_alt_clock_saved_get(const mesa_inst_t inst,
+                                    uint64_t          *const saved)
+    CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief Get the latest saved timeofday from the alternative clock.
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param ts   [OUT]            latest saved timeofday.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_alt_clock_saved_timeofday_get(const mesa_inst_t inst,
+                                              mesa_timestamp_t  *const ts)
+    CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief parameter for setting the alternative  clock mode.
+ */
+/** \brief external clock output configuration. */
+typedef struct mesa_ts_alt_clock_mode_t {
+    mesa_bool_t one_pps_out; /**< Enable 1pps output */
+    mesa_bool_t one_pps_in;  /**< Enable 1pps input */
+    mesa_bool_t save;        /**< Save actual time counter at next 1 PPS input. This is the TOD to get using mesa_ts_alt_clock_saved_timeofday_get() function */
+    mesa_bool_t load;        /**< Load actual time counter at next 1 PPS input. The TOD loaded is given by the TOD _set() functions  */
+} mesa_ts_alt_clock_mode_t CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief Set the alternative external clock mode.
+ *  This function configures the 1PPS, L/S pin usage for pin set no 0 in Serval
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param alt_clock_mode [IN]   alternative clock mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_alt_clock_mode_set(const mesa_inst_t              inst,
+                                   const mesa_ts_alt_clock_mode_t *const alt_clock_mode)
+    CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief Get the alternative external clock mode.
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param alt_clock_mode [OUT]  alternative clock mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_alt_clock_mode_get(const mesa_inst_t        inst,
+                                   mesa_ts_alt_clock_mode_t *const alt_clock_mode)
+    CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief Set the time at the next 1PPS pulse edge in a Timestamp format.
+ * On Serval:
+ * It is assumed that this function is called at the beginning of a sec.
+ * Right after one-second timer synchronization pulse interrupt (MEBA_EVENT_SYNC)
+ * \param inst [IN]     handle to an API instance
+ * \param ts [OUT]      pointer to a TimeStamp structure
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_timeofday_next_pps_set(const mesa_inst_t      inst,
+                                       const mesa_timestamp_t *const ts)
+    CAP(TS_ALT_CLOCK);
+
+/**
+ * \brief parameter for setting the external clock mode.
+ */
+typedef enum  {
+    MESA_TS_EXT_CLOCK_MODE_ONE_PPS_DISABLE,       /**< Disable 1PPS input/output */
+    MESA_TS_EXT_CLOCK_MODE_ONE_PPS_OUTPUT,        /**< 1PPS clock output is generated based on TOD in domain 0 */
+    MESA_TS_EXT_CLOCK_MODE_ONE_PPS_INPUT,         /**< TOD in domain 0 is saved on 1PPS clock input. This is the TOD to get using _get() functions */
+    MESA_TS_EXT_CLOCK_MODE_ONE_PPS_OUTPUT_INPUT,
+    MESA_TS_EXT_CLOCK_MODE_MAX
+} mesa_ts_ext_clock_one_pps_mode_t CAP(TS);
+
+/**
+ * \brief external clock input/output configuration.
+ */ 
+typedef struct mesa_ts_ext_clock_mode_t {
+    mesa_ts_ext_clock_one_pps_mode_t  one_pps_mode;  /**< Select 1PPS ext clock mode */
+    mesa_bool_t                       enable;        /**< True: Select clock generation on external output pin with frequency 'freq'
+                                                          False: Select 1PPS on external input/output pins as indicated in 'one_pps_mode' */
+    uint32_t                          freq;          /**< clock output frequency (hz [1..25.000.000]) when 'enable' == True. */
+} mesa_ts_ext_clock_mode_t CAP(TS);
+
+
+/**
+ * \brief Get the external clock mode.
+ *  The mode depends on the hardware capability, it may be:
+ *          Enable/disable external synch pulse
+ *          Set clock output frequency
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param ext_clock_mode [OUT]  external clock mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_external_clock_mode_get(const mesa_inst_t        inst,
+                                        mesa_ts_ext_clock_mode_t *const ext_clock_mode)
+    CAP(TS);
+
+/**
+ * \brief Set the external clock mode.
+ *  The mode depends on the hardware capability, it may be:
+ *          Enable/disable external synch pulse
+ *          Set clock output frequency
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param ext_clock_mode [IN]   external clock mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_external_clock_mode_set(const mesa_inst_t              inst,
+                                        const mesa_ts_ext_clock_mode_t *const ext_clock_mode)
+    CAP(TS);
+
+/**
+ * \brief parameter for setting the external io mode.
+ * Architecture:
+ *   Jaguar2:
+ */
+typedef enum  {
+    MESA_TS_EXT_IO_MODE_ONE_PPS_DISABLE,     /**< Disable IO pin */
+    MESA_TS_EXT_IO_MODE_ONE_PPS_OUTPUT,      /**< enable external sync pulse output */
+    MESA_TS_EXT_IO_MODE_WAVEFORM_OUTPUT,     /**< enable external clock output frequency */
+    MESA_TS_EXT_IO_MODE_ONE_PPS_LOAD,        /**< enable input and load time at positive edge of input signal. The TOD loaded is given by the TOD _set() functions */
+    MESA_TS_EXT_IO_MODE_ONE_PPS_SAVE,        /**< enable input and save time at positive edge of input signal. This is the TOD to get using mesa_ts_saved_timeofday_get() function */
+    MESA_TS_EXT_IO_MODE_MAX
+} mesa_ts_ext_io_pin_cfg_t CAP(TS);
+
+/** \brief external clock io configuration. */
+typedef struct mesa_ts_ext_io_mode_s {
+    mesa_ts_ext_io_pin_cfg_t    pin;    /**< Defines the io operation modefor the io pin */
+    uint32_t                         domain; /**< clock domain [0..2] assigned to the IO pin */
+    uint32_t                         freq;   /**< clock output frequency (hz [1..25.000.000]). only relevant in WAVEFORM _OUTPUT mode */
+} mesa_ts_ext_io_mode_t CAP(TS);
+
+/**
+ * \brief Get the external io mode.
+ * Architecture:
+ *   Jaguar2:
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param io   [IN]             Input/Output pin number [0..3]
+ * \param ext_io_mode [OUT]     external clock io pin mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_external_io_mode_get(const mesa_inst_t     inst,
+                                     const uint32_t        io,
+                                     mesa_ts_ext_io_mode_t *const ext_io_mode)
+    CAP(TS);
+
+/**
+ * \brief Set the external io mode.
+ * Architecture:
+ *   Jaguar2:
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param io   [IN]             Input/Output pin number [0..3]
+ * \param ext_io_mode [IN]      external clock io pin mode.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_external_io_mode_set(const mesa_inst_t           inst,
+                                     const uint32_t              io,
+                                     const mesa_ts_ext_io_mode_t *const ext_io_mode)
+    CAP(TS);
+
+/**
+ * \brief Get the latest saved time.
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param io   [IN]             Input/Output pin number [0..3]
+ * \param ts  [OUT]             latest saved timeofday for the io pin's domain
+ * \param tc  [OUT]             latest saved time counter for the io pin's domain
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_saved_timeofday_get(const mesa_inst_t inst,
+                                    const uint32_t    io,
+                                    mesa_timestamp_t  *const ts,
+                                    uint64_t          *const tc)
+    CAP(TS);
+
+/**
+ * \brief Get the output pin generated clock edge offset to requested time.
+ *
+ * \param inst    [IN]             handle to an API instance
+ * \param io      [IN]             Input/Output pin number [0..3]
+ * \param offset  [OUT]            The last output clock edge was generated with this offset. Value 256 is one nano second.
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_output_clock_edge_offset_get(const mesa_inst_t inst,
+                                             const uint32_t    io,
+                                             uint32_t          *const offset)
+    CAP(TS);
+
+/**
+ * \brief Get the latest saved time counter in nanosec.
+ *
+ * \param inst [IN]             handle to an API instance
+ * \param saved [OUT]           latest saved value. [0..999.999.999]
+ *
+ * \return Return code.
+ */
+/* TBD henrikb. This is not called by application and the cil pointer is not loaded on any platform */
+mesa_rc mesa_ts_external_clock_saved_get(const mesa_inst_t inst,
+                                         uint32_t          *const saved)
+    CAP(TS);
+
+/**
+ * \brief Set the ingress latency.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param ingress_latency [IN]  pointer to ingress latency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_ingress_latency_set(const mesa_inst_t         inst,
+                                    const mesa_port_no_t      port_no,
+                                    const mesa_timeinterval_t *const ingress_latency)
+    CAP(TS);
+
+/**
+ * \brief Get the ingress latency.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param ingress_latency [OUT] pointer to ingress_latency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_ingress_latency_get(const mesa_inst_t    inst,
+                                    const mesa_port_no_t port_no,
+                                    mesa_timeinterval_t  *const ingress_latency)
+    CAP(TS);
+
+/**
+ * \brief Set the P2P delay.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param p2p_delay [IN]        peer-2-peer delay (measured)
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_p2p_delay_set(const mesa_inst_t         inst,
+                              const mesa_port_no_t      port_no,
+                              const mesa_timeinterval_t *const p2p_delay)
+    CAP(TS);
+
+/**
+ * \brief Get the P2P delay.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param p2p_delay [OUT]       pointer to peer-2-peer delay
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_p2p_delay_get(const mesa_inst_t    inst,
+                              const mesa_port_no_t port_no,
+                              mesa_timeinterval_t  *const p2p_delay)
+    CAP(TS);
+
+
+/**
+ * \brief Set the egress latency.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param egress_latency [IN]   egress latency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_egress_latency_set(const mesa_inst_t         inst,
+                                   const mesa_port_no_t      port_no,
+                                   const mesa_timeinterval_t *const egress_latency)
+    CAP(TS);
+
+/**
+ * \brief Get the egress latency.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param egress_latency [OUT]  pointer to  egress latency
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_egress_latency_get(const mesa_inst_t    inst,
+                                   const mesa_port_no_t port_no,
+                                   mesa_timeinterval_t  *const egress_latency)
+    CAP(TS);
+
+/**
+ * \brief Set the delay asymmetry.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param delay_asymmetry [IN]  delay asymmetry. The (signed) delay is subtracted on egress and added on ingress. 
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_delay_asymmetry_set(const mesa_inst_t         inst,
+                                    const mesa_port_no_t      port_no,
+                                    const mesa_timeinterval_t *const delay_asymmetry)
+    CAP(TS);
+
+/**
+ * \brief Get the delay asymmetry.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param delay_asymmetry [OUT] pointer to  delay asymmetry
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_delay_asymmetry_get(const mesa_inst_t    inst,
+                                    const mesa_port_no_t port_no,
+                                    mesa_timeinterval_t  *const delay_asymmetry)
+    CAP(TS);
+
+/**
+ * \brief parameter for setting the timestamp operating mode
+ */
+typedef enum  {
+    MESA_TS_MODE_NONE,
+    MESA_TS_MODE_EXTERNAL,
+    MESA_TS_MODE_INTERNAL,
+    MESA_TX_MODE_MAX
+} mesa_ts_mode_t CAP(TS);
+
+/** \brief Timestamp operation */
+typedef struct mesa_ts_operation_mode_t {
+    mesa_ts_mode_t mode;   /**< Hardware Timestamping mode for a port(EXTERNAL or INTERNAL) */
+    uint32_t       domain; /**< Hardware timestamping domain for a port */
+} mesa_ts_operation_mode_t CAP(TS);
+
+
+/**
+ * \brief Set the timestamping operation mode for a port.
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param mode [IN]             pointer to a struct holding the operation mode
+ *
+ * \return Return code.
+ *
+ * Serval:  Used to set backplane (INTERNAL) mode/normal(EXTERNAL) mode
+ * Jaguar2: Used to set backplane (INTERNAL) mode/front(EXTERNAL) mode
+ * In backplane mode the internal format is determined by the internal mode (see below)
+ * Other : Not used
+ */
+mesa_rc mesa_ts_operation_mode_set(const mesa_inst_t              inst,
+                                   const mesa_port_no_t           port_no,
+                                   const mesa_ts_operation_mode_t *const mode)
+    CAP(TS);
+
+/**
+ * \brief Get the timestamping operation mode for a port
+ * \param inst [IN]             handle to an API instance
+ * \param port_no [IN]          port number
+ * \param mode [OUT]            pointer to a struct holding the operation mode
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_operation_mode_get(const mesa_inst_t        inst,
+                                   const mesa_port_no_t     port_no,
+                                   mesa_ts_operation_mode_t *const mode)
+    CAP(TS);
+
+/**
+ * \brief parameter for setting the internal timestamp format
+ */
+typedef enum  {
+    MESA_TS_INTERNAL_FMT_NONE,
+    MESA_TS_INTERNAL_FMT_RESERVED_LEN_30BIT,        /* Ts is stored in reservedField as 30 bit (ns only) */
+    MESA_TS_INTERNAL_FMT_RESERVED_LEN_32BIT,        /* Ts is stored in reservedField as 32 bit (ns+sec*10^9) mod 2^32) */
+    MESA_TS_INTERNAL_FMT_SUB_ADD_LEN_44BIT_CF62,    /* Ts is subtracted from cf at ingress as 44 bit (ns+sec*10^9) mod 2^44), MSB is saved in cf bit 62 */
+    MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF_3_0, /* Ts is subtracted from cf at ingress as 48 bit (ns+sec*10^9) mod 2^48), MSBs are saved in cf bit 3-0 */
+    MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF_0,   /* Ts is subtracted from cf at ingress as 48 bit (ns+sec*10^9) mod 2^48), MSB is saved in cf bit 0 */
+    MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF,     /* Ts is subtracted from cf at ingress as 48 bit (ns+sec*10^9) mod 2^48) */
+    MESA_TS_INTERNAL_FMT_MAX
+} mesa_ts_internal_fmt_t CAP(TS);
+
+/** \brief Hardware timestamping format mode for internal ports */
+typedef struct mesa_ts_internal_mode_t {
+    mesa_ts_internal_fmt_t int_fmt;    /**< Hardware Timestamping format mode for INTERNAL ports */
+} mesa_ts_internal_mode_t CAP(TS);
+
+
+/**
+ * \brief Set the internal timestamping mode.
+ * \param inst [IN]             handle to an API instance
+ * \param mode [IN]             pointer to a struct holding the operation mode
+ *
+ * \return Return code.
+ *
+ * Serval: Used to set INTERNAL mode timestamping format
+ * Other : Not used
+ */
+mesa_rc mesa_ts_internal_mode_set(const mesa_inst_t             inst,
+                                  const mesa_ts_internal_mode_t *const mode)
+    CAP(TS);
+
+/**
+ * \brief Get the internal timestamping mode.
+ * \param inst [IN]             handle to an API instance
+ * \param mode [OUT]            pointer to a struct holding the operation mode
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_internal_mode_get(const mesa_inst_t       inst,
+                                  mesa_ts_internal_mode_t *const mode)
+    CAP(TS);
+
+/** \brief Timestamp identifier */
+typedef struct mesa_ts_id_t {
+    uint32_t ts_id;  /**< Timestamp identifier */
+} mesa_ts_id_t CAP(TS);
+
+/** \brief Timestamp structure */
+typedef struct mesa_ts_timestamp_t {
+    uint64_t ts;   /**< Timestamp value */
+    uint32_t id;   /**< Timestamp identifier */
+    void *context; /**< Application specific context */
+    mesa_bool_t ts_valid; /**< Timestamp is valid (can be not valid if timestamp is not received */
+} mesa_ts_timestamp_t CAP(TS);
+
+/**
+ * \brief Update the internal timestamp table, from HW
+ * \param inst    [IN]          handle to an API instance
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_tx_timestamp_update(const mesa_inst_t inst)
+    CAP(TS);
+
+/**
+* \brief Get the rx FIFO timestamp for a {timestampId}
+* Architecture:
+*   Luton26
+*
+* \param inst    [IN]          handle to an API instance
+* \param ts_id   [IN]          timestamp id
+* \param ts     [OUT]          pointer to a struct holding the fifo timestamp
+*
+* \return Return code.
+*/
+mesa_rc mesa_rx_timestamp_get(const mesa_inst_t   inst,
+                              const mesa_ts_id_t  *const ts_id,
+                              mesa_ts_timestamp_t *const ts)
+    CAP(TS);
+
+/**
+* \brief Release the FIFO rx timestamp id
+* \param inst    [IN]          handle to an API instance
+* \param ts_id   [IN]          timestamp id
+*
+* \return Return code.
+*/
+mesa_rc mesa_rx_timestamp_id_release(const mesa_inst_t  inst,
+                                     const mesa_ts_id_t *const ts_id)
+    CAP(TS);
+
+/**
+* \brief Get rx timestamp from a port (convert from slave time to the master time)
+* Architecture:
+*   Jaguar1
+*
+* \param inst    [IN]          handle to an API instance
+* \param port_no [IN]          port number
+* \param ts     [IN/OUT]       pointer to a struct holding the timestamp
+*
+* \return Return code.
+*/
+mesa_rc mesa_rx_master_timestamp_get(const mesa_inst_t    inst,
+                                     const mesa_port_no_t port_no,
+                                     mesa_ts_timestamp_t  *const ts)
+    CAP(TS);
+
+typedef void (*mesa_ts_timestamp_alloc_cb_t)(void *context, uint32_t port_no,
+                                             mesa_ts_timestamp_t *ts);
+
+/** \brief Timestamp allocation */
+typedef struct mesa_ts_timestamp_alloc_t {
+    /** Identify the ports that a timestamp id is allocated to */
+    uint64_t port_mask;
+
+    /** Application specific context used as parameter in the call-out */
+    void *context;
+
+    /** Application call-out function called when the timestamp is available */
+    mesa_ts_timestamp_alloc_cb_t cb;
+} mesa_ts_timestamp_alloc_t CAP(TS);
+
+/**
+ * \brief Allocate a timestamp id for a two step transmission
+ * \param inst       [IN]          handle to an API instance
+ * \param alloc_parm [IN]          pointer allocation parameters
+ * \param ts_id      [OUT]         timestamp id
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_tx_timestamp_idx_alloc(const mesa_inst_t               inst,
+                                    const mesa_ts_timestamp_alloc_t *const alloc_parm,
+                                    mesa_ts_id_t                    *const ts_id)
+    CAP(TS);
+
+/**
+ * \brief Age the FIFO timestamps
+ * \param inst    [IN]          handle to an API instance
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_timestamp_age(const mesa_inst_t inst)
+    CAP(TS);
+
+/**
+* \brief Signal port status change (used to detect and compensate for the internal ingress and egress latencies)
+* \param inst    [IN]          handle to an API instance
+* \param port_no [IN]          port number
+*
+* \return Return code.
+*/
+mesa_rc mesa_ts_status_change(const mesa_inst_t    inst,
+                              const mesa_port_no_t port_no)
+    CAP(TS);
+
+
+/**
+ * \brief parameter for setting auto response behavior pr domain
+ * Jaguar2: bitMask = 0x3F
+ * Fireant: bitMask = 0x7F
+ * ptp_port_individual TRUE:
+ *     DelayResponce portIdentity.portNumber = (ptp_port_msb & ~bitMask) | ((API Port number) & bitMask)
+ * ptp_port_individual FALSE:
+ *     DelayResponce portIdentity.portNumber = ptp_port_msb
+ */
+typedef struct mesa_ts_autoresp_dom_cfg_s {
+    mesa_bool_t         ptp_port_individual; /**< Influencing on DelayResponce portIdentity.portNumber calculation as described above */
+    uint16_t            ptp_port_msb;        /**< Contributing to DelayResponce portIdentity.portNumber as described above */
+    mesa_clock_identity clock_identity;      /**< DelayResponce portIdentity.clockIdentity. */
+    mesa_ace_u8_t       flag_field_update;   /**< DelayResponce flagField byte 0. Bits in .value with .mask bit set, is written to DelayResponce */
+} mesa_ts_autoresp_dom_cfg_t CAP(TS_DELAY_REQ_AUTO_RESP);
+
+/**
+ * \brief Set auto response behavior pr. domain.
+ * \param inst    [IN]          handle to an API instance
+ * \param domain  [IN]          ptp domain number [0..MESA_CAP_TS_DOMAIN_CNT-1]
+ * \param cfg     [IN]          domain configuration for auto response feature
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_autoresp_dom_cfg_set(const mesa_inst_t                inst,
+                                     const uint8_t                    domain,
+                                     const mesa_ts_autoresp_dom_cfg_t *const cfg)
+    CAP(TS_DELAY_REQ_AUTO_RESP);
+
+/**
+ * \brief Get auto response behavior pr. domain.
+ * \param inst    [IN]          handle to an API instance
+ * \param domain  [IN]          ptp domain number [0..MESA_CAP_TS_DOMAIN_CNT-1]
+ * \param cfg     [OUT]         domain configuration for auto response feature
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_autoresp_dom_cfg_get(const mesa_inst_t          inst,
+                                     const uint8_t              domain,
+                                     mesa_ts_autoresp_dom_cfg_t *const cfg)
+    CAP(TS_DELAY_REQ_AUTO_RESP);
+
+/**
+ * \brief Set the source mac address used in auto Delay_Req/Resp
+ * \param inst    [IN]          handle to an API instance
+ * \param port_no [IN]          port number
+ * \param smac    [IN]          port mac configuration for auto response feature
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_smac_set(const mesa_inst_t    inst,
+                         const mesa_port_no_t port_no,
+                         const mesa_mac_t     *const smac)
+    CAP(TS_DELAY_REQ_AUTO_RESP);
+
+/**
+ * \brief Get the source mac address used in auto Delay_Req/Resp
+ * \param inst    [IN]          handle to an API instance
+ * \param port_no [IN]          port number
+ * \param smac   [OUT]          port mac configuration for auto response feature
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_smac_get(const mesa_inst_t    inst,
+                         const mesa_port_no_t port_no,
+                         mesa_mac_t           *const smac)
+    CAP(TS_DELAY_REQ_AUTO_RESP);
+
+/**
+ * \brief Set auto response behavior pr. domain.
+ * \param inst    [IN]          handle to an API instance
+ * \param sec_cntr[IN]          sequence counter number [0..255]. See mesa_packet_tx_info_t.sequence_idx and
+ *                              mesa_packet_tx_info_t.ptp_timestamp.
+ * \param cnt_val [OUT]         actual value of the sequence counter
+ *
+ * \return Return code.
+ */
+mesa_rc mesa_ts_seq_cnt_get(const mesa_inst_t                inst,
+                            const uint32_t                   sec_cntr,
+                            uint16_t *const                  cnt_val)
+    CAP(TS);
+
+/**
+ * \brief Parameter for internal timestamping capability.
+ */
+typedef enum  {
+    MESA_TS_TOD_INTERNAL_TC_MODE_30BIT = 0x1,
+    MESA_TS_TOD_INTERNAL_TC_MODE_32BIT = 0x2,
+    MESA_TS_TOD_INTERNAL_TC_MODE_44BIT = 0x4,
+    MESA_TS_TOD_INTERNAL_TC_MODE_48BIT = 0x8,
+} mesa_ts_tod_internal_tc_mode_t CAP(TS);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_TS_
+:@byteposi?:	@str"0#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TS_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[æiPipiqiªi
+iWi†ii=i>i?ijiïiñi«i˚iEiFi∞i◊iÿi‹iiEiiêiôiúi¥i∏iÛi3i@iAiEiàiªi·ii,iFiIiaieißiÎi2i?i@iDiÄi≥iÌiCiTi]i`ixi|iΩi˝iB	iO	iP	iT	iê	i√	iÈ	i#
+iy
+i|
+iî
+iò
+i‡
+i*iqiΩi iÀiœi i3iÉiîiùi†i∏iºi˘i8iEiFiJi{iÆi‘i$i'i?iCiáiÕii i!i%ihiwiÿi€i(ipi•i®iıiiPiSiei™i⁄i6iPiSiÜiŒi—iÈiÏi˝i.i_iêiôi-i0iHiLiÖi”i‡i·iÂiiLiîi•i≤iøi¸iiLiOigiki¶iˆiiiiTiliûi◊ii/ibiniæiiiÇiöiûi‘iiJiWiXi\i¨iiåiæi˜i>iOi[i´iÆi∆i i i;iviùiûi¢iÓii8i^ióiﬁiÔiii,i0imi¨iÓi0 i= i> iB iå iæ i˜ i!i!i!i+!i/!in!i≤!iø!i¿!iƒ!i"i@"iy"iä"ií"iï"i≠"i±"i"i4#iA#iB#iF#iê#i¬#iË#i!$i2$i:$i=$iU$iY$iü$iÁ$i2%i?%i@%iD%il%iü%i¸%i3&i6&iN&iR&iá&iª&i»&i…&iÕ&iÒ&iÛ&i%'it'i™'i¨'i√'i∆'i˚'i6(iC(iD(iH(i}(ié(i®(i»(iÀ(i )i()iá)iæ)i¡)iŸ)i›)i*iW*ií*iü*i†*i§*i÷*iÁ*i+i!+i$+iY+iÅ+i‡+i,i,i4,i8,it,i≤,iÙ,i-i-i-i`-ib-iî-i„-i6.i8.iO.iR.iä.i».i’.i÷.i⁄.i%/i(/ib/i∫/iΩ/i’/iŸ/i0iY0ip0iq0iu0i∫0iΩ0i˜0i/1i21iJ1iN1iî1iﬂ1iˆ1i˜1i˚1i82i<2io2iô2i—2i3i©3i14i_4i`4id4ió4iÁ4iÍ4i$5i\5i_5iw5i{5i√5i6i36i46i86ik6in6i®6i‡6i„6i˚6iˇ6iA7iî7i´7i¨7i∞7i˙7i8iQ8i£8i’8i9i9i)9i-9iq9i∫9i—9i“9i÷9i:i:i#:iw:iÈ:i;i∞;iœ;i˚;i¸;i <i5<i:<id<iº<iA=iŒ=iN>ir>is>it>ix>iü>i€>i?i2?i5?io?i§?iß?iø?i√?i
+@ib@io@ip@it@iõ@i◊@iAi.Ai1AikAi†Ai£AiªAiøAiBijBiwBixBi|Bi≤Bi√Bi—Bi’BiÂBi)CiÄCi‹CiÇDi8EiTEixEiyEi®EiœEi+FiãFiGi5Gi6Gi:Gi^GioGi}GiÄGi∫Gi˘Gi5Hi8HiPHiTHiïHi‘Hi#Ii0Ii1Ii5IiYIijIixIi{IiµIiÙIi0Ji3JiKJiOJiñJi€Ji0Ki=Ki>KiBKigKijKi§Ki„Ki2LiÑLiáLiüLi£LiﬂLiMiZMiõMi®Mi©Mi≠Mi˘Mi¸Mi9Ni{Ni˜Ni˙NiOiOi[OiûOiÏOi˘Oi˙Oi˛Oi6Pi9PisPi∏PiªPi”Pi◊Pi>QiQi»Qi’Qi÷Qi⁄Qi˝Qi7RicRiûRi°RiπRiΩRiSiHSiûSi´Si¨Si∞Si”SiTi9TitTiwTièTiìTi“TiUieUirUisUiwUiîUiŒUi˙Ui7Vi:ViRViVViîVi’ViWi,Wi-Wi1WiNWiàWi¥WiÒWiÙWiXiXiIXiÖXi Xi◊XiÿXiŸXi›XiˇXi9YieYiîYióYiØYi≥YiˆYi<ZiêZiùZiûZi¢ZiƒZi˛Zi*[ie[ih[iÄ[iÑ[i¬[i\iR\i_\i`\id\iá\i¡\iÌ\i`]ic]i{]i]i√]i
+^i`^im^in^ir^iï^iœ^i˚^i7_i:_iR_iV_iï_i◊_i(`i5`i6`i:`iw`i{`iã`i¢`iΩ`iÿ`iÌ`iaiai*aiTai≥ai˛ai"bi#bi$bi(bibbiúbi»bicici2ci5ci}ciƒcidi0di4di|di«diei#ei$ei(eiaeiõei«eififi1fi5fiwfiºfigigigigiUgiYgiigiàgiÙginhi	iißiiAji¡jiﬁji kikiDkimki—kiÙkiıkiˆki˙ki(libli±li¥liÃliœlimimi mifmi≥mi¿mi¡mi≈miÛmi-ni|ninióniõni€ni"oi/oi0oiSoiqoi£oiªoiºoiﬁoipi.pi^piñpi˙piqiqiqiUqièqiíqi™qiÆqiÁqiÙqiıqi˘qi0ri@riLriNriári≥risisisisiUsiïsi“siﬂsi‡si‰sitiGtistiutiåtiètiÕtiui ui!ui%uixuiàuiîuiñuiœui˙uiCviEvi\vi_viüvi‚vi'wi4wi5wiÉwi wiÀwiÓwixi[xisxitxiæxi—xi“xi"yiGyilyimyiqyiØyiÏyi-zi]zi`zixzi|zi∆zi{io{i|{i}{iÅ{i£{i›{i‡{i¯{i¸{i/|i<|i=|iA|i≤|iÎ|i}i}i/}i2}ik}iß}i¥}iµ}i∂}i∫}i˚}i~i1~iN~i∑~i’~iiiAi iHÄißÄi;ÅiuÅivÅizÅi´ÅiÂÅi5ÇiÑÇiáÇiüÇi£ÇiÔÇi=ÉièÉi∞Éi±ÉiµÉiÊÉi ÑipÑiøÑi¬Ñi⁄ÑiﬁÑi$ÖilÖi∏ÖiŸÖi⁄ÖiﬁÖiÜiYÜiÖÜi÷ÜiŸÜiÒÜiıÜi)ái`áiõáiºáiΩái¡áiài<àihàiπàiºài‘àiÿàiâiCâi~âiüâi†âi§âi’âiäi|äi¡äiãi	ãi!ãi%ãihãiØãiıãiåiåiåiAåiEåiUåiÉåi±åiﬂåiçi7çi8çi`çiçç:@last_line_endiçç{;o;;o;	;
+@
+;ij;"1#define _MICROCHIP_ETHERNET_SWITCH_API_TS_
+
+;@{;o;;o;	;
+@
+;iñ;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i«;"9#include <microchip/ethernet/switch/api/security.h>
+;@{;o;;o;	;
+@
+;i˚;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{;o;;o;	;
+@
+;i∞;"-#define MESA_HW_TIME_MAX_FINE_ADJ   25
+
+;@{:func_proto{:normal{	:	typeo;;o;	;
+@
+;i∏;"mesa_rc ;@:	nameo;;o;	;
+@
+;i¿;"mesa_ts_timeofday_set;@:
+array[ :cap0:	args[{;{	;o;;o;	;
+@
+;i÷;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iÌ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#const mesa_timestamp_t *const ;@;o;;o;	;
+@
+;i/;"ts;@;[ ;0;o;;o;	;
+@
+;i7;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;ie;"mesa_rc ;@;o;;o;	;
+@
+;im;"!mesa_ts_domain_timeofday_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iä;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i°;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÃ;"const uint32_t         ;@;o;;o;	;
+@
+;i„;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#const mesa_timestamp_t *const ;@;o;;o;	;
+@
+;i.;"ts;@;[ ;0;o;;o;	;
+@
+;i6;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i|;"mesa_rc ;@;o;;o;	;
+@
+;iÑ;" mesa_ts_timeofday_set_delta;@;[ ;0;[{;{	;o;;o;	;
+@
+;i†;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i∑;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i·;"const mesa_timestamp_t *;@;o;;o;	;
+@
+;i˘;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;i!	;"mesa_bool_t            ;@;o;;o;	;
+@
+;i8	;"negative;@;[ ;0;o;;o;	;
+@
+;iF	;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iò
+;"mesa_rc ;@;o;;o;	;
+@
+;i†
+;"'mesa_ts_domain_timeofday_set_delta;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i√
+;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i⁄
+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"const uint32_t         ;@;o;;o;	;
+@
+;i";"domain;@;[ ;0{;{	;o;;o;	;
+@
+;iU;"const mesa_timestamp_t *;@;o;;o;	;
+@
+;im;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;iú;"mesa_bool_t            ;@;o;;o;	;
+@
+;i≥;"negative;@;[ ;0;o;;o;	;
+@
+;i¡;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iº;"mesa_rc ;@;o;;o;	;
+@
+;iƒ;"!mesa_ts_timeofday_offset_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i·;"const mesa_inst_t ;@;o;;o;	;
+@
+;iÛ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"const int32_t     ;@;o;;o;	;
+@
+;i0;"offset;@;[ ;0;o;;o;	;
+@
+;i<;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iC;"mesa_rc ;@;o;;o;	;
+@
+;iK;"(mesa_ts_domain_timeofday_offset_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;io;"const mesa_inst_t ;@;o;;o;	;
+@
+;iÅ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≥;"const uint32_t    ;@;o;;o;	;
+@
+;i≈;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i˘;"const int32_t     ;@;o;;o;	;
+@
+;i;"offset;@;[ ;0;o;;o;	;
+@
+;i;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iL;"mesa_rc ;@;o;;o;	;
+@
+;iT;"mesa_ts_adjtimer_one_sec;@;[ ;0;[{;{	;o;;o;	;
+@
+;im;"const mesa_inst_t ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¶;"mesa_bool_t       *const ;@;o;;o;	;
+@
+;iø;"ongoing_adjustment;@;[ ;0;o;;o;	;
+@
+;i◊;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;ik;"mesa_rc ;@;o;;o;	;
+@
+;is;"mesa_ts_ongoing_adjustment;@;[ ;0;[{;{	;o;;o;	;
+@
+;ié;"const mesa_inst_t ;@;o;;o;	;
+@
+;i†;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i…;"mesa_bool_t       *const ;@;o;;o;	;
+@
+;i‚;"ongoing_adjustment;@;[ ;0;o;;o;	;
+@
+;i˙;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iû;"mesa_rc ;@;o;;o;	;
+@
+;i¶;"mesa_ts_timeofday_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iº;"const mesa_inst_t ;@;o;;o;	;
+@
+;iŒ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;i;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;i-;"uint64_t          *const ;@;o;;o;	;
+@
+;iF;"tc;@;[ ;0;o;;o;	;
+@
+;iN;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i ;"mesa_rc ;@;o;;o;	;
+@
+;i“;"mesa_ts_timeofday_raw;@;[ ;0;[{;{	;o;;o;	;
+@
+;iË;"const mesa_inst_t ;@;o;;o;	;
+@
+;i˙;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;i7;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;iY;"uint64_t          *const ;@;o;;o;	;
+@
+;ir;"tc;@;[ ;0;o;;o;	;
+@
+;iz;"&CAP(TS_MISSING_ONE_SEC_INTERRUPT);@{;{;{	;o;;o;	;
+@
+;i0;"mesa_rc ;@;o;;o;	;
+@
+;i8;"!mesa_ts_domain_timeofday_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iU;"const mesa_inst_t ;@;o;;o;	;
+@
+;ig;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ií;"const uint32_t    ;@;o;;o;	;
+@
+;i§;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i—;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;iÍ;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;i ;"uint64_t          *const ;@;o;;o;	;
+@
+;i, ;"tc;@;[ ;0;o;;o;	;
+@
+;i4 ;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i/!;"mesa_rc ;@;o;;o;	;
+@
+;i7!;"#mesa_ts_timeofday_next_pps_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iV!;"const mesa_inst_t ;@;o;;o;	;
+@
+;ih!;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iï!;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;iÆ!;"ts;@;[ ;0;o;;o;	;
+@
+;i∂!;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i±";"mesa_rc ;@;o;;o;	;
+@
+;iπ";"#mesa_ts_timeofday_prev_pps_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÿ";"const mesa_inst_t ;@;o;;o;	;
+@
+;iÍ";"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i#;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;i0#;"ts;@;[ ;0;o;;o;	;
+@
+;i8#;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iY$;"mesa_rc ;@;o;;o;	;
+@
+;ia$;"*mesa_ts_domain_timeofday_next_pps_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iá$;"const mesa_inst_t ;@;o;;o;	;
+@
+;iô$;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÕ$;"const uint32_t    ;@;o;;o;	;
+@
+;iﬂ$;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i%;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;i.%;"ts;@;[ ;0;o;;o;	;
+@
+;i6%;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iR&;"mesa_rc ;@;o;;o;	;
+@
+;iZ&;"mesa_ts_adjtimer_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;io&;"const mesa_inst_t ;@;o;;o;	;
+@
+;iÅ&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i§&;"const int32_t     ;@;o;;o;	;
+@
+;i∂&;"adj;@;[ ;0;o;;o;	;
+@
+;iø&;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i∆';"mesa_rc ;@;o;;o;	;
+@
+;iŒ';"mesa_ts_adjtimer_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i„';"const mesa_inst_t ;@;o;;o;	;
+@
+;iı';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i(;"int32_t           *const ;@;o;;o;	;
+@
+;i1(;"adj;@;[ ;0;o;;o;	;
+@
+;i:(;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i›);"mesa_rc ;@;o;;o;	;
+@
+;iÂ);" mesa_ts_domain_adjtimer_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i*;"const mesa_inst_t ;@;o;;o;	;
+@
+;i*;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i=*;"const uint32_t    ;@;o;;o;	;
+@
+;iO*;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i{*;"const int32_t     ;@;o;;o;	;
+@
+;iç*;"adj;@;[ ;0;o;;o;	;
+@
+;iñ*;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i8,;"mesa_rc ;@;o;;o;	;
+@
+;i@,;" mesa_ts_domain_adjtimer_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i\,;"const mesa_inst_t ;@;o;;o;	;
+@
+;in,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iò,;"const uint32_t    ;@;o;;o;	;
+@
+;i™,;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;i÷,;"int32_t           *const ;@;o;;o;	;
+@
+;iÔ,;"adj;@;[ ;0;o;;o;	;
+@
+;i¯,;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iR.;"mesa_rc ;@;o;;o;	;
+@
+;iZ.;"mesa_ts_freq_offset_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ir.;"const mesa_inst_t ;@;o;;o;	;
+@
+;iÑ.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i™.;"int32_t           *const ;@;o;;o;	;
+@
+;i√.;"adj;@;[ ;0;o;;o;	;
+@
+;iÃ.;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iŸ/;"mesa_rc ;@;o;;o;	;
+@
+;i·/;" mesa_ts_alt_clock_saved_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i˝/;"const mesa_inst_t ;@;o;;o;	;
+@
+;i0;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i90;"uint64_t          *const ;@;o;;o;	;
+@
+;iR0;"
+saved;@;[ ;0;o;;o;	;
+@
+;i]0;"CAP(TS_ALT_CLOCK);@{;{;{	;o;;o;	;
+@
+;iN1;"mesa_rc ;@;o;;o;	;
+@
+;iV1;"*mesa_ts_alt_clock_saved_timeofday_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i|1;"const mesa_inst_t ;@;o;;o;	;
+@
+;ié1;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¬1;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;i€1;"ts;@;[ ;0;o;;o;	;
+@
+;i„1;"CAP(TS_ALT_CLOCK);@{
+:keywordo;;o;	;
+@
+;io2;"typedef;@:struct_type_declare{:struct_members[	{:member{;{	;o;;o;	;
+@
+;iù2;"mesa_bool_t ;@;o;;o;	;
+@
+;i©2;"one_pps_out;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’2;"mesa_bool_t ;@;o;;o;	;
+@
+;i·2;"one_pps_in;@;[ ;0{;{;{	;o;;o;	;
+@
+;i3;"mesa_bool_t ;@;o;;o;	;
+@
+;i3;"	save;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≠3;"mesa_bool_t ;@;o;;o;	;
+@
+;iπ3;"	load;@;[ ;0:typedef_nameo;;o;	;
+@
+;i34;"mesa_ts_alt_clock_mode_t ;@;[ ;o;;o;	;
+@
+;iL4;"CAP(TS_ALT_CLOCK);@{;{;{	;o;;o;	;
+@
+;i{5;"mesa_rc ;@;o;;o;	;
+@
+;iÉ5;"mesa_ts_alt_clock_mode_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iû5;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;iΩ5;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ5;"+const mesa_ts_alt_clock_mode_t *const ;@;o;;o;	;
+@
+;i6;"alt_clock_mode;@;[ ;0;o;;o;	;
+@
+;i 6;"CAP(TS_ALT_CLOCK);@{;{;{	;o;;o;	;
+@
+;iˇ6;"mesa_rc ;@;o;;o;	;
+@
+;i7;"mesa_ts_alt_clock_mode_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i"7;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i;7;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;id7;"%mesa_ts_alt_clock_mode_t *const ;@;o;;o;	;
+@
+;iÑ7;"alt_clock_mode;@;[ ;0;o;;o;	;
+@
+;iò7;"CAP(TS_ALT_CLOCK);@{;{;{	;o;;o;	;
+@
+;i-9;"mesa_rc ;@;o;;o;	;
+@
+;i59;"#mesa_ts_timeofday_next_pps_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iT9;"const mesa_inst_t      ;@;o;;o;	;
+@
+;ik9;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iò9;"#const mesa_timestamp_t *const ;@;o;;o;	;
+@
+;i∂9;"ts;@;[ ;0;o;;o;	;
+@
+;iæ9;"CAP(TS_ALT_CLOCK);@{
+;o;;o;	;
+@
+;i:;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i:;"	enum;@:
+enums[
+{:	enum{:enum_nameo;;o;	;
+@
+;i':;"+MESA_TS_EXT_CLOCK_MODE_ONE_PPS_DISABLE;@;0{; {;!o;;o;	;
+@
+;i{:;"*MESA_TS_EXT_CLOCK_MODE_ONE_PPS_OUTPUT;@;0{; {;!o;;o;	;
+@
+;iÌ:;")MESA_TS_EXT_CLOCK_MODE_ONE_PPS_INPUT;@;0{; {;!o;;o;	;
+@
+;iÉ;;"0MESA_TS_EXT_CLOCK_MODE_ONE_PPS_OUTPUT_INPUT;@;0{; {;!o;;o;	;
+@
+;i¥;;" MESA_TS_EXT_CLOCK_MODE_MAX
+;@;0;o;;o;	;
+@
+;i—;;"&mesa_ts_ext_clock_one_pps_mode_t ;@;[ ;o;;o;	;
+@
+;iÚ;;"CAP(TS);@{
+;o;;o;	;
+@
+;i:<;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ih<;"'mesa_ts_ext_clock_one_pps_mode_t  ;@;o;;o;	;
+@
+;iä<;"one_pps_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¿<;"'mesa_bool_t                       ;@;o;;o;	;
+@
+;i‚<;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i“=;"'uint32_t                          ;@;o;;o;	;
+@
+;iÙ=;"	freq;@;[ ;0;o;;o;	;
+@
+;iP>;"mesa_ts_ext_clock_mode_t ;@;[ ;o;;o;	;
+@
+;ii>;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i√?;"mesa_rc ;@;o;;o;	;
+@
+;iÀ?;"$mesa_ts_external_clock_mode_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÎ?;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i@;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i2@;"%mesa_ts_ext_clock_mode_t *const ;@;o;;o;	;
+@
+;iR@;"ext_clock_mode;@;[ ;0;o;;o;	;
+@
+;if@;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iøA;"mesa_rc ;@;o;;o;	;
+@
+;i«A;"$mesa_ts_external_clock_mode_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÁA;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;iB;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i4B;"+const mesa_ts_ext_clock_mode_t *const ;@;o;;o;	;
+@
+;iZB;"ext_clock_mode;@;[ ;0;o;;o;	;
+@
+;inB;"CAP(TS);@{
+;o;;o;	;
+@
+;i’B;"typedef;@;{;o;;o;	;
+@
+;i›B;"	enum;@;[{; {;!o;;o;	;
+@
+;iÈB;"(MESA_TS_EXT_IO_MODE_ONE_PPS_DISABLE;@;0{; {;!o;;o;	;
+@
+;i-C;"'MESA_TS_EXT_IO_MODE_ONE_PPS_OUTPUT;@;0{; {;!o;;o;	;
+@
+;iÑC;"(MESA_TS_EXT_IO_MODE_WAVEFORM_OUTPUT;@;0{; {;!o;;o;	;
+@
+;i‡C;"%MESA_TS_EXT_IO_MODE_ONE_PPS_LOAD;@;0{; {;!o;;o;	;
+@
+;iÜD;"%MESA_TS_EXT_IO_MODE_ONE_PPS_SAVE;@;0{; {;!o;;o;	;
+@
+;i<E;"MESA_TS_EXT_IO_MODE_MAX
+;@;0;o;;o;	;
+@
+;iVE;"mesa_ts_ext_io_pin_cfg_t ;@;[ ;o;;o;	;
+@
+;ioE;"CAP(TS);@{
+;o;;o;	;
+@
+;i®E;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i”E;"!mesa_ts_ext_io_pin_cfg_t    ;@;o;;o;	;
+@
+;iÔE;"pin;@;[ ;0{;{;{	;o;;o;	;
+@
+;i/F;"&uint32_t                         ;@;o;;o;	;
+@
+;iPF;"domain;@;[ ;0{;{;{	;o;;o;	;
+@
+;ièF;"&uint32_t                         ;@;o;;o;	;
+@
+;i∞F;"	freq;@;[ ;0;o;;o;	;
+@
+;iG;"mesa_ts_ext_io_mode_t ;@;[ ;o;;o;	;
+@
+;i,G;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iTH;"mesa_rc ;@;o;;o;	;
+@
+;i\H;"!mesa_ts_external_io_mode_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iyH;"const mesa_inst_t     ;@;o;;o;	;
+@
+;ièH;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∫H;"const uint32_t        ;@;o;;o;	;
+@
+;i–H;"io;@;[ ;0{;{	;o;;o;	;
+@
+;i˘H;""mesa_ts_ext_io_mode_t *const ;@;o;;o;	;
+@
+;iI;"ext_io_mode;@;[ ;0;o;;o;	;
+@
+;i'I;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iOJ;"mesa_rc ;@;o;;o;	;
+@
+;iWJ;"!mesa_ts_external_io_mode_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;itJ;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iêJ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iªJ;"!const uint32_t              ;@;o;;o;	;
+@
+;i◊J;"io;@;[ ;0{;{	;o;;o;	;
+@
+;i K;"(const mesa_ts_ext_io_mode_t *const ;@;o;;o;	;
+@
+;i#K;"ext_io_mode;@;[ ;0;o;;o;	;
+@
+;i4K;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i£L;"mesa_rc ;@;o;;o;	;
+@
+;i´L;" mesa_ts_saved_timeofday_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i«L;"const mesa_inst_t ;@;o;;o;	;
+@
+;iŸL;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iM;"const uint32_t    ;@;o;;o;	;
+@
+;iM;"io;@;[ ;0{;{	;o;;o;	;
+@
+;i=M;"mesa_timestamp_t  *const ;@;o;;o;	;
+@
+;iVM;"ts;@;[ ;0{;{	;o;;o;	;
+@
+;i~M;"uint64_t          *const ;@;o;;o;	;
+@
+;ióM;"tc;@;[ ;0;o;;o;	;
+@
+;iüM;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iO;"mesa_rc ;@;o;;o;	;
+@
+;iO;")mesa_ts_output_clock_edge_offset_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iCO;"const mesa_inst_t ;@;o;;o;	;
+@
+;iUO;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iàO;"const uint32_t    ;@;o;;o;	;
+@
+;iöO;"io;@;[ ;0{;{	;o;;o;	;
+@
+;iÀO;"uint32_t          *const ;@;o;;o;	;
+@
+;i‰O;"offset;@;[ ;0;o;;o;	;
+@
+;iO;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i>Q;"mesa_rc ;@;o;;o;	;
+@
+;iFQ;"%mesa_ts_external_clock_saved_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;igQ;"const mesa_inst_t ;@;o;;o;	;
+@
+;iyQ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i®Q;"uint32_t          *const ;@;o;;o;	;
+@
+;i¡Q;"
+saved;@;[ ;0;o;;o;	;
+@
+;iÃQ;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iΩR;"mesa_rc ;@;o;;o;	;
+@
+;i≈R;" mesa_ts_ingress_latency_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i·R;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i˚R;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i%S;"const mesa_port_no_t      ;@;o;;o;	;
+@
+;i?S;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ilS;"&const mesa_timeinterval_t *const ;@;o;;o;	;
+@
+;içS;"ingress_latency;@;[ ;0;o;;o;	;
+@
+;i¢S;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iìT;"mesa_rc ;@;o;;o;	;
+@
+;iõT;" mesa_ts_ingress_latency_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i∑T;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iÃT;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iˆT;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iU;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i8U;"!mesa_timeinterval_t  *const ;@;o;;o;	;
+@
+;iTU;"ingress_latency;@;[ ;0;o;;o;	;
+@
+;iiU;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iVV;"mesa_rc ;@;o;;o;	;
+@
+;i^V;"mesa_ts_p2p_delay_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;itV;"const mesa_inst_t         ;@;o;;o;	;
+@
+;iéV;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≤V;"const mesa_port_no_t      ;@;o;;o;	;
+@
+;iÃV;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÛV;"&const mesa_timeinterval_t *const ;@;o;;o;	;
+@
+;iW;"p2p_delay;@;[ ;0;o;;o;	;
+@
+;i#W;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iX;"mesa_rc ;@;o;;o;	;
+@
+;iX;"mesa_ts_p2p_delay_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i.X;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iCX;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;igX;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i|X;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i£X;"!mesa_timeinterval_t  *const ;@;o;;o;	;
+@
+;iøX;"p2p_delay;@;[ ;0;o;;o;	;
+@
+;iŒX;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i≥Y;"mesa_rc ;@;o;;o;	;
+@
+;iªY;"mesa_ts_egress_latency_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i÷Y;"const mesa_inst_t         ;@;o;;o;	;
+@
+;iY;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iZ;"const mesa_port_no_t      ;@;o;;o;	;
+@
+;i3Z;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i_Z;"&const mesa_timeinterval_t *const ;@;o;;o;	;
+@
+;iÄZ;"egress_latency;@;[ ;0;o;;o;	;
+@
+;iîZ;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iÑ[;"mesa_rc ;@;o;;o;	;
+@
+;iå[;"mesa_ts_egress_latency_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iß[;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iº[;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÂ[;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i˙[;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i&\;"!mesa_timeinterval_t  *const ;@;o;;o;	;
+@
+;iB\;"egress_latency;@;[ ;0;o;;o;	;
+@
+;iV\;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i];"mesa_rc ;@;o;;o;	;
+@
+;iá];" mesa_ts_delay_asymmetry_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i£];"const mesa_inst_t         ;@;o;;o;	;
+@
+;iΩ];"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÁ];"const mesa_port_no_t      ;@;o;;o;	;
+@
+;i^;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i.^;"&const mesa_timeinterval_t *const ;@;o;;o;	;
+@
+;iO^;"delay_asymmetry;@;[ ;0;o;;o;	;
+@
+;id^;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iV_;"mesa_rc ;@;o;;o;	;
+@
+;i^_;" mesa_ts_delay_asymmetry_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iz_;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iè_;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iπ_;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iŒ_;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˚_;"!mesa_timeinterval_t  *const ;@;o;;o;	;
+@
+;i`;"delay_asymmetry;@;[ ;0;o;;o;	;
+@
+;i,`;"CAP(TS);@{
+;o;;o;	;
+@
+;i{`;"typedef;@;{;o;;o;	;
+@
+;iÉ`;"	enum;@;[	{; {;!o;;o;	;
+@
+;iè`;"MESA_TS_MODE_NONE;@;0{; {;!o;;o;	;
+@
+;i¶`;"MESA_TS_MODE_EXTERNAL;@;0{; {;!o;;o;	;
+@
+;i¡`;"MESA_TS_MODE_INTERNAL;@;0{; {;!o;;o;	;
+@
+;i‹`;"MESA_TX_MODE_MAX
+;@;0;o;;o;	;
+@
+;iÔ`;"mesa_ts_mode_t ;@;[ ;o;;o;	;
+@
+;i˛`;"CAP(TS);@{
+;o;;o;	;
+@
+;i*a;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iXa;"mesa_ts_mode_t ;@;o;;o;	;
+@
+;iga;"	mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑a;"uint32_t       ;@;o;;o;	;
+@
+;i∆a;"domain;@;[ ;0;o;;o;	;
+@
+;i b;"mesa_ts_operation_mode_t ;@;[ ;o;;o;	;
+@
+;ib;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i4d;"mesa_rc ;@;o;;o;	;
+@
+;i<d;"mesa_ts_operation_mode_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iWd;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;ivd;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iüd;"$const mesa_port_no_t           ;@;o;;o;	;
+@
+;iæd;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÍd;"+const mesa_ts_operation_mode_t *const ;@;o;;o;	;
+@
+;ie;"	mode;@;[ ;0;o;;o;	;
+@
+;ie;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i5f;"mesa_rc ;@;o;;o;	;
+@
+;i=f;"mesa_ts_operation_mode_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iXf;"const mesa_inst_t        ;@;o;;o;	;
+@
+;iqf;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iöf;"const mesa_port_no_t     ;@;o;;o;	;
+@
+;i≥f;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iﬂf;"%mesa_ts_operation_mode_t *const ;@;o;;o;	;
+@
+;iˇf;"	mode;@;[ ;0;o;;o;	;
+@
+;i	g;"CAP(TS);@{
+;o;;o;	;
+@
+;iYg;"typedef;@;{;o;;o;	;
+@
+;iag;"	enum;@;[{; {;!o;;o;	;
+@
+;img;"MESA_TS_INTERNAL_FMT_NONE;@;0{; {;!o;;o;	;
+@
+;iåg;",MESA_TS_INTERNAL_FMT_RESERVED_LEN_30BIT;@;0{; {;!o;;o;	;
+@
+;i¯g;",MESA_TS_INTERNAL_FMT_RESERVED_LEN_32BIT;@;0{; {;!o;;o;	;
+@
+;irh;"0MESA_TS_INTERNAL_FMT_SUB_ADD_LEN_44BIT_CF62;@;0{; {;!o;;o;	;
+@
+;ii;"3MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF_3_0;@;0{; {;!o;;o;	;
+@
+;i´i;"1MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF_0;@;0{; {;!o;;o;	;
+@
+;iEj;"/MESA_TS_INTERNAL_FMT_RESERVED_LEN_48BIT_CF;@;0{; {;!o;;o;	;
+@
+;i≈j;"MESA_TS_INTERNAL_FMT_MAX
+;@;0;o;;o;	;
+@
+;i‡j;"mesa_ts_internal_fmt_t ;@;[ ;o;;o;	;
+@
+;i˜j;"CAP(TS);@{
+;o;;o;	;
+@
+;iDk;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iqk;"mesa_ts_internal_fmt_t ;@;o;;o;	;
+@
+;iàk;"int_fmt;@;[ ;0;o;;o;	;
+@
+;i”k;"mesa_ts_internal_mode_t ;@;[ ;o;;o;	;
+@
+;iÎk;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i m;"mesa_rc ;@;o;;o;	;
+@
+;i(m;"mesa_ts_internal_mode_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iBm;"#const mesa_inst_t             ;@;o;;o;	;
+@
+;i`m;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iàm;"*const mesa_ts_internal_mode_t *const ;@;o;;o;	;
+@
+;i≠m;"	mode;@;[ ;0;o;;o;	;
+@
+;i∑m;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iõn;"mesa_rc ;@;o;;o;	;
+@
+;i£n;"mesa_ts_internal_mode_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iΩn;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i’n;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˝n;"$mesa_ts_internal_mode_t *const ;@;o;;o;	;
+@
+;io;"	mode;@;[ ;0;o;;o;	;
+@
+;i&o;"CAP(TS);@{
+;o;;o;	;
+@
+;iSo;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iuo;"uint32_t ;@;o;;o;	;
+@
+;i~o;"
+ts_id;@;[ ;0;o;;o;	;
+@
+;i•o;"mesa_ts_id_t ;@;[ ;o;;o;	;
+@
+;i≤o;"CAP(TS);@{
+;o;;o;	;
+@
+;iﬁo;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;ip;"uint64_t ;@;o;;o;	;
+@
+;ip;"ts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2p;"uint32_t ;@;o;;o;	;
+@
+;i;p;"id;@;[ ;0{;{;{	;o;;o;	;
+@
+;ibp;"void *;@;o;;o;	;
+@
+;ihp;"context;@;[ ;0{;{;{	;o;;o;	;
+@
+;iöp;"mesa_bool_t ;@;o;;o;	;
+@
+;i¶p;"ts_valid;@;[ ;0;o;;o;	;
+@
+;i¸p;"mesa_ts_timestamp_t ;@;[ ;o;;o;	;
+@
+;iq;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;iÆq;"mesa_rc ;@;o;;o;	;
+@
+;i∂q;"mesa_tx_timestamp_update;@;[ ;0;[{;{	;o;;o;	;
+@
+;iœq;"const mesa_inst_t ;@;o;;o;	;
+@
+;i·q;"	inst;@;[ ;0;o;;o;	;
+@
+;iÎq;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;is;"mesa_rc ;@;o;;o;	;
+@
+;i%s;"mesa_rx_timestamp_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i;s;"const mesa_inst_t   ;@;o;;o;	;
+@
+;iOs;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iss;" const mesa_ts_id_t  *const ;@;o;;o;	;
+@
+;iés;"
+ts_id;@;[ ;0{;{	;o;;o;	;
+@
+;i≥s;" mesa_ts_timestamp_t *const ;@;o;;o;	;
+@
+;iŒs;"ts;@;[ ;0;o;;o;	;
+@
+;i÷s;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;ièt;"mesa_rc ;@;o;;o;	;
+@
+;iót;"!mesa_rx_timestamp_id_release;@;[ ;0;[{;{	;o;;o;	;
+@
+;i¥t;"const mesa_inst_t  ;@;o;;o;	;
+@
+;i«t;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÚt;"const mesa_ts_id_t *const ;@;o;;o;	;
+@
+;iu;"
+ts_id;@;[ ;0;o;;o;	;
+@
+;iu;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i_v;"mesa_rc ;@;o;;o;	;
+@
+;igv;"!mesa_rx_master_timestamp_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÑv;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iôv;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iƒv;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iŸv;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iw;"!mesa_ts_timestamp_t  *const ;@;o;;o;	;
+@
+;i#w;"ts;@;[ ;0;o;;o;	;
+@
+;i+w;"CAP(TS);@{;o;;o;	;
+@
+;i5w;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;i=w;"
+void ;@:fptr_nameo;;o;	;
+@
+;iDw;"!mesa_ts_timestamp_alloc_cb_t;@;[{;{	;o;;o;	;
+@
+;ibw;"void *;@;o;;o;	;
+@
+;ihw;"context;@;[ ;0{;{	;o;;o;	;
+@
+;iqw;"uint32_t ;@;o;;o;	;
+@
+;izw;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i∞w;"mesa_ts_timestamp_t *;@;o;;o;	;
+@
+;i≈w;"ts;@;[ ;0;0{
+;o;;o;	;
+@
+;iÓw;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i_x;"uint64_t ;@;o;;o;	;
+@
+;ihx;"port_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¬x;"void *;@;o;;o;	;
+@
+;i»x;"context;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&y;""mesa_ts_timestamp_alloc_cb_t ;@;o;;o;	;
+@
+;iCy;"cb;@;[ ;0;o;;o;	;
+@
+;iIy;"mesa_ts_timestamp_alloc_t ;@;[ ;o;;o;	;
+@
+;icy;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i|z;"mesa_rc ;@;o;;o;	;
+@
+;iÑz;" mesa_tx_timestamp_idx_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;i†z;"%const mesa_inst_t               ;@;o;;o;	;
+@
+;i¿z;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÍz;",const mesa_ts_timestamp_alloc_t *const ;@;o;;o;	;
+@
+;i{;"alloc_parm;@;[ ;0{;{	;o;;o;	;
+@
+;iA{;",mesa_ts_id_t                    *const ;@;o;;o;	;
+@
+;ih{;"
+ts_id;@;[ ;0;o;;o;	;
+@
+;is{;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i¸{;"mesa_rc ;@;o;;o;	;
+@
+;i|;"mesa_timestamp_age;@;[ ;0;[{;{	;o;;o;	;
+@
+;i|;"const mesa_inst_t ;@;o;;o;	;
+@
+;i)|;"	inst;@;[ ;0;o;;o;	;
+@
+;i3|;"CAP(TS);@{;{;{	;o;;o;	;
+@
+;i2};"mesa_rc ;@;o;;o;	;
+@
+;i:};"mesa_ts_status_change;@;[ ;0;[{;{	;o;;o;	;
+@
+;iP};"const mesa_inst_t    ;@;o;;o;	;
+@
+;ie};"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iâ};"const mesa_port_no_t ;@;o;;o;	;
+@
+;iû};"port_no;@;[ ;0;o;;o;	;
+@
+;i´};"CAP(TS);@{
+;o;;o;	;
+@
+;i;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iE;"mesa_bool_t         ;@;o;;o;	;
+@
+;iY;"ptp_port_individual;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒ;"uint16_t            ;@;o;;o;	;
+@
+;i‚;"ptp_port_msb;@;[ ;0{;{;{	;o;;o;	;
+@
+;iLÄ;"mesa_clock_identity ;@;o;;o;	;
+@
+;i`Ä;"clock_identity;@;[ ;0{;{;{	;o;;o;	;
+@
+;i´Ä;"mesa_ace_u8_t       ;@;o;;o;	;
+@
+;iøÄ;"flag_field_update;@;[ ;0;o;;o;	;
+@
+;i=Å;" mesa_ts_autoresp_dom_cfg_t ;@;[ ;o;;o;	;
+@
+;iXÅ;" CAP(TS_DELAY_REQ_AUTO_RESP);@{;{;{	;o;;o;	;
+@
+;i£Ç;"mesa_rc ;@;o;;o;	;
+@
+;i´Ç;"!mesa_ts_autoresp_dom_cfg_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i»Ç;"&const mesa_inst_t                ;@;o;;o;	;
+@
+;iÈÇ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÉ;"&const uint8_t                    ;@;o;;o;	;
+@
+;i5É;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;ibÉ;"-const mesa_ts_autoresp_dom_cfg_t *const ;@;o;;o;	;
+@
+;iäÉ;"cfg;@;[ ;0;o;;o;	;
+@
+;iìÉ;" CAP(TS_DELAY_REQ_AUTO_RESP);@{;{;{	;o;;o;	;
+@
+;iﬁÑ;"mesa_rc ;@;o;;o;	;
+@
+;iÊÑ;"!mesa_ts_autoresp_dom_cfg_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÖ;" const mesa_inst_t          ;@;o;;o;	;
+@
+;iÖ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iIÖ;" const uint8_t              ;@;o;;o;	;
+@
+;idÖ;"domain;@;[ ;0{;{	;o;;o;	;
+@
+;iëÖ;"'mesa_ts_autoresp_dom_cfg_t *const ;@;o;;o;	;
+@
+;i≥Ö;"cfg;@;[ ;0;o;;o;	;
+@
+;iºÖ;" CAP(TS_DELAY_REQ_AUTO_RESP);@{;{;{	;o;;o;	;
+@
+;iıÜ;"mesa_rc ;@;o;;o;	;
+@
+;i˝Ü;"mesa_ts_smac_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iá;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i#á;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iBá;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iWá;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iyá;"!const mesa_mac_t     *const ;@;o;;o;	;
+@
+;iïá;"	smac;@;[ ;0;o;;o;	;
+@
+;iüá;" CAP(TS_DELAY_REQ_AUTO_RESP);@{;{;{	;o;;o;	;
+@
+;iÿà;"mesa_rc ;@;o;;o;	;
+@
+;i‡à;"mesa_ts_smac_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÒà;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iâ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i%â;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i:â;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i\â;"!mesa_mac_t           *const ;@;o;;o;	;
+@
+;ixâ;"	smac;@;[ ;0;o;;o;	;
+@
+;iÇâ;" CAP(TS_DELAY_REQ_AUTO_RESP);@{;{;{	;o;;o;	;
+@
+;i%ã;"mesa_rc ;@;o;;o;	;
+@
+;i-ã;"mesa_ts_seq_cnt_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iAã;"&const mesa_inst_t                ;@;o;;o;	;
+@
+;ibã;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÑã;"&const uint32_t                   ;@;o;;o;	;
+@
+;i•ã;"sec_cntr;@;[ ;0{;{	;o;;o;	;
+@
+;iÀã;"&uint16_t *const                  ;@;o;;o;	;
+@
+;iÏã;"cnt_val;@;[ ;0;o;;o;	;
+@
+;i˘ã;"CAP(TS);@{
+;o;;o;	;
+@
+;iEå;"typedef;@;{;o;;o;	;
+@
+;iMå;"	enum;@;[	{; {	;!o;;o;	;
+@
+;iYå;"(MESA_TS_TOD_INTERNAL_TC_MODE_30BIT ;@:operatoro;;o;	;
+@
+;i|å;"=;@:	expro;;o;	;
+@
+;i~å;"0x1;@;0{; {	;!o;;o;	;
+@
+;iáå;"(MESA_TS_TOD_INTERNAL_TC_MODE_32BIT ;@;%o;;o;	;
+@
+;i™å;"=;@;&o;;o;	;
+@
+;i¨å;"0x2;@;0{; {	;!o;;o;	;
+@
+;iµå;"(MESA_TS_TOD_INTERNAL_TC_MODE_44BIT ;@;%o;;o;	;
+@
+;iÿå;"=;@;&o;;o;	;
+@
+;i⁄å;"0x4;@;0{; {	;!o;;o;	;
+@
+;i„å;"(MESA_TS_TOD_INTERNAL_TC_MODE_48BIT ;@;%o;;o;	;
+@
+;iç;"=;@;&o;;o;	;
+@
+;iç;"0x8;@;0;o;;o;	;
+@
+;iç;"$mesa_ts_tod_internal_tc_mode_t ;@;[ ;o;;o;	;
+@
+;i.ç;"CAP(TS);@{;o;;o;	;
+@
+;i8ç;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i`ç;"2#endif // _MICROCHIP_ETHERNET_SWITCH_API_TS_
+;@

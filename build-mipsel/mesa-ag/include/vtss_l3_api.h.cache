@@ -1,0 +1,1148 @@
+{:	root[${:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"*K// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief L3 routing API
+ * \details This header file describes L3 IPv4/IPv6 hardware assisted routing
+ * functions.
+ */
+
+#ifndef _VTSS_L3_API_H_
+#define _VTSS_L3_API_H_
+
+#include <vtss/api/types.h>
+
+#if defined(VTSS_FEATURE_LAYER3)
+
+/** \page layer3 Layer 3
+ *
+ * The Layer 3 functionality is build around some global configuration and three
+ * tables:
+ *
+ * IP unicast: router-legs (RLEG), longest-prefix-match (LPM) and
+ * neighbour-table (IP UC ARP).
+ *
+ * IP multicast: router-legs (RLEG), longest-prefix-match (LPM) and
+ * Router Leg bitmask table.
+ *
+ * Following is the purpose of these configurations entities.
+ *
+ *
+ * Configuration entities
+ * ----------------------
+ *
+ * Global configuration: Required to enable routing and to configure the MAC
+ * addressing schema to use for the router legs.
+ *
+ * Router legs: The purpose of L3 routing is to forward IP frames from one L3
+ * interface to another. The router legs represents these L3 interfaces. A
+ * router leg is associated to a L2 VLAN, it has a MAC-address and a set of
+ * other attributes to enable/disable IPv4/IPv6 routing and VRRP settings. If a
+ * IP frame is received on a VLAN which has an associated router leg, and the
+ * destination MAC of the frame matches the MAC address of the router leg, then
+ * the frame is candidate for being routed.
+ *
+ * NOTE: The router leg table should be synchronized with the interface table in
+ * the operating systems IP stack. When a L3 interface is added in the operating
+ * system, a corresponding router leg should be created. When an IP address is
+ * assigned to a given L3 interface in the IP stack, then the corresponding
+ * interface route should be installed in the LPM table.
+ *
+ * Longest prefix match: This is where the actual routing takes place, if a IP
+ * frame qualifies for routing then the destination IP address is matched
+ * against the LPM table. The best match (the longest prefix match) in the LPM
+ * table is used to route the frame. If no match is found in the LPM table, then
+ * the frame is forwarded to the CPU. The LPM table should include network
+ * routes, host routes and interface routes. An interface route is a route
+ * representing the configured IP range of the interface, and with the
+ * destination configured to zero.
+ *
+ * NOTE: An IP UC LPM entry can only be routed in HW if the destination of the route
+ * is installed in the neighbour table. If this is not the case the frame will
+ * be forwarded to the CPU, which should perform the ARP/NDP resolution route
+ * the packet in SW and install the neighbour in HW for future use.
+ *
+ * IP UC Neighbour table: This table is used to map IP address to (MAC addresses,
+ * VLAN). When a packet is being routed in the LPM table, the output is a
+ * "next-hop" IP address, this "next-hop" IP address must be translated to a
+ * MAC-address and a VLAN before it can be L2 forwarded. If a LPM entry does not
+ * have a corresponding neighbour entry, then the packet will be forwarded to
+ * the CPU.
+ * The neighbour table should be synchronized with the ARP/NDP table of the
+ * operating systems IP stack.
+ *
+ * IP MC Rleg bitmask table: This table consists of destination router legs entries
+ * for a given MC group in the LPM table, i.e. each group can have a unique number of
+ * destination rlegs.  If 2 (or more) groups have identical destinations they will share
+ * the same rleg bitmask table entry.
+ *
+ * Mode of operation
+ * -----------------
+ * IP Unicast:
+ *
+ * When a frame is being routed and the best match in the LPM table is a
+ * interface route, then the packet will be forwarded to the CPU. The CPU should
+ * now start the ARP/NDP protocols in order to figure out what the MAC address
+ * is of the destination host. The address resolution has completed the frame
+ * can be routed. In order to enable hardware routing for directly connected
+ * routes, the derived destination host must be installed as a host route in the
+ * LPM table, and an associated neighbour entry should be installed.
+ *
+ * When a new network route is installed, the MAC address of the next hop route
+ * may not be known in advance. If this is the case the first hit on that route
+ * will also cause the frame to be forwarded to the CPU, and the CPU may
+ * complete the neighbour discovery and install a neighbour entry. After the
+ * neighbour entry has been installed the routing will be performed in HW.
+ *
+ * IP Multicast:
+ *
+ * To enable MC routing a MC group must be installed into the LPM table without
+ * a rleg destination, i.e. initially frames to this group will get dropped.
+ * The SIP can be either specific address or any.
+ * Hereafter the receivers will join this group and enable forwarding to their RLEG/VLAN and
+ * when the receiver leaves the group then the rleg is removed. The receiver can enforce
+ * only to listen to a group from specific source.  The sender activity status can be
+ * monitored by the router application and the group removed in case of an idle sender
+ *
+ */
+
+#if defined(VTSS_ARCH_JAGUAR_2)
+#if defined(VTSS_ARCH_SERVAL_T)
+
+// Serval-T has 6 super VCAP blocks, each with 64 rows of 16 entries. This means
+// that a single block will give us 64*16 entries - which is the minimum
+// meaningful amount. 6*1024 is max.
+#define VTSS_RLEG_CNT    31   /**< Length of RLEG table */
+#define VTSS_LPM_CNT     1024 /**< Length of LPM table */
+#define VTSS_ARP_CNT     256  /**< Length of ARP table */
+#define VTSS_LPM_MC_CNT  512  /**< Length of LPM table for multicast entries */
+#define VTSS_MC_TBL_CNT  256  /**< Length of MC RLEG bit-mask table */
+#else
+// Jaguar-2 has 8 super VCAP blocks, each with 256 rows of 16 entries. This means
+// that a single block will give us 256*16 = 4096 entries.
+#define VTSS_RLEG_CNT    127  /**< Length of RLEG table */
+#define VTSS_LPM_CNT     4096 /**< Length of LPM table for unicast entries */
+#define VTSS_ARP_CNT     2048 /**< Length of ARP table */
+#define VTSS_LPM_MC_CNT  2048 /**< Length of LPM table for multicast entries */
+#define VTSS_MC_TBL_CNT  1024 /**< Length of MC RLEG mask table */
+
+// A IPv4 unicast address occupies 1 entry in the LPM VCAP while
+// IPv6 unicast address occupies 4 entries.
+// I.e. the max number of IP UC entries:
+// IPv4 UC = VTSS_LPM_CNT
+// IPv6 UC = VTSS_LPM_CNT/4
+
+// A IPv4 multicast address occupies 2 entries in the LPM VCAP while
+// IPv6 multicast address occupies 8 entries.
+// I.e. the max number of IP MC entries:
+// IPv4 MC = VTSS_LPM_MC_CNT
+// IPv6 MC = VTSS_LPM_MC_CNT/4
+
+#endif /* VTSS_ARCH_SERVAL_T */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+
+
+#if defined(VTSS_ARCH_SPARX5)
+
+// SparX-5 has 10 super VCAP blocks, each with 256 rows of 12 entries (52 bits each).
+// This means that a single block will give us 256*12 = 3072 entries.
+#define VTSS_RLEG_CNT    127  /**< Length of RLEG table */
+#define VTSS_LPM_CNT     3072 /**< Length of LPM table */
+#define VTSS_ARP_CNT     2048 /**< Length of ARP table */
+#define VTSS_LPM_MC_CNT  1536 /**< Length of LPM table for multicast entries */
+#define VTSS_MC_TBL_CNT  2048 /**< Length of MC RLEG bit-mask table */
+
+// A IPv4 unicast address occupies 1 entry in the LPM VCAP while
+// IPv6 unicast address occupies 2 entries.
+// I.e. the max number of IP UC entries:
+// IPv4 UC = VTSS_LPM_CNT
+// IPv6 UC = VTSS_LPM_CNT/4
+
+// A IPv4 multicast address occupies 2 entries in the LPM VCAP while
+// IPv6 multicast address occupies 5 entries. As each row consists of 12 entries
+// there is only room for 2 IPv6 MC addresses (10) per row.
+// I.e. the max number of IP MC entries:
+// IPv4 MC = VTSS_LPM_MC_CNT
+// IPv6 MC = VTSS_LPM_MC_CNT/3
+//
+// Currently the IP MC supports up to 128 egress router legs.
+
+#endif /* VTSS_ARCH_SPARX5 */
+
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief Virtual router identifier */
+typedef u8  vtss_l3_vrid_t;
+
+/** \brief MAC addressing mode for routing legs */
+typedef enum
+{
+    /** The addressing mode has still not been configured */
+    VTSS_ROUTING_RLEG_MAC_MODE_INVALID = 0,
+
+    /** One common MAC address is used for all legs */
+    VTSS_ROUTING_RLEG_MAC_MODE_SINGLE = 1,
+} vtss_l3_rleg_common_mode_t;
+
+/** \brief Common configurations for all routing legs */
+typedef struct
+{
+    /** Common rleg-mode for all routing legs. */
+    vtss_l3_rleg_common_mode_t rleg_mode;
+
+    /** Base mac address used to derive addresses for all routing legs. */
+    vtss_mac_t                 base_address;
+
+    /** Globally enable/disable unicast routing. */
+    BOOL                       routing_enable;
+
+    /** Globally enable/disable multicast routing. */
+    BOOL                       mc_routing_enable;
+} vtss_l3_common_conf_t;
+
+/** \brief Router leg control structure */
+typedef struct
+{
+    /** Enable router leg ID */
+    BOOL rleg_enable;
+
+    /** Router leg ID */
+    vtss_l3_rleg_id_t rleg_id;
+
+    /** Enable IPv4 unicast routing */
+    BOOL ipv4_unicast_enable;
+
+    /** Enable IPv6 unicast routing */
+    BOOL ipv6_unicast_enable;
+
+    /** Enable IPv4 multicast routing */
+    BOOL ipv4_multicast_enable;
+
+    /** Enable IPv6 multicast routing */
+    BOOL ipv6_multicast_enable;
+
+    /** Enable IPv4 icmp redirect */
+    BOOL ipv4_icmp_redirect_enable;
+
+    /** Enable IPv6 icmp redirect */
+    BOOL ipv6_icmp_redirect_enable;
+
+    /** Vlan for which the router leg is instantiated */
+    vtss_vid_t          vlan;
+
+    /** Enable/disable VRRP for a given router leg.
+     *
+     * The hardware has support for enabling 0-2 VRID's for a given router leg.
+     * This is activated by configured vrid0_enable and vrid1_enable. The actual
+     * VRID the route is assigned to is configured in vrid0/vrid1.
+     *
+     * JR1-NOTE: When enabling vrrp for JR1-revb, the hardware will consider all
+     * destination mac addresses matching 00-00-5E-00-XX-{VRID} as VRRP address.
+     * For versions earlier than rev-B VRRP is only supported for IPv4
+     * (00-00-5E-00-01-{VRID}).
+     */
+    BOOL                vrid0_enable;
+
+    /** The VRID value assigned to this router leg. */
+    vtss_l3_vrid_t      vrid0;
+
+    /** Enable/disable vrid1 for this router leg. */
+    BOOL                vrid1_enable;
+
+    /** The VRID value assigned to this router leg. */
+    vtss_l3_vrid_t      vrid1;
+
+    /** Enable/disable non-default multicast TTL limit for this router leg.
+     *  Default: Frames with TTL >= 2 are routet. */
+    BOOL                mc_ttl_limit_enable;
+
+    /** The TTL in the frame must be equal or higher than this value (must be >= 2). */
+    u32                 mc_ttl_limit;
+
+} vtss_l3_rleg_conf_t;
+
+/** \brief Neighbour type */
+typedef enum
+{
+    /** Invalid entry. */
+    VTSS_L3_NEIGHBOUR_TYPE_INVALID = 0,
+
+    /** IPv4 Neighbour entry (ARP). */
+    VTSS_L3_NEIGHBOUR_TYPE_ARP = 1,
+
+    /** IPv6 Neighbour entry (NDP). */
+    VTSS_L3_NEIGHBOUR_TYPE_NDP = 2,
+} vtss_l3_neighbour_type_t;
+
+/** \brief Neighbour entry */
+typedef struct
+{
+    /** MAC address of destination */
+    vtss_mac_t         dmac;
+
+    /** VLAN of destination */
+    vtss_vid_t         vlan;
+
+    /** IP address of destination */
+    vtss_ip_addr_t     dip;
+} vtss_l3_neighbour_t;
+
+/**
+ * \brief Flush all L3 configurations
+ *
+ * \param inst [IN]     Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_flush(const vtss_inst_t inst);
+
+/**
+ * \brief Get common router configuration.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param conf [OUT]    Common routing configurations.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_common_get(const vtss_inst_t      inst,
+                           vtss_l3_common_conf_t *const conf);
+
+/**
+ * \brief Set common router configuration.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param conf [OUT]    Common routing configurations.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_common_set(const vtss_inst_t            inst,
+                           const vtss_l3_common_conf_t *const conf);
+
+/**
+ * \brief Get a specific configured router leg
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param vid  [IN]     VLAN ID of the router leg to get
+ * \param conf [OUT]    Output buffer where the configuration is written
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_rleg_get_specific(const vtss_inst_t     inst,
+                                  vtss_vid_t            vid,
+                                  vtss_l3_rleg_conf_t  *conf);
+
+/**
+ * \brief Add a router leg on the given VLAN
+ *
+ * \param inst [IN] Target instance reference.
+ * \param conf [IN] Routing leg configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_rleg_add(const vtss_inst_t          inst,
+                         const vtss_l3_rleg_conf_t *const conf);
+
+/**
+ * \brief Update an existing router leg.
+ *
+ * Will fail if an existing router leg with the same VLAN does not exists.
+ *
+ * \param inst [IN] Target instance reference.
+ * \param conf [IN] Routing leg configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_rleg_update(const vtss_inst_t          inst,
+                            const vtss_l3_rleg_conf_t *const conf);
+
+/**
+ * \brief Delete a router leg associated with VLAN
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param vlan [IN]     VLAN to delete router leg from
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_rleg_del(const vtss_inst_t         inst,
+                         const vtss_vid_t          vlan);
+
+/**
+ * \brief Add an entry to the routing table
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    Route to add
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_route_add(const vtss_inst_t             inst,
+                          const vtss_routing_entry_t    * const entry);
+
+/**
+ * \brief Add a list of routes
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param cnt  [IN]      Length of 'entry'
+ * \param entry [IN]     List of routes to add
+ * \param rt_added [OUT] Number of routes added
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_route_bulk_add(const vtss_inst_t             inst,
+                               const u32                     cnt,
+                               const vtss_routing_entry_t    *entry,
+                               u32                           *const rt_added);
+
+/**
+ * \brief Delete an entry from the routing table
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    Entry to delete.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_route_del(const vtss_inst_t             inst,
+                          const vtss_routing_entry_t    *const entry);
+
+/**
+ * \brief Deletes a list of routes
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param cnt  [IN]        Length of 'entry'
+ * \param entry [IN]       List of routes to add
+ * \param rt_deleted [OUT] Number of routes deleted
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_route_bulk_del(const vtss_inst_t             inst,
+                               const u32                     cnt,
+                               const vtss_routing_entry_t    *entry,
+                               u32                           *const rt_deleted);
+
+/**
+ * \brief Add a new entry to the neighbour cache.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    Entry to add.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_neighbour_add(const vtss_inst_t         inst,
+                              const vtss_l3_neighbour_t * const entry);
+
+/**
+ * \brief Delete an entry from the neighbour  cache.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    Entry to delete.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_neighbour_del(const vtss_inst_t         inst,
+                              const vtss_l3_neighbour_t * const entry);
+
+/**
+ * \brief Add an multicast entry to the routing table
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    MC entry to add
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_mc_route_add(const vtss_inst_t              inst,
+                             const vtss_routing_mc_entry_t  *const entry);
+
+/**
+ * \brief Delete an entry from the multicast routing table
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param entry [IN]    MC entry to delete.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_mc_route_del(const vtss_inst_t              inst,
+                             const vtss_routing_mc_entry_t  *const entry);
+
+/**
+ * \brief Get activity status on a mc route, i.e. if it has been used by mc transmitter.
+ *  Clear on read.
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param entry [IN]     MC entry to check for activity
+ * \param active [OUT]   True (active) / False (not active) since last read.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_mc_route_active_get(const vtss_inst_t              inst,
+                                    const vtss_routing_mc_entry_t  *const entry,
+                                    BOOL *const active);
+
+/**
+ * \brief Add an router leg to an existing routing entry
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param entry [IN]       MC route entry
+ * \param dest_rleg [IN]   Destination router leg to add to route
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_mc_route_rleg_add(const vtss_inst_t              inst,
+                                  const vtss_routing_mc_entry_t  *const entry,
+                                  const vtss_vid_t               dest_rleg);
+
+/**
+ * \brief Remove an router leg from an routing entry
+ *
+ * \param inst [IN]       Target instance reference.
+ * \param entry [IN]      MC route entry
+ * \param dest_rleg [IN]  Destination router leg to remove from route
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_mc_route_rleg_del(const vtss_inst_t              inst,
+                                  const vtss_routing_mc_entry_t  *const entry,
+                                  const vtss_vid_t               dest_rleg);
+
+/**
+ * \brief Reset all routing leg statistics counters
+ *
+ * \param inst [IN]     Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_counters_reset(const vtss_inst_t inst);
+
+/**
+ * \brief Get routing system counters
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param counters [OUT] Counters
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_counters_system_get(const vtss_inst_t  inst,
+                                    vtss_l3_counters_t * const counters);
+
+/**
+ * \brief Get routing legs counters
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param vlan [IN]      Routing leg
+ * \param counters [OUT] Counters
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_counters_rleg_get(const vtss_inst_t       inst,
+                                  const vtss_vid_t        vlan,
+                                  vtss_l3_counters_t      * const counters);
+
+/**
+ * \brief Clear routing legs counters
+ *
+ * \param inst [IN]      Target instance reference.
+ * \param vlan [IN]      Routing leg
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_l3_counters_rleg_clear(const vtss_inst_t       inst,
+                                    const vtss_vid_t        vlan);
+
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* VTSS_FEATURE_LAYER3 */
+#endif /* _VTSS_L3_API_H_ */
+:@byteposiÙ:	@str"#ifndef _VTSS_L3_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[0iPipiqiriviiìi·iÔiÛiÙii$i%iAiBicidi}iÄi—i‹iﬂi!iAiDiài•i®iÊiÈiÏii i#ipi°i§iÚi=iâiŸi'iwi£i¶i˜iHiói„iiini∏iiXi£iÓi5	iX	i[	i∞	iˇ	iM
+ië
+iî
+iÊ
+i0i}iŒii(itiìiñiÍi@iôiøi¬i◊iÏi˚i˛iGiòiÁi5iÇi”iiikiªiiQiúiüi∞i≥iiPiÇiﬂi8iéiÂiËiÏiÌii-i.ii»iÌi(ibiúiÏi3i9iãi∆iiOiâiŸiii^iäi≥iÕiÈiÍi/i]iÜi£i¬i√i„iiii#i$izi¿i˚i5ioiøiiiHitiùi∑i”i‘iiji¶iœiÏiiiLiMikiliminiÅiéiïiñiæi⁄i€iiiiZiÜiáiæiÈi i iA iP iR iÑ iÆ iØ i˙ i'!i(!i\!iã!iå!i¬!iÙ!i"i"i9"iH"iJ"ij"iÄ"iÅ"iö"iπ"i∫"i·"iˇ"i #i'#iE#iF#io#iè#iê#iπ#iŸ#i⁄#iˇ#i#$i$$iI$im$in$iß$i≈$i∆$i˙$i%iQ%i¢%iÂ%iÏ%i=&ié&i’&iı&i˝&i#'i$'i['iz'i{'i∞'i÷'i◊'i(i-(i.(iz(iØ(i‹(i›(i5)i[)i\)is)it)ië)iû)i†)i∫)i‚)i„)i
+*i.*i/*iV*iz*iñ*ió*iµ*iƒ*i∆*iÏ*i	+i
++i)+iF+iG+il+ià+iü+i†+i§+i +iÕ+i ,i,i,i ,iO,iP,iT,i,iÇ,iµ,iÏ,iÔ,i-i-iD-iÉ-iÑ-ià-i≥-i∂-iÈ-i .i#.i;.i@.i~.i√.iƒ.i».i˜.i˙.i-/if/iØ/i≤/i /iœ/i0iJ0iâ0iä0ié0iª0iæ0iÌ0i1i1i71i<1iv1i∑1i∏1iº1iÂ1iË1i32i62ie2iî2ió2iØ2i¥2iÒ2i53i63i:3im3ip3i£3i⁄3i›3iı3i˙3i34im4in4ir4iû4i°4i‘4i˘4i¸4i5i5iW5iü5i†5i§5i√5i∆5i˙5i%6iT6iÑ6iá6iü6i§6iÁ6i)7in7iΩ7iæ7i¬7iÛ7iˆ7i)8iR8iU8im8ir8i∞8i˜8i¯8i¸8i9i"9iX9iÖ9i∂9iÍ9iÌ9i:i
+:iM:iè:i‘:i%;i&;i*;i\;i_;ií;i∏;iª;i”;iÿ;i<i^<i_<ic<iò<iõ<iŒ<i˜<i˙<i=i=iU=iù=iû=i¢=iÿ=i€=i>i6>i9>iQ>iV>iò>i„>i‰>iË>i#?i&?iY?iÖ?ià?i†?i•?iÁ?i2@i3@i7@iê@i£@i¶@i⁄@iAi_AibAizAiAi»AiBiRBiSBiWBiêBiìBi…BiÛBi5Ci8CiPCiUCiúCiÎCi8Di9Di=DirDiuDi™Di”DiEiEi4Ei9EiÄEiœEiFiFi!FiUFiXFiãFiéFi¶Fi´Fi„Fi‰FiËFiGiGiEGigGijGiÇGiáGiƒGiHiHiHi7Hi:HinHiìHiµHi∏Hi–Hi’HiIiUIi¢Ii£IißIiÕIi–IiJi)Ji,JiDJiIJiãJiŒJiœJi–Ji„JiÂJiÏJiKi*K:@last_line_endi*K{;o;;o;	;
+@
+;i;"#define _VTSS_L3_API_H_
+
+;@{;o;;o;	;
+@
+;i%;""#include <vtss/api/types.h>
+
+;@{;o;;o;	;
+@
+;iB;"'#if defined(VTSS_FEATURE_LAYER3)
+
+;@{;o;;o;	;
+@
+;iÌ;"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;o;;o;	;
+@
+;i;"&#if defined(VTSS_ARCH_SERVAL_T)
+
+;@{;o;;o;	;
+@
+;iÌ;"@#define VTSS_RLEG_CNT    31   /**< Length of RLEG table */
+;@{;o;;o;	;
+@
+;i(;"?#define VTSS_LPM_CNT     1024 /**< Length of LPM table */
+;@{;o;;o;	;
+@
+;ib;"?#define VTSS_ARP_CNT     256  /**< Length of ARP table */
+;@{;o;;o;	;
+@
+;iú;"U#define VTSS_LPM_MC_CNT  512  /**< Length of LPM table for multicast entries */
+;@{;o;;o;	;
+@
+;iÏ;"L#define VTSS_MC_TBL_CNT  256  /**< Length of MC RLEG bit-mask table */
+;@{;o;;o;	;
+@
+;i3;"#else
+;@{;o;;o;	;
+@
+;i∆;"@#define VTSS_RLEG_CNT    127  /**< Length of RLEG table */
+;@{;o;;o;	;
+@
+;i;"S#define VTSS_LPM_CNT     4096 /**< Length of LPM table for unicast entries */
+;@{;o;;o;	;
+@
+;iO;"?#define VTSS_ARP_CNT     2048 /**< Length of ARP table */
+;@{;o;;o;	;
+@
+;iâ;"U#define VTSS_LPM_MC_CNT  2048 /**< Length of LPM table for multicast entries */
+;@{;o;;o;	;
+@
+;iŸ;"I#define VTSS_MC_TBL_CNT  1024 /**< Length of MC RLEG mask table */
+
+;@{;o;;o;	;
+@
+;i√;"%#endif /* VTSS_ARCH_SERVAL_T */
+;@{;o;;o;	;
+@
+;i„;"'#endif /* VTSS_ARCH_JAGUAR_2 */
+
+
+;@{;o;;o;	;
+@
+;i;"$#if defined(VTSS_ARCH_SPARX5)
+
+;@{;o;;o;	;
+@
+;i¿;"@#define VTSS_RLEG_CNT    127  /**< Length of RLEG table */
+;@{;o;;o;	;
+@
+;i˚;"?#define VTSS_LPM_CNT     3072 /**< Length of LPM table */
+;@{;o;;o;	;
+@
+;i5;"?#define VTSS_ARP_CNT     2048 /**< Length of ARP table */
+;@{;o;;o;	;
+@
+;io;"U#define VTSS_LPM_MC_CNT  1536 /**< Length of LPM table for multicast entries */
+;@{;o;;o;	;
+@
+;iø;"M#define VTSS_MC_TBL_CNT  2048 /**< Length of MC RLEG bit-mask table */
+
+;@{;o;;o;	;
+@
+;iM;"&#endif /* VTSS_ARCH_SPARX5 */
+
+
+
+;@{;o;;o;	;
+@
+;in;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;iÅ;"extern;@:stringo;;o;	;
+@
+;ià;""C";@; [#{;o;;o;	;
+@
+;ié;"#endif
+
+;@{
+;o;;o;	;
+@
+;iæ;"typedef;@:type_aliaso;;o;	;
+@
+;i∆;"	u8  ;@:typedef_nameo;;o;	;
+@
+;i ;"vtss_l3_vrid_t;@:
+array[ :cap0{
+;o;;o;	;
+@
+;i;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i;"	enum;@:
+enums[{:	enum{	:enum_nameo;;o;	;
+@
+;i^;"(VTSS_ROUTING_RLEG_MAC_MODE_INVALID ;@:operatoro;;o;	;
+@
+;iÅ;"=;@:	expro;;o;	;
+@
+;iÉ;"0;@;0{;{	;o;;o;	;
+@
+;i¬;"'VTSS_ROUTING_RLEG_MAC_MODE_SINGLE ;@;o;;o;	;
+@
+;i‰;"=;@;o;;o;	;
+@
+;iÊ;"1;@;0;o;;o;	;
+@
+;iÎ;"vtss_l3_rleg_common_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;iA ;"typedef;@:struct_type_declare{:struct_members[	{:member{:normal{	:	typeo;;o;	;
+@
+;ià ;" vtss_l3_rleg_common_mode_t ;@:	nameo;;o;	;
+@
+;i£ ;"rleg_mode;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i˛ ;" vtss_mac_t                 ;@;#o;;o;	;
+@
+;i!;"base_address;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i`!;" BOOL                       ;@;#o;;o;	;
+@
+;i{!;"routing_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i∆!;" BOOL                       ;@;#o;;o;	;
+@
+;i·!;"mc_routing_enable;@;[ ;0;o;;o;	;
+@
+;iˆ!;"vtss_l3_common_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i9";"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;in";"
+BOOL ;@;#o;;o;	;
+@
+;is";"rleg_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iû";"vtss_l3_rleg_id_t ;@;#o;;o;	;
+@
+;i∞";"rleg_id;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÂ";"
+BOOL ;@;#o;;o;	;
+@
+;iÍ";"ipv4_unicast_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i+#;"
+BOOL ;@;#o;;o;	;
+@
+;i0#;"ipv6_unicast_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;is#;"
+BOOL ;@;#o;;o;	;
+@
+;ix#;"ipv4_multicast_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iΩ#;"
+BOOL ;@;#o;;o;	;
+@
+;i¬#;"ipv6_multicast_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i$;"
+BOOL ;@;#o;;o;	;
+@
+;i$;"ipv4_icmp_redirect_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iM$;"
+BOOL ;@;#o;;o;	;
+@
+;iR$;"ipv6_icmp_redirect_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i´$;"vtss_vid_t          ;@;#o;;o;	;
+@
+;iø$;"	vlan;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i';"BOOL                ;@;#o;;o;	;
+@
+;i';"vrid0_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i_';"vtss_l3_vrid_t      ;@;#o;;o;	;
+@
+;is';"
+vrid0;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¥';"BOOL                ;@;#o;;o;	;
+@
+;i»';"vrid1_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i(;"vtss_l3_vrid_t      ;@;#o;;o;	;
+@
+;i&(;"
+vrid1;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i≥(;"BOOL                ;@;#o;;o;	;
+@
+;i«(;"mc_ttl_limit_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i9);"u32                 ;@;#o;;o;	;
+@
+;iM);"mc_ttl_limit;@;[ ;0;o;;o;	;
+@
+;i^);"vtss_l3_rleg_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;ië);"typedef;@;{;o;;o;	;
+@
+;iô);"	enum;@;[{;{	;o;;o;	;
+@
+;iæ);"$VTSS_L3_NEIGHBOUR_TYPE_INVALID ;@;o;;o;	;
+@
+;i›);"=;@;o;;o;	;
+@
+;iﬂ);"0;@;0{;{	;o;;o;	;
+@
+;i*;" VTSS_L3_NEIGHBOUR_TYPE_ARP ;@;o;;o;	;
+@
+;i)*;"=;@;o;;o;	;
+@
+;i+*;"1;@;0{;{	;o;;o;	;
+@
+;iZ*;" VTSS_L3_NEIGHBOUR_TYPE_NDP ;@;o;;o;	;
+@
+;iu*;"=;@;o;;o;	;
+@
+;iw*;"2;@;0;o;;o;	;
+@
+;i|*;"vtss_l3_neighbour_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iµ*;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i*;"vtss_mac_t         ;@;#o;;o;	;
+@
+;i+;"	dmac;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i-+;"vtss_vid_t         ;@;#o;;o;	;
+@
+;i@+;"	vlan;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;ip+;"vtss_ip_addr_t     ;@;#o;;o;	;
+@
+;iÉ+;"dip;@;[ ;0;o;;o;	;
+@
+;iä+;"vtss_l3_neighbour_t;@;[ ;0{:func_proto{;!{	;"o;;o;	;
+@
+;i ,;"vtss_rc ;@;#o;;o;	;
+@
+;i(,;"vtss_l3_flush;@;[ ;0:	args[{;!{	;"o;;o;	;
+@
+;i6,;"const vtss_inst_t ;@;#o;;o;	;
+@
+;iH,;"	inst;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i-;"vtss_rc ;@;#o;;o;	;
+@
+;i-;"vtss_l3_common_get;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i'-;"const vtss_inst_t      ;@;#o;;o;	;
+@
+;i>-;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i_-;""vtss_l3_common_conf_t *const ;@;#o;;o;	;
+@
+;i|-;"	conf;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i@.;"vtss_rc ;@;#o;;o;	;
+@
+;iH.;"vtss_l3_common_set;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i[.;""const vtss_inst_t            ;@;#o;;o;	;
+@
+;ix.;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iô.;"(const vtss_l3_common_conf_t *const ;@;#o;;o;	;
+@
+;iº.;"	conf;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iœ/;"vtss_rc ;@;#o;;o;	;
+@
+;i◊/;"vtss_l3_rleg_get_specific;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;iÒ/;"const vtss_inst_t     ;@;#o;;o;	;
+@
+;i0;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i/0;"vtss_vid_t            ;@;#o;;o;	;
+@
+;iE0;"vid;@;[ ;0{;!{	;"o;;o;	;
+@
+;il0;"vtss_l3_rleg_conf_t  *;@;#o;;o;	;
+@
+;iÇ0;"	conf;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i<1;"vtss_rc ;@;#o;;o;	;
+@
+;iD1;"vtss_l3_rleg_add;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;iU1;" const vtss_inst_t          ;@;#o;;o;	;
+@
+;ip1;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iè1;"&const vtss_l3_rleg_conf_t *const ;@;#o;;o;	;
+@
+;i∞1;"	conf;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i¥2;"vtss_rc ;@;#o;;o;	;
+@
+;iº2;"vtss_l3_rleg_update;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i–2;" const vtss_inst_t          ;@;#o;;o;	;
+@
+;iÎ2;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i3;"&const vtss_l3_rleg_conf_t *const ;@;#o;;o;	;
+@
+;i.3;"	conf;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i˙3;"vtss_rc ;@;#o;;o;	;
+@
+;i4;"vtss_l3_rleg_del;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i4;"const vtss_inst_t         ;@;#o;;o;	;
+@
+;i-4;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iL4;"const vtss_vid_t          ;@;#o;;o;	;
+@
+;if4;"	vlan;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i5;"vtss_rc ;@;#o;;o;	;
+@
+;i!5;"vtss_l3_route_add;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i35;"#const vtss_inst_t             ;@;#o;;o;	;
+@
+;iQ5;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iq5;"+const vtss_routing_entry_t    * const ;@;#o;;o;	;
+@
+;ió5;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i§6;"vtss_rc ;@;#o;;o;	;
+@
+;i¨6;"vtss_l3_route_bulk_add;@;[ ;0;%[	{;!{	;"o;;o;	;
+@
+;i√6;"#const vtss_inst_t             ;@;#o;;o;	;
+@
+;i·6;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i7;"#const u32                     ;@;#o;;o;	;
+@
+;i$7;"cnt;@;[ ;0{;!{	;"o;;o;	;
+@
+;iH7;"$const vtss_routing_entry_t    *;@;#o;;o;	;
+@
+;ig7;"
+entry;@;[ ;0{;!{	;"o;;o;	;
+@
+;iç7;"*u32                           *const ;@;#o;;o;	;
+@
+;i≤7;"rt_added;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;ir8;"vtss_rc ;@;#o;;o;	;
+@
+;iz8;"vtss_l3_route_del;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;iå8;"#const vtss_inst_t             ;@;#o;;o;	;
+@
+;i™8;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i 8;"*const vtss_routing_entry_t    *const ;@;#o;;o;	;
+@
+;iÔ8;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i
+:;"vtss_rc ;@;#o;;o;	;
+@
+;i:;"vtss_l3_route_bulk_del;@;[ ;0;%[	{;!{	;"o;;o;	;
+@
+;i):;"#const vtss_inst_t             ;@;#o;;o;	;
+@
+;iG:;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;il:;"#const u32                     ;@;#o;;o;	;
+@
+;iä:;"cnt;@;[ ;0{;!{	;"o;;o;	;
+@
+;iÆ:;"$const vtss_routing_entry_t    *;@;#o;;o;	;
+@
+;iÕ:;"
+entry;@;[ ;0{;!{	;"o;;o;	;
+@
+;iÛ:;"*u32                           *const ;@;#o;;o;	;
+@
+;i;;"rt_deleted;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iÿ;;"vtss_rc ;@;#o;;o;	;
+@
+;i‡;;"vtss_l3_neighbour_add;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;iˆ;;"const vtss_inst_t         ;@;#o;;o;	;
+@
+;i<;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i4<;"'const vtss_l3_neighbour_t * const ;@;#o;;o;	;
+@
+;iV<;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i=;"vtss_rc ;@;#o;;o;	;
+@
+;i=;"vtss_l3_neighbour_del;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i5=;"const vtss_inst_t         ;@;#o;;o;	;
+@
+;iO=;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;is=;"'const vtss_l3_neighbour_t * const ;@;#o;;o;	;
+@
+;iï=;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iV>;"vtss_rc ;@;#o;;o;	;
+@
+;i^>;"vtss_l3_mc_route_add;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;is>;"$const vtss_inst_t              ;@;#o;;o;	;
+@
+;ií>;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iµ>;"+const vtss_routing_mc_entry_t  *const ;@;#o;;o;	;
+@
+;i€>;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i•?;"vtss_rc ;@;#o;;o;	;
+@
+;i≠?;"vtss_l3_mc_route_del;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i¬?;"$const vtss_inst_t              ;@;#o;;o;	;
+@
+;i·?;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i@;"+const vtss_routing_mc_entry_t  *const ;@;#o;;o;	;
+@
+;i*@;"
+entry;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iA;"vtss_rc ;@;#o;;o;	;
+@
+;iáA;" vtss_l3_mc_route_active_get;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i£A;"$const vtss_inst_t              ;@;#o;;o;	;
+@
+;i¬A;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iÏA;"+const vtss_routing_mc_entry_t  *const ;@;#o;;o;	;
+@
+;iB;"
+entry;@;[ ;0{;!{	;"o;;o;	;
+@
+;i=B;"BOOL *const ;@;#o;;o;	;
+@
+;iIB;"active;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iUC;"vtss_rc ;@;#o;;o;	;
+@
+;i]C;"vtss_l3_mc_route_rleg_add;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;iwC;"$const vtss_inst_t              ;@;#o;;o;	;
+@
+;iñC;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iæC;"+const vtss_routing_mc_entry_t  *const ;@;#o;;o;	;
+@
+;i‰C;"
+entry;@;[ ;0{;!{	;"o;;o;	;
+@
+;iD;"$const vtss_vid_t               ;@;#o;;o;	;
+@
+;i,D;"dest_rleg;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i9E;"vtss_rc ;@;#o;;o;	;
+@
+;iAE;"vtss_l3_mc_route_rleg_del;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i[E;"$const vtss_inst_t              ;@;#o;;o;	;
+@
+;izE;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i¢E;"+const vtss_routing_mc_entry_t  *const ;@;#o;;o;	;
+@
+;i»E;"
+entry;@;[ ;0{;!{	;"o;;o;	;
+@
+;iÒE;"$const vtss_vid_t               ;@;#o;;o;	;
+@
+;iF;"dest_rleg;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i´F;"vtss_rc ;@;#o;;o;	;
+@
+;i≥F;"vtss_l3_counters_reset;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i F;"const vtss_inst_t ;@;#o;;o;	;
+@
+;i‹F;"	inst;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iáG;"vtss_rc ;@;#o;;o;	;
+@
+;ièG;" vtss_l3_counters_system_get;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i´G;"const vtss_inst_t  ;@;#o;;o;	;
+@
+;iæG;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iËG;" vtss_l3_counters_t * const ;@;#o;;o;	;
+@
+;iH;"counters;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;i’H;"vtss_rc ;@;#o;;o;	;
+@
+;i›H;"vtss_l3_counters_rleg_get;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;i˜H;"const vtss_inst_t       ;@;#o;;o;	;
+@
+;iI;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;i7I;"const vtss_vid_t        ;@;#o;;o;	;
+@
+;iOI;"	vlan;@;[ ;0{;!{	;"o;;o;	;
+@
+;iwI;"%vtss_l3_counters_t      * const ;@;#o;;o;	;
+@
+;ióI;"counters;@;[ ;0;0{;${;!{	;"o;;o;	;
+@
+;iIJ;"vtss_rc ;@;#o;;o;	;
+@
+;iQJ;" vtss_l3_counters_rleg_clear;@;[ ;0;%[{;!{	;"o;;o;	;
+@
+;imJ;"const vtss_inst_t       ;@;#o;;o;	;
+@
+;iÖJ;"	inst;@;[ ;0{;!{	;"o;;o;	;
+@
+;iØJ;"const vtss_vid_t        ;@;#o;;o;	;
+@
+;i«J;"	vlan;@;[ ;0;0{;o;;o;	;
+@
+;i–J;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;iÂJ;"#endif
+;@{;o;;o;	;
+@
+;iÏJ;"&#endif /* VTSS_FEATURE_LAYER3 */
+;@{;o;;o;	;
+@
+;iK;""#endif /* _VTSS_L3_API_H_ */
+;@

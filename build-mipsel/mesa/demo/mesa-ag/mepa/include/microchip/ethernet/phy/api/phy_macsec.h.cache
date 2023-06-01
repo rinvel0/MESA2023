@@ -1,0 +1,5105 @@
+{:	root[∆{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"ˇE// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+#ifndef _MEPA_MACSEC_API_H_
+#define _MEPA_MACSEC_API_H_
+
+#include <microchip/ethernet/phy/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  /**< ALL INCLUDE ABOVE THIS LINE */
+
+#define MEPA_MACSEC_10G_MAX_SA 64     /**< 10G PHY Max SAs : 64 */
+#define MEPA_MACSEC_1G_MAX_SA  16     /**< 1G PHY Max SAs : 16 */
+#define MEPA_MACSEC_SA_PER_SC_MAX  4  /**< SAs per SC Max : 4 */
+#define MEPA_MACSEC_SA_PER_SC_MIN  2  /**< SAs per SC Min : 2 */
+
+#define MEPA_MACSEC_SA_PER_SC MEPA_MACSEC_SA_PER_SC_MAX /**< SAs per SCs : 4 */
+#ifdef MEPA_CHIP_10G_PHY
+#define MEPA_MACSEC_MAX_SA     MEPA_MACSEC_10G_MAX_SA   /**< 10G PHY Max SAs : 64 */
+#else
+#define MEPA_MACSEC_MAX_SA     MEPA_MACSEC_1G_MAX_SA    /**< 1G PHY Max SAs : 16 */
+#endif
+#define MEPA_MACSEC_MAX_SA_RX  MEPA_MACSEC_MAX_SA       /**< Max Rx SAs */
+#define MEPA_MACSEC_MAX_SA_TX  MEPA_MACSEC_MAX_SA       /**< Max Tx SAs */
+#define MEPA_MACSEC_MAX_SC_RX  MEPA_MACSEC_MAX_SA/2     /**< Max Rx SCs : 32/8 */
+#define MEPA_MACSEC_MAX_SC_TX  MEPA_MACSEC_MAX_SC_RX    /**< Max Tx SCs : 32/8 */
+#define MEPA_MACSEC_MAX_SECY   MEPA_MACSEC_MAX_SC_TX    /**< Max SecYs : 32/8 */
+
+#define MEPA_MAC_BLOCK_MTU_MAX 0x2748                   /**< MAC Block Max MTU Size */
+
+
+/** \brief SecY port status as defined by 802.1AE */
+typedef struct {
+    mepa_bool_t mac_enabled;                                  /**< MAC is enabled (802.1AE) */
+    mepa_bool_t mac_operational;                              /**< MAC is operational (802.1AE) */
+    mepa_bool_t oper_point_to_point_mac;                      /**< Point to point oper status (802.1AE) */
+} mepa_macsec_port_status_t;
+
+typedef struct {
+    mepa_macsec_port_status_t controlled;                     /**< 802.1AE Controlled port status */
+    mepa_macsec_port_status_t uncontrolled;                   /**< 802.1AE Uncontrolled port status */
+    mepa_macsec_port_status_t common;                         /**< 802.1AE Common port status */
+} mepa_macsec_secy_port_status_t;
+
+/** \brief Port Number */
+typedef uint32_t mepa_port_no_t;
+typedef uint16_t mepa_macsec_vport_id_t;                      /**< Virtual port Id. Corresponds to a SecY.  */
+typedef uint32_t mepa_macsec_service_id_t;                    /**< Encapsulation service id */
+
+/** \brief packet number of 32-bit or 64-bit size. */
+typedef union {
+    uint32_t pn;                                              /**< packet number of 32 bit size. */
+    uint64_t xpn;                                             /**< extended packet number of 64 bit size. */
+} mepa_macsec_pkt_num_t;
+
+typedef enum {
+    MEPA_MACSEC_VALIDATE_FRAMES_DISABLED,                     /**< Do not perform integrity check */
+    MEPA_MACSEC_VALIDATE_FRAMES_CHECK,                        /**< Perform integrity check do not drop failed frames */
+    MEPA_MACSEC_VALIDATE_FRAMES_STRICT                        /**< Perform integrity check and drop failed frames */
+} mepa_validate_frames_t;
+
+/** \brief Values of the CipherSuite control */
+typedef enum {
+    MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128,                     /**< GCM-AES-128 cipher suite */
+    MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256,                     /**< GCM-AES-256 cipher suite. */
+    MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128,                 /**< GCM-AES-XPN_128 cipher suite for XPN mode. */
+    MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256                  /**< GCM-AES-XPN_256 cipher suite for XPN mode. */
+} mepa_macsec_ciphersuite_t;
+
+/** \brief The mepa_macsec_port_t is a unique identifier to a SecY.
+ * This identifier is defined by three properties:
+ *  - port_no:    A reference the physical port
+ *  - service_id: A reference to a given encapsulation service. The user of the
+ *                API may choose any number, this is not used in hardware, but
+ *                in cases where external-virtual ports are used this is
+ *                required to have a unique identifier to a given SecY.
+ *  - port_id:    The port ID which used in the SCI tag.
+ * */
+typedef struct {
+    mepa_port_no_t           port_no;                         /**< Physical port no */
+    mepa_macsec_service_id_t service_id;                      /**< Service id */
+    mepa_macsec_vport_id_t   port_id;                         /**< Virtual port id, the port number used in the optional SCI tag */
+} mepa_macsec_port_t;
+
+/** \brief SecY control information (802.1AE section 10.7) */
+typedef struct {
+    mepa_mac_t mac_addr;                                      /**< Mac address of the Tx SecY */
+    mepa_validate_frames_t validate_frames;                   /**< The validateFrames control (802.1AE section 10.7.8) */
+    mepa_bool_t replay_protect;                               /**< The replayProtect control (802.1AE section 10.7.8) */
+    uint32_t replay_window;                                   /**< The replayWindow control (802.1AE section 10.7.8) */
+    mepa_bool_t protect_frames;                               /**< The protectFrames control (802.1AE section 10.7.17) */
+    mepa_bool_t always_include_sci;                           /**< The alwaysIncludeSCI control (802.1AE section 10.7.17) */
+    mepa_bool_t use_es;                                       /**< The useES control (802.1AE section 10.7.17) */
+    mepa_bool_t use_scb;                                      /**< The useSCB control (802.1AE section 10.7.17) */
+    mepa_macsec_ciphersuite_t current_cipher_suite;           /**< The currentCipherSuite control (802.1AE section 10.7.25) */
+    uint32_t confidentiality_offset;                          /**< The confidentiality Offset control (802.1AE section 10.7.25), 0-64 bytes supported */
+} mepa_macsec_secy_conf_t;
+
+/** \brief Salt for cryptographic operations */
+typedef struct {
+    uint8_t buf[12];                                          /**< Buffer containing 12 byte Salt for XPN. */
+} mepa_macsec_salt_t;
+
+/** \brief An 128-bit or 256-bit AES key */
+typedef struct {
+    uint8_t buf[32];                                          /**< Buffer containing the key */
+    uint32_t len;                                             /**< Length of key in bytes (16 or 32) */
+    uint8_t h_buf[16];                                        /**< Buffer containing the 128-bit AES key hash */
+    mepa_macsec_salt_t salt;                                  /**< salt used for XPN */
+} mepa_macsec_sak_t;
+
+/** 8 byte Secure Channel Identifier (SCI)  */
+typedef struct {
+    mepa_mac_t              mac_addr;                         /**< 6 byte MAC address */
+    mepa_macsec_vport_id_t  port_id;                          /**< 2 byte Port Id */
+} mepa_macsec_sci_t;
+
+/** \brief Short SCI (SSCI). Used for XPN. */
+typedef struct {
+    uint8_t buf[4];                                           /**< Buffer containing the 4-byte SSCI for XPN. */
+} mepa_macsec_ssci_t;
+
+/** \brief Rx SecA XPN status as defined by 802.1AE */
+typedef struct {
+    mepa_macsec_pkt_num_t next_pn;                            /**< Rev B Next XPN (802.1AEW) */
+    mepa_macsec_pkt_num_t lowest_pn;                          /**< Rev B Lowest XPN */
+} mepa_macsec_rx_sa_pn_status_t;
+
+/** \brief Rx SA status as defined by 802.1AE */
+typedef struct {
+    mepa_bool_t in_use;                                       /**< In use (802.1AE)  */
+    uint32_t next_pn;                                         /**< Next pn (802.1AE) */
+    uint32_t lowest_pn;                                       /**< Lowest_pn (802.1AE) */
+    uint32_t created_time;                                    /**< Created time (802.1AE) */
+    uint32_t started_time;                                    /**< Started time (802.1AE) */
+    uint32_t stopped_time;                                    /**< Stopped time (802.1AE) */
+    mepa_macsec_rx_sa_pn_status_t pn_status;                  /**< Rx SecA XPN status */
+} mepa_macsec_rx_sa_status_t;
+
+/** \brief Tx SecA XPN status as defined by 802.1AE */
+typedef struct {
+    mepa_macsec_pkt_num_t  next_pn;                           /**< Rev B Next XPN */
+} mepa_macsec_tx_sa_pn_status_t;
+
+/** \brief Tx SA status as defined by 802.1AE */
+typedef struct {
+    mepa_bool_t in_use;                                       /**< In use (802.1AE)  */
+    uint32_t next_pn;                                         /**< Next PN (802.1AE) */
+    uint32_t created_time;                                    /**< Creation time (802.1AE)*/
+    uint32_t started_time;                                    /**< Started time (802.1AE)*/
+    uint32_t stopped_time;                                    /**< Stopped time (802.1AE) */
+    mepa_macsec_tx_sa_pn_status_t pn_status;                  /**< Rev B Tx SecA XPN status */
+} mepa_macsec_tx_sa_status_t;
+
+/** \brief Rx SC parameters (optional) */
+typedef struct {
+    mepa_validate_frames_t validate_frames;                   /**< The validateFrames control (802.1AE section 10.7.8) */
+    mepa_bool_t replay_protect;                               /**< The replayProtect control (802.1AE section 10.7.8) */
+    uint32_t replay_window;                                   /**< The replayWindow control (802.1AE section 10.7.8) */
+    uint32_t confidentiality_offset;                          /**< The confidentiality Offset control (802.1AE section 10.7.25), 0-64 bytes supported */
+} mepa_macsec_rx_sc_conf_t;
+
+/** \brief Rx SC status as defined by 802.1AE section 10.7 */
+typedef struct {
+    mepa_bool_t receiving;                                    /**< Receiving status (802.1AE) */
+    uint32_t created_time;                                    /**< Created time (802.1AE) */
+    uint32_t started_time;                                    /**< Started time (802.1AE) */
+    uint32_t stopped_time;                                    /**< Stopped time (802.1AE) */
+} mepa_macsec_rx_sc_status_t;
+
+/** \brief Tx SC parameters (optional) */
+typedef struct {
+    mepa_bool_t protect_frames;                               /**< The protectFrames control (802.1AE section 10.7.17) */
+    mepa_bool_t always_include_sci;                           /**< The alwaysIncludeSCI control (802.1AE section 10.7.17) */
+    mepa_bool_t use_es;                                       /**< The useES control (802.1AE section 10.7.17) */
+    mepa_bool_t use_scb;                                      /**< The useSCB control (802.1AE section 10.7.17) */
+    uint32_t confidentiality_offset;                          /**< The confidentiality Offset control (802.1AE section 10.7.25), 0-64 bytes supported */
+} mepa_macsec_tx_sc_conf_t;
+
+/** \brief Tx SC status as defined by 802.1AE */
+typedef struct {
+    mepa_macsec_sci_t sci;                                    /**< SCI id (802.1AE) */
+    mepa_bool_t transmitting;                                 /**< Transmitting status (802.1AE) */
+    uint16_t encoding_sa;                                     /**< Encoding (802.1AE) */
+    uint16_t enciphering_sa;                                  /**< Enciphering (802.1AE)  */
+    uint32_t created_time;                                    /**< Created time (802.1AE) */
+    uint32_t started_time;                                    /**< Started time (802.1AE) */
+    uint32_t stopped_time;                                    /**< Stopped time (802.1AE) */
+} mepa_macsec_tx_sc_status_t;
+
+
+// PHY Line MAC block configuration
+typedef struct {
+    // Length field (Ether Type) validation is enabled by default, if set length
+    // field validation will be disabled. */
+    mepa_bool_t dis_length_validate;
+} mepa_macsec_lmac_conf_t;
+
+// PHY Host MAC block configuration
+typedef struct {
+    // Length field (Ether Type) validation is enabled by default, if set length
+    // field validation will be disabled.
+    mepa_bool_t dis_length_validate;
+} mepa_macsec_hmac_conf_t;
+
+// PHY MAC block configuration
+typedef struct {
+    // Line MAC configuration
+    mepa_macsec_lmac_conf_t lmac;
+
+    // Host MAC configuration
+    mepa_macsec_hmac_conf_t hmac;
+} mepa_macsec_mac_conf_t;
+
+// PHY MACSEC block Bypass configuration
+typedef enum {
+    // MACSEC block bypass mode None
+    MEPA_MACSEC_INIT_BYPASS_NONE,
+
+    // Enable MACSEC block bypass mode
+    MEPA_MACSEC_INIT_BYPASS_ENABLE,
+
+    // Disable Macsec block bypass mode
+    MEPA_MACSEC_INIT_BYPASS_DISABLE,
+} mepa_macsec_init_bypass_t;
+
+// MACsec init structure
+typedef struct {
+    // Enable the MACsec block
+    mepa_bool_t enable;
+
+    // Disable Non Matching MACsec ingress packets processing
+    mepa_bool_t dis_ing_nm_macsec_en;
+
+    // MAC block configuration
+    mepa_macsec_mac_conf_t mac_conf;
+
+    // MACSEC block Bypass configuration
+    mepa_macsec_init_bypass_t bypass;
+} mepa_macsec_init_t;
+
+/** MACsec configuration of MTU for ingress and egress packets
+ * If an egress MACsec packet that causes the MTU to be exceeded will cause the per-SA Out_Pkts_Too_Long*/
+typedef struct {
+    uint32_t  mtu;                                    /**< Defines the maximum packet size (in bytes) - VLAN tagged packets are allowed to be 4 bytes longer */
+    mepa_bool_t drop;                                 /**< Set to TRUE in order to drop packets larger than mtu. Set to FALSE in order to allow packets larger than mtu to be transmitted (Out_Pkts_Too_Long will still count). Frames will be "dropped" by corrupting the frame's CRC. Packets with source port as the Common port or the reserved port are ingress, packets from the Controlled or Uncontrolled port are egress.*/
+    mepa_bool_t vlan_unaware_en;                      /**< Set TRUE for VLAN unaware mode. Set FALSE for VLAN aware mode.*/
+} mepa_macsec_mtu_t;
+
+// MACsec Initialization //////////////////////////////////////////////////////
+
+// Initilize the MACsec block
+// When the MACsec block is disabled all frames are passed through unchanged.
+// This is the default state after Phy initilization.
+// When the MACsec block is enabled,  all frames are dropped until SecY (CA) is
+// created.
+mepa_rc mepa_macsec_init_set(struct mepa_device *dev, const
+                             mepa_macsec_init_t *const macsec_init);
+
+// Get the MACsec block init configuration
+mepa_rc mepa_macsec_init_get(struct mepa_device *dev,
+                             mepa_macsec_init_t *const macsec_init);
+
+/*--------------------------------------------------------------------*/
+/* MAC Security Entity (SecY) management                              */
+/*--------------------------------------------------------------------*/
+
+/** Create a SecY entity of a MACsec port
+ *  The entity is created with given parameters.
+ *  The controlled port is disabled by default and must be enabled before normal processing.
+ *  Classification pattern must be configured to classify traffic to a SecY instance
+ *
+ */
+mepa_rc mepa_macsec_secy_conf_add(struct mepa_device *dev,
+                                  const mepa_macsec_port_t port,
+                                  const mepa_macsec_secy_conf_t *const conf);
+
+/** Create a SecY entity of a MACsec port
+ * The SecY is updated with given parameters.
+ * Note that the SecY must exist
+ * SecY update with new parameters i.e. Replay Window size etc, it will
+ * update newly create SA's only. Existing parameters i.e. Next PN and Lower PN
+ * will not change. Tx/Rx SA Status Next PN and Lowest PN shows different
+ * as compare with existing Tx/Rx SA Status.
+ *
+ */
+mepa_rc mepa_macsec_secy_conf_update(struct mepa_device *dev,
+                                     const mepa_macsec_port_t port,
+                                     const mepa_macsec_secy_conf_t *const conf);
+
+/** Get the SecY entry. */
+mepa_rc mepa_macsec_secy_conf_get(struct mepa_device *dev,
+                                  const mepa_macsec_port_t port,
+                                  mepa_macsec_secy_conf_t *const conf);
+
+/** \brief Delete the SecY and the associated SCs/SAs */
+mepa_rc mepa_macsec_secy_conf_del(struct mepa_device *dev,
+                                  const mepa_macsec_port_t port);
+
+/** \brief Enable/Disable the SecY's controlled (secure) port.
+* The controlled port is disabled by default.
+*/
+mepa_rc mepa_macsec_secy_controlled_set(struct mepa_device *dev,
+                                        const mepa_macsec_port_t port,
+                                        const mepa_bool_t enable);
+
+/** Get the state config of the controlled (secure) port. */
+mepa_rc mepa_macsec_secy_controlled_get(struct mepa_device *dev,
+                                        const mepa_macsec_port_t port,
+                                        mepa_bool_t *const enable);
+
+/** Get status from a SecY port, controlled, uncontrolled or common. */
+mepa_rc mepa_macsec_secy_port_status_get(struct mepa_device *dev,
+                                         const mepa_macsec_port_t port,
+                                         mepa_macsec_secy_port_status_t *const status);
+
+/** Browse through available macsec ports (secy's) on a physical port
+ *  Use NULL pointer to get the first port and use found ports as a search port in the next round.
+*/
+mepa_rc mepa_macsec_port_get_next(struct mepa_device *dev,
+                                  const mepa_port_no_t port_no,
+                                  const mepa_macsec_port_t *const search_macsec_port,
+                                  mepa_macsec_port_t *const found_macsec_port);
+
+
+/*--------------------------------------------------------------------*/
+/* Receive Secure Channel (SC) management                             */
+/*--------------------------------------------------------------------*/
+
+/** Create an Rx SC object inside of the SecY. */
+mepa_rc mepa_macsec_rx_sc_add(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const mepa_macsec_sci_t *const sci);
+
+/** Instead of inheriting the configuration from the SecY the Rx SC can use its own configuration.
+* RxSC update with new parameters i.e. Replay Window size etc, it will
+* update newly create SA's only. Existing parameters i.e. Next PN and Lower PN
+* will not change. Rx SA Status Next PN and Lowest PN shows different
+* as compare with existing Rx SA Status.
+*/
+mepa_rc mepa_macsec_rx_sc_update(struct mepa_device *dev,
+                                 const mepa_macsec_port_t port,
+                                 const mepa_macsec_sci_t  *const sci,
+                                 const mepa_macsec_rx_sc_conf_t *const conf);
+
+/*Get the configuration of the SC. */
+mepa_rc mepa_macsec_rx_sc_get_conf(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   const mepa_macsec_sci_t *const sci,
+                                   mepa_macsec_rx_sc_conf_t *const conf);
+
+/* Browse through the Rx SCs inside of the SecY. */
+mepa_rc mepa_macsec_rx_sc_get_next(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   const mepa_macsec_sci_t *const search_sci,
+                                   mepa_macsec_sci_t *const found_sci);
+
+
+/* Delete the Rx SC and the associated SAs */
+mepa_rc mepa_macsec_rx_sc_del(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const mepa_macsec_sci_t *const sci);
+
+/* Rx SC status info */
+mepa_rc mepa_macsec_rx_sc_status_get(struct mepa_device *dev,
+                                     const mepa_macsec_port_t port,
+                                     const mepa_macsec_sci_t *const sci,
+                                     mepa_macsec_rx_sc_status_t *const status);
+
+/*--------------------------------------------------------------------*/
+/* Transmit Secure Channel (SC) management                            */
+/*--------------------------------------------------------------------*/
+
+/** Create an Tx SC object inside of the SecY.  One TxSC is supported for each SecY.  */
+mepa_rc mepa_macsec_tx_sc_set(struct mepa_device *dev,
+                              const mepa_macsec_port_t port);
+
+/** \brief Instead of inheriting the configuration from the SecY the Tx SC can use its own configuration.
+ * TxSC update with new parameters i.e. Replay Window size etc, it will
+ * update newly create SA's only. Existing parameters i.e. Next PN and Lower PN
+ * will not change. Tx SA Status Next PN and Lowest PN shows different
+ * as compare with existing Tx SA Status.
+ *
+ */
+mepa_rc mepa_macsec_tx_sc_update(struct mepa_device *dev,
+                                 const mepa_macsec_port_t port,
+                                 const mepa_macsec_tx_sc_conf_t *const conf);
+
+
+/** Get the SC configuration */
+mepa_rc mepa_macsec_tx_sc_get_conf(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   mepa_macsec_tx_sc_conf_t *const conf);
+
+/** \brief Delete the Tx SC object and the associated SAs */
+mepa_rc mepa_macsec_tx_sc_del(struct mepa_device *dev,
+                              const mepa_macsec_port_t port);
+
+
+/** \brief Tx SC status */
+mepa_rc mepa_macsec_tx_sc_status_get(struct mepa_device *dev,
+                                     const mepa_macsec_port_t port,
+                                     mepa_macsec_tx_sc_status_t *const status);
+
+/*--------------------------------------------------------------------*/
+/* Receive Secure Association (SA) management                         */
+/*--------------------------------------------------------------------*/
+
+/** Create an Rx SA which is associated with an SC within the SecY.
+ *  This SA is not enabled until mepa_macsec_rx_sa_activate() is performed. */
+mepa_rc mepa_macsec_rx_sa_set(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const mepa_macsec_sci_t *const sci,
+                              const uint16_t an,
+                              const uint32_t lowest_pn,
+                              const mepa_macsec_sak_t *const sak);
+
+/** Get the Rx SA configuration of the active SA.
+
+ * If SA was created before any change on parameter like Replay Widow etc. Lowest PN may appear to be consistent with newly
+ * updated value, but the actual value will be according to the SA's creation time. One has to subtract the change in the
+ * the value obtained from API to get the actual value. Updating parameters like Replay Window doesn't change the older SA's.
+ */
+mepa_rc mepa_macsec_rx_sa_get(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const mepa_macsec_sci_t *const sci,
+                              const uint16_t an,
+                              uint32_t *const lowest_pn,
+                              mepa_macsec_sak_t *const sak,
+                              mepa_bool_t *const active);
+
+
+/** Activate the SA associated with the AN.
+    The reception switches from a previous SA to the SA identified by the AN.
+    Note that the reception using the new SA does not necessarily begin immediately. **/
+mepa_rc mepa_macsec_rx_sa_activate(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   const mepa_macsec_sci_t *const sci,
+                                   const uint16_t an);
+
+/** This function disables Rx SA identified by an. Frames still in the pipeline are not discarded. */
+mepa_rc mepa_macsec_rx_sa_disable(struct mepa_device *dev,
+                                  const mepa_macsec_port_t port,
+                                  const mepa_macsec_sci_t *const sci,
+                                  const uint16_t an);
+
+
+/** This function deletes Rx SA object identified by an. The Rx SA must be disabled before deleted. */
+mepa_rc mepa_macsec_rx_sa_del(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const mepa_macsec_sci_t *const sci,
+                              const uint16_t an);
+
+
+/** Set (update) the packet number (pn) value to value in lowest_pn */
+mepa_rc mepa_macsec_rx_sa_lowest_pn_update(struct mepa_device *dev,
+                                           const mepa_macsec_port_t port,
+                                           const mepa_macsec_sci_t *const sci,
+                                           const uint16_t an,
+                                           const uint32_t lowest_pn);
+
+/** Rx SA status get
+ * If SA was created before any change on parameter like Replay Widow etc. Lowest PN may appear to be consistent with newly
+ * updated value, but the actual value will be according to the SA's creation time. One has to subtract the change in the
+ * the value obtained from API to get the actual value. Updating parameters like Replay Window doesn't change the older SA's.
+ */
+mepa_rc mepa_macsec_rx_sa_status_get(struct mepa_device *dev,
+                                     const mepa_macsec_port_t port,
+                                     const mepa_macsec_sci_t *const sci,
+                                     const uint16_t an,
+                                     mepa_macsec_rx_sa_status_t *const status);
+
+/*--------------------------------------------------------------------*/
+/* For XPN supported devices                                          */
+/* Receive Secure Association (SA) management                         */
+/*--------------------------------------------------------------------*/
+
+/** Create an Rx SA which is associated with an SC within the SecY. */
+mepa_rc mepa_macsec_rx_seca_set(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const mepa_macsec_sci_t *const sci,
+                                const uint16_t an,
+                                const mepa_macsec_pkt_num_t lowest_pn,
+                                const mepa_macsec_sak_t *const sak,
+                                const mepa_macsec_ssci_t *const ssci);
+
+/** Get the Rx SA configuration of the active SA. */
+mepa_rc mepa_macsec_rx_seca_get(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const mepa_macsec_sci_t *const sci,
+                                const uint16_t an,
+                                mepa_macsec_pkt_num_t *const lowest_pn,
+                                mepa_macsec_sak_t *const sak,
+                                mepa_bool_t *const active,
+                                mepa_macsec_ssci_t *const ssci);
+
+
+
+/** Update the lowest_pn packet number in 64-bit or 32-bit for Rx SA. */
+mepa_rc mepa_macsec_rx_seca_lowest_pn_update(struct mepa_device *dev,
+                                             const mepa_macsec_port_t port,
+                                             const mepa_macsec_sci_t *const sci,
+                                             const uint16_t an,
+                                             const mepa_macsec_pkt_num_t lowest_pn);
+
+/*--------------------------------------------------------------------*/
+/* Transmit Secure Association (SA) management                        */
+/*--------------------------------------------------------------------*/
+
+/**Create an Tx SA which is associated with the Tx SC within the SecY.
+ * This SA is not in use until mepa_macsec_tx_sa_activate() is performed.
+ * If SA was created before any change in parameters like Replay Widow etc. Lowest PN may appear to be consistent with newly
+ * updated value, but the actual value will be according to the SA's creation time. One has to subtract the change in the
+ * the value obtained from API to get the actual value. Updating parameters like Replay Window doesn't change the older SA's.
+ *
+ */
+mepa_rc mepa_macsec_tx_sa_set(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const uint16_t an,
+                              const uint32_t next_pn,
+                              const mepa_bool_t confidentiality,
+                              const mepa_macsec_sak_t *const sak);
+
+
+/**Get the  Tx SA configuration.*/
+mepa_rc mepa_macsec_tx_sa_get(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const uint16_t an,
+                              uint32_t *const next_pn,
+                              mepa_bool_t *const confidentiality,
+                              mepa_macsec_sak_t *const sak,
+                              mepa_bool_t *const active);
+
+
+/** This function switches transmission from a previous Tx SA to the Tx SA identified by an.
+    Transmission using the new SA is in effect immediately.
+ */
+mepa_rc mepa_macsec_tx_sa_activate(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   const uint16_t an);
+
+
+/** This function disables Tx SA identified by an. Frames still in the pipeline are not discarded. */
+mepa_rc mepa_macsec_tx_sa_disable(struct mepa_device *dev,
+                                  const mepa_macsec_port_t port,
+                                  const uint16_t an);
+
+
+/** This function deletes Tx SA object identified by an. The Tx SA must be disabled before deleted. */
+mepa_rc mepa_macsec_tx_sa_del(struct mepa_device *dev,
+                              const mepa_macsec_port_t port,
+                              const uint16_t an);
+
+/**Tx SA status
+ * If SA was created before any change on parameter like Replay Widow etc. Lowest PN may appear to be consistent with newly
+ * updated value, but the actual value will be according to the SA's creation time. One has to subtract the change in the
+ * the value obtained from API to get the actual value. Updating parameters like Replay Window doesn't change the older SA's.
+ */
+mepa_rc mepa_macsec_tx_sa_status_get(struct mepa_device *dev,
+                                     const mepa_macsec_port_t port,
+                                     const uint16_t an,
+                                     mepa_macsec_tx_sa_status_t *const status);
+
+/*--------------------------------------------------------------------*/
+/* For XPN supported devices                                          */
+/* Transmit Secure Association (SA) management                        */
+/*--------------------------------------------------------------------*/
+
+/** Create an Tx SA which is associated with the Tx SC within the SecY.
+ * This SA is not in use until mepa_macsec_tx_sa_activate() is performed.
+ */
+mepa_rc mepa_macsec_tx_seca_set(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const uint16_t an,
+                                const mepa_macsec_pkt_num_t next_pn,
+                                const mepa_bool_t confidentiality,
+                                const mepa_macsec_sak_t *const sak,
+                                const mepa_macsec_ssci_t *const ssci);
+
+/**Get the Tx SA configuration supporting 64-bit and 32-bit PN. */
+mepa_rc mepa_macsec_tx_seca_get(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const uint16_t an,
+                                mepa_macsec_pkt_num_t *const next_pn,
+                                mepa_bool_t *const confidentiality,
+                                mepa_macsec_sak_t *const sak,
+                                mepa_bool_t *const active,
+                                mepa_macsec_ssci_t *const ssci);
+
+
+/*--------------------------------------------------------------------*/
+/* SecY Counters                                                      */
+/*--------------------------------------------------------------------*/
+/** \brief Counter structure for common counters */
+typedef struct {
+    uint64_t if_in_octets;                                    /**< In octets       */
+    uint64_t if_in_ucast_pkts;                                /**< In unicasts     */
+    uint64_t if_in_multicast_pkts;                            /**< In multicasts   */
+    uint64_t if_in_broadcast_pkts;                            /**< In broadcasts   */
+    uint64_t if_in_discards;                                  /**< In discards     */
+    uint64_t if_in_errors;                                    /**< In errors       */
+    uint64_t if_out_octets;                                   /**< Out octets      */
+    uint64_t if_out_ucast_pkts;                               /**< Out unicasts    */
+    uint64_t if_out_multicast_pkts;                           /**< Out multicasts  */
+    uint64_t if_out_broadcast_pkts;                           /**< Out broadcasts  */
+    uint64_t if_out_errors;                                   /**< Out errors      */
+} mepa_macsec_common_counters_t;
+
+/** \brief Counter structure for uncontrolled counters */
+typedef struct {
+    uint64_t if_in_octets;                                    /**< In octets       */
+    uint64_t if_in_ucast_pkts;                                /**< In unicasts     */
+    uint64_t if_in_multicast_pkts;                            /**< In multicasts   */
+    uint64_t if_in_broadcast_pkts;                            /**< In broadcasts   */
+    uint64_t if_in_discards;                                  /**< In discards     */
+    uint64_t if_in_errors;                                    /**< In errors       */
+    uint64_t if_out_octets;                                   /**< Out octets      */
+    uint64_t if_out_ucast_pkts;                               /**< Out unicasts    */
+    uint64_t if_out_multicast_pkts;                           /**< Out multicasts  */
+    uint64_t if_out_broadcast_pkts;                           /**< Out broadcasts  */
+    uint64_t if_out_errors;                                   /**< Out errors      */
+} mepa_macsec_uncontrolled_counters_t;
+
+/** \brief Counter structure for SecY ports */
+typedef struct {
+    uint64_t if_in_octets;                                    /**< In octets       */
+    uint64_t if_in_pkts;                                      /**< Out octets      */
+    uint64_t if_in_ucast_pkts;                                /**< In unicasts   - available from Rev B */
+    uint64_t if_in_multicast_pkts;                            /**< In multicasts - available from Rev B */
+    uint64_t if_in_broadcast_pkts;                            /**< In broadcasts - available from Rev B */
+    uint64_t if_in_discards;                                  /**< In discards     */
+    uint64_t if_in_errors;                                    /**< In errors       */
+    uint64_t if_out_octets;                                   /**< Out octets      */
+    uint64_t if_out_pkts;                                     /**< Out packets     */
+    uint64_t if_out_errors;                                   /**< Out errors      */
+    uint64_t if_out_ucast_pkts;                               /**< Out unicasts   - available from Rev B */
+    uint64_t if_out_multicast_pkts;                           /**< Out multicasts - available from Rev B */
+    uint64_t if_out_broadcast_pkts;                           /**< Out broadcasts - available from Rev B */
+} mepa_macsec_secy_port_counters_t;
+
+/** \brief SecY counters as defined by 802.1AE */
+typedef struct {
+    uint64_t in_pkts_untagged;                                /**< Received packets without the secTAG when secyValidateFrames is not in strict mode. NOTE: Theses packets will be counted in the uncontrolled if_in_pkts and not in the controlled if_in_pkts  */
+    uint64_t in_pkts_no_tag;                                  /**< Received packets discarded without the secTAG when secyValidateFrames is in strict mode. */
+    uint64_t in_pkts_bad_tag;                                 /**< Received packets discarded with an invalid secTAG or zero value PN or an invalid PN. */
+    uint64_t in_pkts_unknown_sci;                             /**< Received packets with unknown SCI when secyValidateFrames is not in strict mode
+                                                                 and the C bit in the SecTAG is not set. */
+    uint64_t in_pkts_no_sci;                                  /**< Received packets discarded with unknown SCI when  secyValidateFrames is in strict mode
+                                                                 or the C bit in the SecTAG is set. */
+    uint64_t in_pkts_overrun;                                 /**< Received packets discarded because the number of receive packets exceeded the
+                                                                 cryptographic performace capabilities. */
+    uint64_t in_octets_validated;                             /**< Received octets validated */
+    uint64_t in_octets_decrypted;                             /**< Received octets decrypted */
+    uint64_t out_pkts_untagged;                               /**< Number of packets transmitted without the MAC security TAG. NOTE: Theses packets will be counted in the uncontrolled if_out_pkts and not in the controlled if_out_pkts for Rev A of macsec. From Rev B onwards, they will be counted under controlled port for successful SA lookup */
+    uint64_t out_pkts_too_long;                               /**< Number of transmitted packets discarded because the packet length is larger than the interface MTU. */
+    uint64_t out_octets_protected;                            /**< The number of octets integrity protected but not encrypted. */
+    uint64_t out_octets_encrypted;                            /**< The number of octets integrity protected and encrypted. */
+} mepa_macsec_secy_counters_t;
+
+/* Possible values for the mepa_macsec_secy_cap_t:ciphersuite_cap */
+#define MEPA_MACSEC_CAP_GCM_AES_128       0x0001              /**< GCM-AES-128 cipher suite capability */
+#define MEPA_MACSEC_CAP_GCM_AES_256       0x0002              /**< GCM-AES-256 cipher suite capability */
+#define MEPA_MACSEC_CAP_GCM_AES_XPN_128   0x0004              /**< GCM-AES-XPN-256 cipher suite capability (extended PN) */
+#define MEPA_MACSEC_CAP_GCM_AES_XPN_256   0x0008              /**< GCM-AES-XPN-256 cipher suite capability (extended PN) */
+
+/** \brief Capabilities as defined by 802.1AE */
+typedef struct {
+    uint16_t max_peer_scs;                                    /**< Max peer SCs (802.1AE) */
+    uint16_t max_receive_keys;                                /**< Max Rx keys  (802.1AE) */
+    uint16_t max_transmit_keys;                               /**< Max Tx keys  (802.1AE) */
+    uint32_t ciphersuite_cap;                                 /**< The cipher suite capability offered by the API and chip */
+} mepa_macsec_secy_cap_t;
+
+/** Get counters from a SecY controlled (802-1AE) port.*/
+mepa_rc mepa_macsec_controlled_counters_get(struct mepa_device *dev,
+                                            const mepa_macsec_port_t port,
+                                            mepa_macsec_secy_port_counters_t *const counters);
+
+/** Get counters from a physical uncontrolled (802-1AE) port. */
+mepa_rc mepa_macsec_uncontrolled_counters_get(struct mepa_device                   *dev,
+                                              const mepa_port_no_t                port_no,
+                                              mepa_macsec_uncontrolled_counters_t *const counters);
+
+/** Get counters from a physical common (802-1AE) port. */
+mepa_rc mepa_macsec_common_counters_get(struct mepa_device *dev,
+                                        const mepa_port_no_t port_no,
+                                        mepa_macsec_common_counters_t *const counters);
+
+
+/** Get the capabilities of the SecY as define by 802.1AE. */
+mepa_rc mepa_macsec_secy_cap_get(struct mepa_device *dev,
+                                 const mepa_port_no_t port_no,
+                                 mepa_macsec_secy_cap_t *const cap);
+
+
+/**SecY counters */
+mepa_rc mepa_macsec_secy_counters_get(struct mepa_device *dev,
+                                      const mepa_macsec_port_t port,
+                                      mepa_macsec_secy_counters_t *const counters);
+
+
+/** MacSec counter update.  Keep the API internal SW counters updated.
+ *  Should be called periodically, but no special requirement to interval (the chip counters are 40bit).
+ */
+mepa_rc mepa_macsec_counters_update(struct mepa_device *dev,
+                                    const mepa_port_no_t port_no);
+
+
+/** MacSec counter clear.  Clear all counters. */
+mepa_rc mepa_macsec_counters_clear(struct mepa_device *dev,
+                                   const mepa_port_no_t port_no);
+
+/*--------------------------------------------------------------------*/
+/* SC Counters                                                        */
+/*--------------------------------------------------------------------*/
+/** \brief SC Counters as defined by 802.1AE. */
+typedef struct {
+    // Bugzilla#12752
+    uint64_t in_pkts_unchecked;                            /**< Unchecked packets (802.1AE) - Due to a chip limitation InOctetsValidated/Decrypted is not incremented. The API will not correctly count "if_in_octets" since this counter is indirectly derived from InOctetsValidated/Decrypted which per standard. Hence if_in_octets calculation of controlled port is incorrect and only the DMAC and SMAC octets are counted.*/
+
+    uint64_t in_pkts_delayed;                              /**< Delayed packets (802.1AE) */
+    uint64_t in_pkts_late;                                 /**< Late packets (802.1AE) */
+    uint64_t in_pkts_ok;                                   /**< Ok packets (802.1AE) */
+    uint64_t in_pkts_invalid;                              /**< Invalid packets (802.1AE) */
+    uint64_t in_pkts_not_valid;                            /**< No valid packets (802.1AE) */
+    uint64_t in_pkts_not_using_sa;                         /**< Packets not using SA (802.1AE) */
+    uint64_t in_pkts_unused_sa;                            /**< Unused SA (802.1AE) */
+    uint64_t in_octets_validated;                          /**< Received octets validated */
+    uint64_t in_octets_decrypted;                          /**< Received octets decrypted */
+} mepa_macsec_rx_sc_counters_t;
+
+
+/** \brief Tx SC counters as defined by 802.1AE */
+typedef struct {
+    uint64_t out_pkts_protected;                           /**< Protected but not encrypted (802.1AE) */
+    uint64_t out_pkts_encrypted;                           /**< Both protected and encrypted (802.1AE) */
+    uint64_t out_octets_protected;                         /**< The number of octets integrity protected but not encrypted. */
+    uint64_t out_octets_encrypted;                         /**< The number of octets integrity protected and encrypted. */
+} mepa_macsec_tx_sc_counters_t;
+
+
+
+/** RX SC counters */
+mepa_rc mepa_macsec_rx_sc_counters_get(struct mepa_device *dev,
+                                       const mepa_macsec_port_t port,
+                                       const mepa_macsec_sci_t *const sci,
+                                       mepa_macsec_rx_sc_counters_t *const counters);
+
+/** Rx SC counters */
+mepa_rc mepa_macsec_tx_sc_counters_get(struct mepa_device *dev,
+                                       const mepa_macsec_port_t port,
+                                       mepa_macsec_tx_sc_counters_t *const counters);
+
+/*--------------------------------------------------------------------*/
+/* SA Counters                                                        */
+/*--------------------------------------------------------------------*/
+/** \brief Tx SA counters as defined by 802.1AE */
+typedef struct {
+  uint64_t out_pkts_protected;                            /**< Protected but not encrypted (802.1AE) */
+  uint64_t out_pkts_encrypted;                            /**< Both protected and encrypted (802.1AE) */
+} mepa_macsec_tx_sa_counters_t;
+
+
+/** \brief Rx SA counters as defined by 802.1AE */
+typedef struct {
+    uint64_t in_pkts_ok;                                  /**< Ok packets  (802.1AE) */
+    uint64_t in_pkts_invalid;                             /**< Invalid packets (802.1AE) */
+    uint64_t in_pkts_not_valid;                           /**< Not valid packets (802.1AE) */
+    uint64_t in_pkts_not_using_sa;                        /**< Not using SA (802.1AE) */
+    uint64_t in_pkts_unused_sa;                           /**< Unused SA (802.1AE) */
+
+    // Bugzilla#12752
+    uint64_t in_pkts_unchecked;                           /**< Unchecked packets (802.1AE) - Due to a chip limitation InOctetsValidated/Decrypted is not incremented. The API will not correctly count "if_in_octets" since this counter is indirectly derived from InOctetsValidated/Decrypted which per standard. Hence if_in_octets calculation of controlled port is incorrect and only the DMAC and SMAC octets are counted.*/
+
+    uint64_t in_pkts_delayed;                             /**< Delayed packets (802.1AE) */
+    uint64_t in_pkts_late;                                /**< Late packets (802.1AE) */
+} mepa_macsec_rx_sa_counters_t;
+
+
+/** Tx SA counters */
+mepa_rc mepa_macsec_tx_sa_counters_get(struct mepa_device *dev,
+                                       const mepa_macsec_port_t port,
+                                       const uint16_t an,
+                                       mepa_macsec_tx_sa_counters_t *const counters);
+
+
+/** Tx SA counters */
+mepa_rc mepa_macsec_rx_sa_counters_get(struct mepa_device *dev,
+                                       const mepa_macsec_port_t port,
+                                       const mepa_macsec_sci_t *const sci,
+                                       const uint16_t an,
+                                       mepa_macsec_rx_sa_counters_t *const counters);
+
+/*--------------------------------------------------------------------*/
+/* VP / Uncontrolled classification                                   */
+/*--------------------------------------------------------------------*/
+#define MEPA_MACSEC_MATCH_DISABLE        0x0001           /**< Disable match  */
+#define MEPA_MACSEC_MATCH_DMAC           0x0002           /**< DMAC match  */
+#define MEPA_MACSEC_MATCH_ETYPE          0x0004           /**< ETYPE match */
+#define MEPA_MACSEC_MATCH_VLAN_ID        0x0008           /**< VLAN match  */
+#define MEPA_MACSEC_MATCH_VLAN_ID_INNER  0x0010           /**< Inner VLAN match */
+#define MEPA_MACSEC_MATCH_BYPASS_HDR     0x0020           /**< MPLS header match */
+#define MEPA_MACSEC_MATCH_IS_CONTROL     0x0040           /**< Control frame match e.g. Ethertype 0x888E */
+#define MEPA_MACSEC_MATCH_HAS_VLAN       0x0080           /**< The frame contains a VLAN tag */
+#define MEPA_MACSEC_MATCH_HAS_VLAN_INNER 0x0100           /**< The frame contains an inner VLAN tag */
+#define MEPA_MACSEC_MATCH_SMAC           0x0200           /**< Source MAC address  */
+
+#define MEPA_MACSEC_MATCH_PRIORITY_LOWEST 15              /**< Lowest possible matching priority */
+#define MEPA_MACSEC_MATCH_PRIORITY_LOW    12              /**< Low matching priority */
+#define MEPA_MACSEC_MATCH_PRIORITY_MID     8              /**< Medium matching priority */
+#define MEPA_MACSEC_MATCH_PRIORITY_HIGH    4              /**< High matching priority */
+#define MEPA_MACSEC_MATCH_PRIORITY_HIGHEST 0              /**< Hihhest possible matching priority */
+
+/** \brief MACsec control frame matching */
+typedef struct {
+    uint32_t            match;                            /**< Use combination of (OR): VTSS_MACSEC_MATCH_DMAC,
+                                                             MEPA_MACSEC_MATCH_ETYPE */
+    mepa_mac_t     dmac;                                  /**< DMAC address to match (SMAC not supported) */
+    mepa_etype_t   etype;                                 /**< Ethernet type to match  */
+} mepa_macsec_control_frame_match_conf_t;
+
+/**Set the control frame matching rules.
+ *  16 rules are supported for ETYPE (8 for 1G Phy).
+ *   8 rules are supported for DMACs
+ *   2 rules are supported for ETYPE & DMAC
+ */
+mepa_rc mepa_macsec_control_frame_match_conf_set(struct mepa_device *dev ,
+                                                 const mepa_port_no_t port_no,
+                                                 const mepa_macsec_control_frame_match_conf_t *const conf,
+                                                 uint32_t *const rule_id);
+
+/** Delete a control frame matching rule. */
+mepa_rc mepa_macsec_control_frame_match_conf_del(struct mepa_device *dev,
+                                                 const mepa_port_no_t port_no,
+                                                 const uint32_t rule_id);
+
+/**
+ Get the control frame matching rules.
+ */
+mepa_rc mepa_macsec_control_frame_match_conf_get(struct mepa_device *dev,
+                                                 const mepa_port_no_t port_no,
+                                                 mepa_macsec_control_frame_match_conf_t *const conf,
+                                                 uint32_t rule_id);
+
+/** \brief Matching patterns,
+ * When traffic is passed through the MACsec processing block, it will be match
+ * against a set of rules. If non of the rules matches, it will be matched
+ * against the default rules (one and only on of the default rules will always
+ * match) defined in mepa_macsec_default_action_policy_t.
+ *
+ * The classification rules are associated with a MACsec port and an action. The
+ * action is defined in mepa_macsec_match_action_t and defines if frames
+ * should be dropped, forwarded to the controlled or the un-controlled port of
+ * the given virtual MACsec port.
+ *
+ * These classification rules are used both on the ingress and the egress side.
+ * On the ingress side, only tags located before the SECtag will be used.
+ *
+ * These rules are a limited resource, and the HW is limited to allow the same
+ * amount of classification rules as concurrent SA streams. Therefore to utilize
+ * the hardware 100%, they should only be used to associate traffic with the
+ * controlled port of a MACsec port. In simple scenarios where a single peer is
+ * connected to a single PHY, there are more then sufficiet resources to use
+ * this mechanism for associate traffic with the uncontrolled port.
+ *
+ * Instead of using this to forward control frames to the uncontrolled port,
+ * the default rules may be used to bypass those frames. This will however have
+ * the following consequences:
+ *  - The controlled frames will not be included in uncontrolled port
+ *    counters. To get the correct counter values, the application will need to
+ *    gather all the control frames, calculate the statistics and use this to
+ *    compensate the uncontrolled port counters.
+ *  - All frames which are classified as control frames are passed through. If
+ *    the control frame matches against the ether-type, it will
+ *    evaluate to true in the following three cases:
+ *     * If the ether-type located directly after the source MAC address matches
+ *     * If the ether-type located the first VLAN tag matches
+ *     * If the ether-type located a double VLAN tag matches
+ * */
+
+typedef struct {
+    /** This field is used to specify which part of the matching pattern is
+     * active. If multiple fields are active, they must all match if the
+     * pattern is to match.  */
+    uint32_t          match;
+
+    /** Signals if the frame has been classified as a control frame. This allow
+     * to match if a frame must be classified as a control frame, or if it has
+     * not be classified as a control frame. The classification is controlled
+     * by the mepa_macsec_control_frame_match_conf_t struct. This field is
+     * activated by setting the MEPA_MACSEC_MATCH_IS_CONTROL in "match" */
+    mepa_bool_t         is_control;
+
+    /** Signals if the frame contains a VLAN tag. This allows to match if a VLAN
+     * tag must exists, and if a VLAN tag must not exists. This field is
+     * activated by setting the MEPA_MACSEC_MATCH_HAS_VLAN bit in "match" */
+    mepa_bool_t         has_vlan_tag;
+
+    /** Signals if the frame contains an inner VLAN tag. This allows to match if
+     * an inner VLAN tag must exists, and if an inner VLAN tag must not exists.
+     * This field is activated by setting the MEPA_MACSEC_MATCH_HAS_VLAN_INNER
+     * bit in "match" */
+    mepa_bool_t         has_vlan_inner_tag;
+
+    /** This field can be used to match against a parsed ether-type. This
+     * field is activated by setting the MEPA_MACSEC_MATCH_ETYPE bit in "match"
+     */
+    mepa_etype_t etype;
+
+    /** This field can be used to match against the VLAN id. This field is
+     * activated by setting the MEPA_MACSEC_MATCH_VLAN_ID bit in "match" */
+    mepa_vid_t   vid;
+
+    /** This field can be used to match against the inner VLAN id. This field
+     * is activated by setting the MEPA_MACSEC_MATCH_VLAN_ID_INNER bit in
+     * "match" */
+    mepa_vid_t   vid_inner;
+
+    /** This field along with hdr_mask is used to do a binary matching of a MPLS
+     * header. This is activated by setting the MEPA_MACSEC_MATCH_BYPASS_HDR bit
+     * in "match" */
+    uint8_t           hdr[8];
+
+    /** Full mask set for the 'hdr' field. */
+    uint8_t           hdr_mask[8];
+
+    /** In case multiple rules matches a given frame, the rule with the highest
+     * priority wins. Valid range is 0 (highest) - 15 (lowest).*/
+    uint8_t           priority;
+
+    /** This field can be used to match against the Source MAC address.  This field is
+     * activated by setting the MEPA_MACSEC_MATCH_SMAC bit in "match" */
+    mepa_mac_t   src_mac;
+
+    /** This field can be used to match against the Destination MAC address.  This field is
+     * activated by setting the MEPA_MACSEC_MATCH_DMAC bit in "match" */
+    mepa_mac_t   dest_mac;
+} mepa_macsec_match_pattern_t;
+
+/** \brief Pattern matching actions */
+typedef enum {
+    /** Drop the packet */
+    MEPA_MACSEC_MATCH_ACTION_DROP=0,
+
+   /** Forward the packet to the controlled port */
+    MEPA_MACSEC_MATCH_ACTION_CONTROLLED_PORT=1,
+
+    /** Forward the packet to the uncontrolled port */
+    MEPA_MACSEC_MATCH_ACTION_UNCONTROLLED_PORT=2,
+
+    /** Number of actions - always add new actions above this line */
+    MEPA_MACSEC_MATCH_ACTION_CNT = 3,
+} mepa_macsec_match_action_t;
+
+
+/** \brief Type used to state direction  */
+typedef enum {
+    /** Ingress. Traffic which is received by the port. */
+    MEPA_MACSEC_DIRECTION_INGRESS=0,
+
+    /** Egress. Traffic which is transmitted on the port. */
+    MEPA_MACSEC_DIRECTION_EGRESS=1,
+
+    /** Number of directions - will always be 2 */
+    MEPA_MACSEC_DIRECTION_CNT = 2,
+
+} mepa_macsec_direction_t;
+
+/** Configure the Matching pattern for a given MACsec port, for a given
+ * action. Only one action may be associated with each actions. One matching
+ * slot will be acquired immediately when this is called for the "DROP" or the
+ * "UNCONTROLLED_PORT" actions. When matching pattern is configured for the
+ * "CONTROLLED_PORT" action, HW a matching resource will be acquired for every
+ * SA added.
+ */
+mepa_rc mepa_macsec_pattern_set(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const mepa_macsec_direction_t direction,
+                                const mepa_macsec_match_action_t action,
+                                const mepa_macsec_match_pattern_t *const pattern);
+
+/** Delete a pattern matching rule.*/
+mepa_rc mepa_macsec_pattern_del(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const mepa_macsec_direction_t direction,
+                                const mepa_macsec_match_action_t action);
+
+/** Get the pattern matching rule. */
+mepa_rc mepa_macsec_pattern_get(struct mepa_device *dev,
+                                const mepa_macsec_port_t port,
+                                const mepa_macsec_direction_t direction,
+                                const mepa_macsec_match_action_t action,
+                                mepa_macsec_match_pattern_t *const pattern);
+
+
+/** \brief Default matching actions */
+typedef enum {
+    MEPA_MACSEC_DEFAULT_ACTION_DROP   = 0,  /**< Drop frame */
+    MEPA_MACSEC_DEFAULT_ACTION_BYPASS = 1,  /**< Bypass frame */
+} mepa_macsec_default_action_t;
+
+/** \brief Default policy.
+ * Frames not matched by any of the MACsec patterns will be evaluated against
+ * the default policy.
+ */
+typedef struct {
+    /**  Defines action for ingress frames which are not classified as MACsec
+     *   frames and not classified as control frames. */
+    mepa_macsec_default_action_t ingress_non_control_and_non_macsec;
+
+    /**  Defines action for ingress frames which are not classified as MACsec
+     *   frames and are classified as control frames. */
+    mepa_macsec_default_action_t ingress_control_and_non_macsec;
+
+    /**  Defines action for ingress frames which are classified as MACsec frames
+     *   and are not classified as control frames. */
+    mepa_macsec_default_action_t ingress_non_control_and_macsec;
+
+    /**  Defines action for ingress frames which are classified as MACsec frames
+     *   and are classified as control frames. */
+    mepa_macsec_default_action_t ingress_control_and_macsec;
+
+    /**  Defines action for egress frames which are classified as control frames. */
+    mepa_macsec_default_action_t egress_control;
+
+    /**  Defines action for egress frames which are not classified as control frames. */
+    mepa_macsec_default_action_t egress_non_control;
+} mepa_macsec_default_action_policy_t;
+
+/** Assign default policy */
+mepa_rc mepa_macsec_default_action_set(struct mepa_device *dev,
+                                       const mepa_port_no_t port_no,
+                                       const mepa_macsec_default_action_policy_t *const policy);
+
+/** Get default policy */
+mepa_rc mepa_macsec_default_action_get(struct mepa_device *dev,
+                                       const mepa_port_no_t port_no,
+                                       mepa_macsec_default_action_policy_t *const policy);
+
+/*--------------------------------------------------------------------*/
+/* Header / TAG Bypass                                                */
+/*--------------------------------------------------------------------*/
+
+/** \brief  Enum for Bypass mode, Tag or Header  */
+typedef enum {
+    MEPA_MACSEC_BYPASS_NONE,                          /**< Disable bypass mode  */
+    MEPA_MACSEC_BYPASS_TAG,                           /**< Enable TAG bypass mode  */
+    MEPA_MACSEC_BYPASS_HDR,                           /**< Enable Header bypass mode */
+} mepa_macsec_bypass_t;
+
+/** \brief Structure for Bypass mode */
+typedef struct {
+    mepa_macsec_bypass_t  mode;                       /**< Bypass Mode, Tag bypass or Header bypass */
+    uint32_t hdr_bypass_len;                          /**< (ignored for TAG bypass) Header Bypass length, possible values: 2,4,6..16 bytes.
+                                                       * The bypass includes MPLS DA + MPLS SA + MPLS Etype (before frame DA/SA)
+                                                       * E.g. the value '4' means 6+6+2+4=18 bytes (MPLS dmac + MPLS smac + MPLS etype + 4) */
+    mepa_etype_t hdr_etype;                           /**< (ignored for TAG bypass) Header Bypass: Etype to match (at frame index 12)
+                                                       * When matched, process control packets using DMAC/SMAC/Etype after the header
+                                                       * If not matched process control packets using the first DMAC/SMAC/Etype (as normally done) */
+} mepa_macsec_bypass_mode_t;
+
+/** \brief Enum for number of TAGs  */
+typedef enum {
+    MEPA_MACSEC_BYPASS_TAG_ZERO,                      /**< Disable */
+    MEPA_MACSEC_BYPASS_TAG_ONE,                       /**< Bypass 1 tag */
+    MEPA_MACSEC_BYPASS_TAG_TWO,                       /**< Bypass 2 tags */
+} mepa_macsec_tag_bypass_t;
+
+
+/** Set header bypass mode globally for the port */
+mepa_rc mepa_macsec_bypass_mode_set(struct mepa_device *dev,
+                                    const mepa_port_no_t port_no,
+                                    const mepa_macsec_bypass_mode_t *const bypass);
+
+/** Get the header bypass mode */
+mepa_rc mepa_macsec_bypass_mode_get(struct mepa_device *dev,
+                                    const mepa_port_no_t port_no,
+                                    mepa_macsec_bypass_mode_t *const bypass);
+
+
+/** Set the bypass tag mode i.e. number of Tags to bypass: 0(disable), 1 or 2 tags.*/
+mepa_rc mepa_macsec_bypass_tag_set(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   const mepa_macsec_tag_bypass_t tag);
+
+/** Get the bypass Tag mode i.e. 0, 1 or 2 tags. */
+mepa_rc mepa_macsec_bypass_tag_get(struct mepa_device *dev,
+                                   const mepa_macsec_port_t port,
+                                   mepa_macsec_tag_bypass_t *const tag);
+
+/*--------------------------------------------------------------------*/
+/* Others                                                             */
+/*--------------------------------------------------------------------*/
+
+#define MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX 504 /**< The maximum frame size supported for MACSEC capturing */
+
+/** \brief Enum for frame capturing  */
+typedef enum {
+    MEPA_MACSEC_FRAME_CAPTURE_DISABLE,               /**< Disable frame capturing */
+    MEPA_MACSEC_FRAME_CAPTURE_INGRESS,               /**< Enable ingress frame capturing */
+    MEPA_MACSEC_FRAME_CAPTURE_EGRESS,                /**< Enable egress frame capturing */
+} mepa_macsec_frame_capture_t;
+
+/** Sets MTU for both ingress and egress. */
+mepa_rc mepa_macsec_mtu_set(struct mepa_device *dev,
+                            const mepa_port_no_t port_no,
+                            const mepa_macsec_mtu_t *const mtu_conf);
+
+/** Gets current MTU configuration */
+mepa_rc mepa_macsec_mtu_get(struct mepa_device *dev,
+                            const mepa_port_no_t port_no,
+                            mepa_macsec_mtu_t *mtu_conf);
+
+/** Enable frame capture.  Used for test/debugging.
+ *   The buffer will only capture the first frame received after capturing has been started
+ *   The procedure for frame capturing is as follow:
+ *   1) Start capturing (Call mepa_macsec_frame_capture_set with MEPA_MACSEC_FRAME_CAPTURE_INGRESS/MEPA_MACSEC_FRAME_CAPTURE_EGRESS)
+ *   2) Send in the frame to be captured
+ *   3) Disable capturing (Call mepa_macsec_frame_capture_set with MEPA_MACSEC_FRAME_CAPTURE_DISABLE) in order to prepare for next capturing.
+ *   4) Get the captured frame using mepa_macsec_frame_get.
+ *
+ */
+
+mepa_rc mepa_macsec_frame_capture_set(struct mepa_device *dev,
+                                      const mepa_port_no_t port_no,
+                                      const mepa_macsec_frame_capture_t capture);
+
+/** Get a frame from an internal capture buffer. Used for test/debugging. */
+mepa_rc mepa_macsec_frame_get(struct mepa_device *dev,
+                              const mepa_port_no_t port_no,
+                              const uint32_t buf_length,
+                              uint32_t *const return_length,
+                              uint8_t *const frame);
+
+/** \brief Enum for events  */
+typedef enum {
+    MEPA_MACSEC_SEQ_NONE  = 0x0,
+    MEPA_MACSEC_SEQ_THRESHOLD_EVENT = 0x1,
+    MEPA_MACSEC_SEQ_ROLLOVER_EVENT  = 0x2,
+    MEPA_MACSEC_SEQ_ALL   = 0x3
+} mepa_macsec_event_t;
+
+
+/**
+ * Enabling / Disabling of events
+ **/
+mepa_rc mepa_macsec_event_enable_set(struct mepa_device *dev,
+                                     const mepa_port_no_t port_no,
+                                     const mepa_macsec_event_t ev_mask,
+                                     const mepa_bool_t enable);
+
+/**
+ * Get Enabling of events
+ **/
+mepa_rc mepa_macsec_event_enable_get(struct mepa_device *dev,
+                                     const mepa_port_no_t port_no,
+                                     mepa_macsec_event_t *const ev_mask);
+
+/**
+ * Polling for active events
+ **/
+mepa_rc mepa_macsec_event_poll(struct mepa_device *dev,
+                               const mepa_port_no_t port_no,
+                               mepa_macsec_event_t *const ev_mask);
+
+
+/**
+ * Configure the SEQ threshold
+ **/
+mepa_rc mepa_macsec_event_seq_threshold_set(struct mepa_device *dev,
+                                            const mepa_port_no_t port_no,
+                                            const uint32_t threshold);
+
+/**
+ * Get the SEQ threshold
+ **/
+mepa_rc mepa_macsec_event_seq_threshold_get(struct mepa_device *dev,
+                                            const mepa_port_no_t port_no,
+                                            uint32_t *const threshold);
+
+/**
+ * Get the Egress Interrupt SA Active AN
+ **/
+mepa_rc mepa_macsec_egr_intr_sa_get(struct mepa_device *dev,
+                                    const mepa_port_no_t port_no,
+                                    mepa_macsec_port_t *const port,
+                                    uint16_t *const an);
+
+/**
+ * \brief Chip register read
+ *
+ **/
+mepa_rc mepa_macsec_csr_read(struct mepa_device *dev,
+                             const mepa_port_no_t port_no,
+                             const uint16_t mmd,
+                             const uint32_t addr,
+                             uint32_t *const value);
+/**
+ * \brief Chip register write
+ *
+ **/
+mepa_rc mepa_macsec_csr_write(struct mepa_device *dev,
+                              const mepa_port_no_t port_no,
+                              const uint32_t mmd,
+                              const uint32_t addr,
+                              const uint32_t value);
+
+/** \brief Debug counters for counting the number error return codes.  */
+typedef struct {
+    uint32_t invalid_sci_macaddr;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_INVALID_SCI_MACADDR*/
+    uint32_t macsec_not_enabled;      /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_NOT_ENABLED*/
+    uint32_t secy_already_in_use;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_SECY_ALREADY_IN_USE*/
+    uint32_t no_secy_found;           /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_NO_SECY_FOUND*/
+    uint32_t no_secy_vacency;         /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_NO_SECY_VACANCY*/
+    uint32_t invalid_validate_frm;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_INVALID_VALIDATE_FRM*/
+    uint32_t invalid_hdr_bypass_len;  /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_INVALID_BYPASS_HDR_LEN*/
+    uint32_t sc_not_found;            /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_SC_NOT_FOUND*/
+    uint32_t could_not_prg_sa_match;  /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_PRG_SA_MATCH*/
+    uint32_t could_not_prg_sa_flow;   /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_PRG_SA_FLOW*/
+    uint32_t could_not_ena_sa;        /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_ENA_SA*/
+    uint32_t could_not_set_sa;        /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_SET_SA*/
+    uint32_t no_ctrl_frm_match;       /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_NO_CTRL_FRM_MATCH*/
+    uint32_t could_not_set_pattern;   /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_SET_PATTERN*/
+    uint32_t timeout_issue;           /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_TIMEOUT_ISSUE*/
+    uint32_t could_not_empty_egress;  /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_EMPTY_EGRESS*/
+    uint32_t an_not_created;          /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_AN_NOT_CREATED*/
+    uint32_t could_not_empty_ingress; /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_EMPTY_INGRESS*/
+    uint32_t tx_sc_not_exist;         /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_TX_SC_NOT_EXIST*/
+    uint32_t could_not_disable_sa;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_DISABLE_SA*/
+    uint32_t could_not_del_rx_sa;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_DEL_RX_SA*/
+    uint32_t could_not_del_tx_sa;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_DEL_TX_SA*/
+    uint32_t pattern_not_set;         /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_PATTERN_NOT_SET*/
+    uint32_t hw_resource_exhusted;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_HW_RESOURCE_EXHUSTED*/
+    uint32_t sci_already_exist;       /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_SCI_ALREADY_EXISTS*/
+    uint32_t sc_resource_not_found;   /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_SC_RESOURCE_NOT_FOUND*/
+    uint32_t rx_an_already_in_use;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_RX_AN_ALREADY_IN_USE*/
+    uint32_t empty_record;            /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_EMPTY_RECORD*/
+    uint32_t could_not_prg_xform;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_PRG_XFORM*/
+    uint32_t could_not_toggle_sa;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_TOGGLE_SA*/
+    uint32_t tx_an_already_in_use;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_TX_AN_ALREADY_IN_USE*/
+    uint32_t all_available_sa_in_use; /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_ALL_AVAILABLE_SA_IN_USE*/
+    uint32_t match_disable;           /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_MATCH_DISABLE*/
+    uint32_t all_cp_rules_in_use;     /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_ALL_CP_RULES_IN_USE*/
+    uint32_t pattern_prio_not_valid;  /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_PATTERN_PRIO_NOT_VALID*/
+    uint32_t buffer_too_small;        /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_BUFFER_TOO_SMALL*/
+    uint32_t frm_too_long;            /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_FRAME_TOO_LONG*/
+    uint32_t frm_truncated;           /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_FRAME_TRUNCATED*/
+    uint32_t phy_powered_down;        /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_PHY_POWERED_DOWN*/
+    uint32_t phy_not_macsec_capable;  /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_PHY_NOT_MACSEC_CAPABLE*/
+    uint32_t an_not_exist;            /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_AN_NOT_EXIST*/
+    uint32_t no_pattern_cfg;          /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_NO_PATTERN_CFG*/
+    uint32_t unexpected_speed;        /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_UNEXPECT_SPEED*/
+    uint32_t max_mtu;                 /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_MAX_MTU*/
+    uint32_t unexpected_cp_mode;      /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_UNEXPECT_CP_MODE*/
+    uint32_t could_not_disable_an;    /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_COULD_NOT_DISABLE_AN*/
+    uint32_t rule_out_of_range;       /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_RULE_OUT_OF_RANGE*/
+    uint32_t rule_not_exit;           /**< Number of errors happen with error code MEPA_RC_ERR_MACSEC_RULE_NOT_EXIT*/
+    uint32_t csr_read;                /**< Number of errors happen with error code MEPA_RC_ERR_CSR_READ*/
+    uint32_t csr_write;               /**< Number of errors happen with error code MEPA_RC_ERR_CSR_WRITE*/
+    uint32_t unknown_rc_code;         /**< Number of errors happen with unknown error code*/
+} mepa_macsec_rc_dbg_counters_t;
+
+/**
+ * Get return code debug counters
+**/
+mepa_rc mepa_macsec_dbg_counter_get(struct mepa_device *dev,
+                                    const mepa_port_no_t port_no,
+                                    mepa_macsec_rc_dbg_counters_t *const counters);
+
+
+#define deb_counter_get mepa_macsec_dbg_counter_get /**< Backward compatibility */
+
+/*--------------------------------------------------------------------*/
+/* Line MAC / Host MAC / FC                                           */
+/*--------------------------------------------------------------------*/
+
+/** \brief Host/Line Mac Counters */
+typedef struct {
+    /* Rx RMON counters */
+    uint64_t if_rx_octets;           /**< In octets       */
+    uint64_t if_rx_in_bytes;         /**< In bytes        */
+    uint32_t if_rx_pause_pkts;       /**< In pause        */
+    uint32_t if_rx_ucast_pkts;       /**< In unicasts     */
+    uint32_t if_rx_multicast_pkts;   /**< In multicasts   */
+    uint32_t if_rx_broadcast_pkts;   /**< In broadcasts   */
+    uint32_t if_rx_discards;         /**< In discards     */
+    uint32_t if_rx_errors;           /**< In errors       */
+
+    uint64_t if_rx_StatsPkts;        /**< In All Pkt cnts    */
+    uint32_t if_rx_CRCAlignErrors;   /**< In CRC errors      */
+    uint32_t if_rx_UndersizePkts;    /**< In Undersize pkts  */
+    uint32_t if_rx_OversizePkts;     /**< In Oversize pkts   */
+    uint32_t if_rx_Fragments;        /**< In Fragments       */
+    uint32_t if_rx_Jabbers;          /**< In Jabbers         */
+    uint32_t if_rx_Pkts64Octets;         /**< In Pkts64Octets         */
+    uint32_t if_rx_Pkts65to127Octets;    /**< In Pkts65to127Octets    */
+    uint32_t if_rx_Pkts128to255Octets;   /**< In Pkts128to255Octets   */
+    uint32_t if_rx_Pkts256to511Octets;   /**< In Pkts256to511Octets   */
+    uint32_t if_rx_Pkts512to1023Octets;  /**< In Pkts512to1023Octets  */
+    uint32_t if_rx_Pkts1024to1518Octets; /**< In Pkts1024to1518Octets */
+    uint32_t if_rx_Pkts1519toMaxOctets;  /**< In Pkts1519toMaxOctets  */
+
+    /* Tx RMON counters */
+    uint64_t if_tx_octets;           /**< Out octets      */
+    uint32_t if_tx_pause_pkts;       /**< Out pause       */
+    uint32_t if_tx_ucast_pkts;       /**< Out unicasts    */
+    uint32_t if_tx_multicast_pkts;   /**< Out multicasts  */
+    uint32_t if_tx_broadcast_pkts;   /**< Out broadcasts  */
+    uint32_t if_tx_errors;           /**< Out errors      */
+
+    uint32_t if_tx_DropEvents;            /**< Out _DropEvents          */
+    uint64_t if_tx_StatsPkts;             /**< Out StatsPkts            */
+    uint32_t if_tx_Collisions;            /**< Out Collisions           */
+    uint32_t if_tx_Pkts64Octets;          /**< Out Pkts64Octets         */
+    uint32_t if_tx_Pkts65to127Octets;     /**< Out Pkts65to127Octets    */
+    uint32_t if_tx_Pkts128to255Octets;    /**< Out Pkts128to255Octets   */
+    uint32_t if_tx_Pkts256to511Octets;    /**< Out Pkts256to511Octets   */
+    uint32_t if_tx_Pkts512to1023Octets;   /**< Out Pkts512to1023Octets  */
+    uint32_t if_tx_Pkts1024to1518Octets;  /**< Out Pkts1024to1518Octets */
+    uint32_t if_tx_Pkts1519toMaxOctets;   /**< Out Pkts1519toMaxOctets  */
+} mepa_macsec_mac_counters_t;
+
+/**
+ * Host Mac counters (To be moved)
+ *
+ **/
+mepa_rc mepa_macsec_hmac_counters_get(struct mepa_device *dev,
+                                      const mepa_port_no_t port_no,
+                                      mepa_macsec_mac_counters_t *const counters,
+                                      const mepa_bool_t clear);
+
+/**
+ * Line Mac counters (To be moved)
+ *
+ **/
+mepa_rc mepa_macsec_lmac_counters_get(struct mepa_device *dev,
+                                      const mepa_port_no_t port_no,
+                                      mepa_macsec_mac_counters_t *const counters,
+                                      const mepa_bool_t clear);
+/**
+ * Function for getting if a port is MACSEC capable
+ **/
+mepa_rc mepa_macsec_is_capable(struct mepa_device *dev,
+                               const mepa_port_no_t port_no,
+                               mepa_bool_t *capable);
+/**
+ * Function for dump MACSEC registers
+ **/
+
+mepa_rc mepa_macsec_dbg_reg_dump(struct mepa_device *dev,
+                                 const mepa_port_no_t port_no,
+                                 const mepa_debug_print_t pr);
+
+/*--------------------------------------------------------------------*/
+/* Macsec SC Instance Counters structures                                */
+/*--------------------------------------------------------------------*/
+
+/** \brief No. of  Tx SA or Rx SA Information */
+typedef struct {
+    uint8_t no_sa;                              /**< No. of SAs configured */
+    uint8_t sa_id[MEPA_MACSEC_SA_PER_SC_MAX];   /**< Configured SA ids */
+} mepa_sc_inst_count_t;
+
+/*--------------------------------------------------------------------*/
+/* Macsec SecY Instance Counters structures                                */
+/*--------------------------------------------------------------------*/
+
+/** \brief No. of  Tx SC and Rx SC Information */
+typedef struct {
+    uint8_t no_txsc;                            /**< No. of Tx SCs configured */
+    uint8_t txsc_id;                            /**< Configured Tx SC ids */
+    mepa_macsec_sci_t tx_sci;              /**< Tx SCI */
+    mepa_sc_inst_count_t txsc_inst_count;  /**< Tx SC Instances */
+    uint8_t no_rxsc;                            /**< No. of Rx SCs configured */
+    uint8_t rxsc_id[MEPA_MACSEC_MAX_SC_RX];     /**< Configured Rx SC ids */
+    mepa_macsec_sci_t rx_sci[MEPA_MACSEC_MAX_SC_RX];             /**< Rx SCIs */
+    mepa_sc_inst_count_t rxsc_inst_count[MEPA_MACSEC_MAX_SC_RX]; /**< Rx SCs Instances */
+} mepa_secy_inst_count_t;
+
+/*--------------------------------------------------------------------*/
+/* Macsec Instance Counters structures                                */
+/*--------------------------------------------------------------------*/
+
+/** \brief No. of  SecYs, Virtual Port Information */
+typedef struct {
+    uint8_t no_secy;                       /**< No. of SecYs configured */
+    uint8_t secy_vport[MEPA_MACSEC_MAX_SECY]; /**< Configured SecY virtual port */
+    mepa_secy_inst_count_t secy_inst_count[MEPA_MACSEC_MAX_SECY]; /**< SecY Instances */
+} mepa_macsec_inst_count_t;
+
+/** Get the Instances count of SecYs, Rx SCs, Tx SA and Rx SAs.
+ *
+ */
+mepa_rc mepa_macsec_inst_count_get(struct mepa_device *dev,
+                                   const mepa_port_no_t   port_no,
+                                   mepa_macsec_inst_count_t *count);
+
+/** Clear the RMON Line mac counters.
+ */
+mepa_rc mepa_macsec_lmac_counters_clear(struct mepa_device *dev,
+                                        const mepa_port_no_t port_no);
+
+/** Clear the RMON Host mac counters.
+ */
+mepa_rc mepa_macsec_hmac_counters_clear(struct mepa_device *dev,
+                                        const mepa_port_no_t port_no);
+
+/** Clear the Macsec Debug counters.
+ */
+mepa_rc mepa_macsec_debug_counters_clear(struct mepa_device *dev,
+                                         const mepa_port_no_t port_no);
+
+/**Clear the Common counters.
+ */
+mepa_rc mepa_macsec_common_counters_clear(struct mepa_device *dev,
+                                          const mepa_port_no_t port_no);
+
+/** Clear the Uncontrolled port counters.
+ */
+mepa_rc mepa_macsec_uncontrolled_counters_clear(struct mepa_device *dev,
+                                                const mepa_port_no_t port_no);
+
+/** Clear the Controlled port counters.
+ */
+mepa_rc mepa_macsec_controlled_counters_clear (struct mepa_device *dev,
+                                               const mepa_macsec_port_t port);
+
+/**Clear the Rx SA counters.
+ */
+mepa_rc mepa_macsec_rxsa_counters_clear(struct mepa_device *dev,
+                                        const mepa_macsec_port_t port,
+                                        const mepa_macsec_sci_t *const sci,
+                                        const uint16_t an);
+
+/** Clear the Rx SC counters. */
+mepa_rc mepa_macsec_rxsc_counters_clear(struct mepa_device *dev,
+                                        const mepa_macsec_port_t port,
+                                        const mepa_macsec_sci_t  *const sci);
+
+/** Clear the Tx SA counters. */
+mepa_rc mepa_macsec_txsa_counters_clear(struct mepa_device *dev,
+                                        const mepa_macsec_port_t  port,
+                                        const uint16_t  an);
+
+/** Clear the Tx SC counters. */
+mepa_rc mepa_macsec_txsc_counters_clear (struct mepa_device *dev,
+                                         const mepa_macsec_port_t port);
+
+/** Clear the SecY counters. */
+mepa_rc mepa_macsec_secy_counters_clear (struct mepa_device *dev,
+                                         const mepa_macsec_port_t port);
+
+/** Get the Macsec Enable Status. */
+mepa_rc mepa_macsec_port_enable_status_get (struct mepa_device *dev,
+                                            const mepa_port_no_t port_no,
+                                            mepa_bool_t *status);
+
+/** Get the Macsec RxSA AN Status. */
+mepa_rc mepa_macsec_rxsa_an_status_get (struct mepa_device *dev,
+                                        const mepa_macsec_port_t port,
+                                        const mepa_macsec_sci_t *const sci,
+                                        const uint16_t an,
+                                        mepa_bool_t *status);
+
+/** Get MAC Block MTU and Tag Check configuration. */
+mepa_rc mepa_mac_block_mtu_get(struct mepa_device *dev,
+                               const mepa_port_no_t port_no,
+                               uint16_t *const mtu_value,
+                               mepa_bool_t *const mtu_tag_check);
+
+/** Set MAC Block MTU and Tag Check configuration. */
+mepa_rc mepa_mac_block_mtu_set(struct mepa_device *dev,
+                               const mepa_port_no_t port_no,
+                               const uint16_t mtu_value,
+                               const mepa_bool_t mtu_tag_check);
+
+/** Set frame gap compensation in FC Buffer. */
+mepa_rc mepa_macsec_fcbuf_frame_gap_comp_set(struct mepa_device *dev,
+                                             const mepa_port_no_t port_no,
+                                             const uint8_t frm_gap);
+
+/** Flow Control buffer Block Reg Dump. */
+mepa_rc mepa_macsec_dbg_fcb_block_reg_dump(struct mepa_device *dev,
+                                           const mepa_port_no_t port_no,
+                                           const mepa_debug_print_t pr);
+
+
+/** Flow Control buffer Block Reg Dump. */
+mepa_rc mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump(struct mepa_device *dev,
+                                                         const mepa_port_no_t port_no,
+                                                         const mepa_debug_print_t pr);
+
+
+#ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND
+/** MACsec Debug Re-configuration.
+ *
+ */
+mepa_rc mepa_macsec_dbg_reconfig(struct mepa_device *dev,
+                                 const mepa_port_no_t port_no);
+#endif
+
+/** Configure MACsec Update sequence number.
+ *
+ */
+mepa_rc mepa_macsec_dbg_update_seq_set(struct mepa_device *dev,
+                                       const mepa_macsec_port_t port,
+                                       const mepa_macsec_sci_t *const sci,
+                                       uint16_t an,
+                                       mepa_bool_t egr,
+                                       const mepa_bool_t disable);
+
+
+// ***************************************************************************
+//
+//  End of file.
+//
+// ***************************************************************************
+
+
+#include <microchip/ethernet/hdr_end.h>
+#endif /**< _MEPA_TS_API_H_ */
+:@byteposiq:	@str"!#ifndef _MEPA_MACSEC_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ÔiPipiqiài§i•i”i"i#ifi®iÈi*i+i{iîiÈiÔiCiJiïi‡i2iÑi’i÷i-i.i/idiui‘i7i¢iøi¿i—i6iùi˛i i!i;i\iÀi*	i+	ia	iq	i’	iB
+i[
+i\
+ik
+i–
+iHiΩi◊iÿiiivi÷iGi∏i’i÷iiMi}iÕiiei≠iÊiÏi˝iTi•i)i?i@i~ièiiji„i[i’iRiƒi7i∂iOijikiõi¨ii0i1i]iniŒi6ißiˇiiiDiUiÆiiiiGiXi…iﬂi‡ii(iàiﬂi ii2iCiõiÛiMi™iidiΩi€i‹ii$iyiöiõiÃi›i5 iç iÍ iF!i£!i"i "i!"iK"i\"i÷"iO#i«#i`$i|$i}$iª$iÃ$i-%iä%iÁ%iD&ib&ic&iç&iû&i'iï'i(iz(i)i/)i0)ia)ir)i…)i-*iÜ*i„*i@+iù+i˙+i,i,i,i>,iO,i†,iÕ,iÚ,i-i-i2-iC-iî-iæ-i„-i˛-iˇ-i.i/.iM.io.ip.ié.i∞.i .iÀ.iÙ.i/i(/iJ/iK/ir/iñ/ió/iø/i‰/i0i0i0i,0iK0ic0id0i¢0i»0i…0iË0i1i1i71i]1is1it1i≥1i2i/2iœ2it4i4i5i5iV5iW5iu5i√5i˘5iI6iU6ië6i÷6i◊6i7i87i}7i~7i«7i8iY8iZ8iÑ8iµ8i9ig9ij9in9i©9iÍ9i8:i9:ic:ië:i≤:i˙:iJ;iî;i¡;iƒ;i»;i<iJ<iõ<iú<i∑<iÚ<i3=i{=i|=iµ=i=i2>i3>ir>i†>i£>i‰>i+?in?io?i¨?iÌ?i4@ix@iy@i¡@iAiKAi£Ai§AiÍAiMBiPBiãBiÀBi!CiqCirCisCiºCiDiNDiODiÅDi∏DiıDi8Ei9EiúEi„Ei2FixFi°Fi§FiﬁFiGidGi≤Gi≥GiŸGiHiWHiûHiËHiÈHiIiYIiõIiÈIi1Ji2Ji3JiaJiòJi’JiKiKi1KioKi≥Ki¸KiLLiMLiñLiﬂLi(Mi)MiÇMiπMi˜Mi¯MibNi™Ni˙NiAOikOinOirOi¨OiÏOi:Pi;Pi<Pi\PiòPi⁄Pi$Qi%QibQiôQi◊QiÿQiŸQiÙQi2RivRi∆Ri«RiSiYSi¢Si£SiÁSi6TimTi™TiÏTiUiUUiòUiôUiÀUiÃUiHVi¬Vi@WiDWi{Wi∏Wi˙Wi+XidXi†Xi⁄Xi€Xi‹XiYiVYiØYiÎYi-ZitZi´Zi¨Zi[iM[ié[i‘[i
+\i\i\is\i™\iÁ\i)]i[]i\]i]]i§]iË]i2^iÅ^iø^i_i_i_ió_i`iè`iì`i—`iai^aiñaiÊaiÁai0biybi¬biciciSciåciÀcidiBdiâdiÕdieieiJeiÉei¬eifi9fiÅfiøfi˙fi;gi<gi=gi>giágiÕgihijhi™hiˇhi iiIiiíii€ii‹ii#jimjiÍjidki‚kiÂkiÈki li]liéliƒlimiHmiImiJmimmi§mi·miniIniãni«nioioioi`oiúoi†oi‹oipiUpiVpiWpiΩpi¯pi9qioqipqiqqiÿqiriLri~ririèrisiÖsititiEtiâti¡tiuiui[ui§uiÌui6vi7vivi…viÕviwiEwixwiΩwi xiDxiãxiåxiœxiyiGyizyi¿yiziBzi}ziæziøzi¿zi	{iR{iõ{iœ{i‡{i6|iå|i‚|i8}ié}i‰}i:~iê~iÊ~i<iíi≥i¥iÓiˇiUÄi´ÄiÅiWÅi≠ÅiÇiYÇiØÇiÉi[Éi±ÉiÿÉiŸÉiÑiÑioÑi≈Ñi0ÖiõÖiÜi\Üi≤Üiái^ái¥ái àiåài¯àiâiâiOâi`âicäiãiùãi0åiúåi6çiùçi.éiôéi˘éiYèi≥êi]ëiﬂëi]íi|íi}íi¬íi,ìiñìiîiéîièîi¿îi—îi.ïiãïiËïifñiÄñiÅñiªñi óiKói™ói´óiÏóiEòi†òiôiôi@ôiÅôi«ôiöi öi!öi_öiôöiÿöiõiõiõi3õirõi∑õiúiúiúiTúiΩúi¡úi˛úiAùiBùiCùiuùi±ùiÛùiÙùi=ûiÜûiœûi üiüi'üiÃ†iÕ†i*°iÑ°i‹°i9¢ió¢i˘¢iP£i≠£i
+§i*§i+§i,§i_§ip§iŸ§iC•i¬•i=¶i]¶i^¶i_¶i`¶iv¶i∂¶i¸¶iGßiùßiûßi¥ßiÙßi:®iê®ië®i⁄®i#©il©iü©i∞©i™iÅ™i°™i¢™i£™i÷™iÁ™i?´iõ´i˘´iR¨i®¨i©¨iø¨icÆidÆi¿ÆiØi9Øi:Øi;ØiQØiëØi◊Øi∞ig∞ih∞ii∞i∞iø∞i±iP±iä±i‡±i·±i*≤is≤iº≤i≥i[≥i©≥i˜≥iJ¥iû¥i
+µijµi—µi'∂i(∂iå∂i‰∂i?∑iò∑i˝∑i˛∑i*∏i;∏i´∏iπipπi πiÙπiıπi∫iS∫ix∫i§∫i®∫iÛ∫iBªi≠ªi¯ªi˘ªi&ºipºiøºi	Ωi
+ΩiΩi5Ωi9ΩiÉΩi“Ωi7æi{æi|æiöæiÍæi5øiÑøiæøi¡øi¿i[¿i™¿iÃ¿iœ¿i¡ii¡il¡iª¡i¬iY¬i©¬iˆ¬i:√i=√iä√i⁄√i˘√i?ƒièƒi›ƒi≈i]≈iù≈i“≈i#∆ia∆iû∆i§∆i•∆i∂∆i«iK«ik«ià«iâ«iŸ«i(»iv»i¡»i…i0…i1…iÇ…iÀ…i i> i? iê i‡ i/ÀiHÀitÀiuÀiøÀiÃiÃi/Ãi0Ãi{Ãi«Ãi›ÃiﬁÃi,ÕivÕiàÕi§Õi•ÕiˆÕiGŒi\ŒizŒi{Œi©ŒiÃŒiÕŒiœi_œiœiÄœi◊œi –i:–i;–ió–i‡–i˚–i—i—iB—iQ—il—ië—ií—i∆—iˆ—i˜—i.“i`“ia“iß“iÕ“iÎ“iÏ“iÌ“i”i(”ic”ià”iâ”i∆”iÍ”iÎ”i‘iA‘iB‘i]‘i^‘i¶‘iÛ‘iB’ié’i›’iÍ’iÓ’i'÷if÷iØ÷i¯÷iK◊iL◊ir◊i´◊iÍ◊i3ÿi}ÿi~ÿi§ÿi›ÿiŸieŸiÆŸi˚Ÿi¸Ÿi˝Ÿi$⁄i3⁄ir⁄i≥⁄i”⁄i‘⁄iÔ⁄i=€iT€iX€ii€i∑€i€i5‹i6‹iÑ‹iΩ‹i˛‹iˇ‹iP›iÜ›i«›i»›iﬁiKﬁiàﬁiâﬁiﬁﬁiﬂiﬂiiﬂiûﬂi≈ﬂi∆ﬂi„ﬂi#‡ih‡i…‡i ‡i‰‡i$·ii·iƒ·i≈·i‚iW‚i†‚i°‚i’‚i‰‚i7„iç„iÂ„i˝„i˛„i&‰i7‰iû‰i*Âi´Âi:Êi¿ÊiFÁi‹Ái˘Ái˙Ái!Ëi0ËivËi¡ËiÈi)Èi*Èi+Èi_ÈiúÈiﬁÈi2Íi3ÍiUÍiíÍi‘Íi"Îi#Îi$ÎizÎi∂Îi¯Îi@ÏiAÏiuÏi±ÏiÛÏi<Ìi=ÌiÜÌiœÌiÓiÓiÜÓiáÓiØÓiæÓiÔioÔi ÔiÈÔiÍÔiiLiÜiÃiÕiÛi(ÒibÒiúÒiùÒi—Òi-ÚibÚiÁÚiÛiûÛi⁄Ûi›Ûi·Ûi‚Ûi!ÙieÙi∑Ùi∏Ùiıi<ıixıi±ıiÓıi#ˆi$ˆiCˆiRˆisˆiûˆi…ˆiÈˆi ˜i˜i˜i˜i(˜i-˜ik˜iÆ˜iˆ˜i6¯i7¯i;¯iU¯iZ¯iò¯i€¯i%˘i&˘i*˘iG˘iL˘iÑ˘i¡˘i˙i˙i˙i˙i*˙i/˙it˙iæ˙i˚i˚i
+˚i#˚i(˚im˚i∑˚iˇ˚i ¸i¸i-¸i2¸io¸i±¸iı¸i.˝i/˝i3˝iP˝iS˝iX˝ié˝i…˝i˙˝i,˛ia˛ie˛iÉ˛iÜ˛iã˛i¬˛i˛˛i0ˇicˇiòˇiôˇi„ˇiÙˇip i‰ i`i÷iNiÀiJiøi>iºi5iÆi(i¶iiõiiíi
+	iá	i
+i
+i˜
+itiÔimiÍi_i€iWi‘iTi iFi≈i>iµi-i¶i%iöiiài¯iqiÓihiﬁiHi≥ii1i2i6iXi\iôi€i/i0i1iÑiÖiŒii`iaiÜiói≤iÔi,iii¶i„i i]iöiõi€ii[iõi€iidi≠iˆi?iài—i i i6 is i∞ iÌ i*!ig!i§!i•!i!i;"iÜ"i—"i#ig#i≤#i˝#iH$iì$i±$i≤$i∂$iŸ$i‹$i·$i %id%i∂%iˆ%i˜%i˚%i&i!&i&&ie&i©&i˚&i;'i?'is'ix'i∞'iÌ'i#(i'(iM(iR(iS(iç(iÃ(i)i)iU)i°)iÍ)iÎ)i*i-*i{*i≈*i›*iﬁ*i'+iu+iæ+iø+iÒ+i,iS,i†,i⁄,i-in-iª-i.if.iÄ.iÅ.i .i/i\/i]/iì/i§/iÔ/iB0iõ0i∑0i∏0i¯0i˚0iˇ0i;1i~1i√1iƒ1iÍ1iÓ1i/2iv2iw2iù2i°2i‚2i)3i*3iO3iS3iï3i›3iﬁ3i¸3i 4iC4iå4iç4i∑4iª4i5iS5iT5i|5iÄ5i»5i6i6i56i96iz6i¡6i7iI7iJ7ik7i¨7iÛ7iA8iB8ic8i§8iÏ8i)9i*9iK9iç9i÷9i◊9i˜9i9:iÇ:iÉ:i®:iÌ:i7;iy;iz;i†;i·;i(<it<iØ<iÌ<iÓ<i$=i\=iô=i”=i>i>iL>iÑ>i¡>i˙>i;?i<?il?i≤?i˝?iB@iC@in@i≤@i˚@iDAiEAiFAiqAi√AiBiqBirBisBiüBi¬Bi≈Bi…BiCiCCiJCiKCixCi{CiCiøCiDiPDiÑDiºDiˇDi EiEiPEiSEidEigEi∂Ei∑Ei∏Ei‡EiˇE:@last_line_endiˇE{;o;;o;	;
+@
+;ià;""#define _MEPA_MACSEC_API_H_
+
+;@{;o;;o;	;
+@
+;i•;"3#include <microchip/ethernet/phy/api/types.h>
+;@{;o;;o;	;
+@
+;i”;"U#include <microchip/ethernet/hdr_start.h>  /**< ALL INCLUDE ABOVE THIS LINE */
+
+;@{;o;;o;	;
+@
+;i#;"H#define MEPA_MACSEC_10G_MAX_SA 64     /**< 10G PHY Max SAs : 64 */
+;@{;o;;o;	;
+@
+;if;"G#define MEPA_MACSEC_1G_MAX_SA  16     /**< 1G PHY Max SAs : 16 */
+;@{;o;;o;	;
+@
+;i®;"F#define MEPA_MACSEC_SA_PER_SC_MAX  4  /**< SAs per SC Max : 4 */
+;@{;o;;o;	;
+@
+;iÈ;"G#define MEPA_MACSEC_SA_PER_SC_MIN  2  /**< SAs per SC Min : 2 */
+
+;@{;o;;o;	;
+@
+;i+;"U#define MEPA_MACSEC_SA_PER_SC MEPA_MACSEC_SA_PER_SC_MAX /**< SAs per SCs : 4 */
+;@{;o;;o;	;
+@
+;i{;"#ifdef MEPA_CHIP_10G_PHY
+;@{;o;;o;	;
+@
+;iî;"Z#define MEPA_MACSEC_MAX_SA     MEPA_MACSEC_10G_MAX_SA   /**< 10G PHY Max SAs : 64 */
+;@{;o;;o;	;
+@
+;iÈ;"#else
+;@{;o;;o;	;
+@
+;iÔ;"Y#define MEPA_MACSEC_MAX_SA     MEPA_MACSEC_1G_MAX_SA    /**< 1G PHY Max SAs : 16 */
+;@{;o;;o;	;
+@
+;iC;"#endif
+;@{;o;;o;	;
+@
+;iJ;"P#define MEPA_MACSEC_MAX_SA_RX  MEPA_MACSEC_MAX_SA       /**< Max Rx SAs */
+;@{;o;;o;	;
+@
+;iï;"P#define MEPA_MACSEC_MAX_SA_TX  MEPA_MACSEC_MAX_SA       /**< Max Tx SAs */
+;@{;o;;o;	;
+@
+;i‡;"W#define MEPA_MACSEC_MAX_SC_RX  MEPA_MACSEC_MAX_SA/2     /**< Max Rx SCs : 32/8 */
+;@{;o;;o;	;
+@
+;i2;"W#define MEPA_MACSEC_MAX_SC_TX  MEPA_MACSEC_MAX_SC_RX    /**< Max Tx SCs : 32/8 */
+;@{;o;;o;	;
+@
+;iÑ;"W#define MEPA_MACSEC_MAX_SECY   MEPA_MACSEC_MAX_SC_TX    /**< Max SecYs : 32/8 */
+
+;@{;o;;o;	;
+@
+;i÷;"^#define MEPA_MAC_BLOCK_MTU_MAX 0x2748                   /**< MAC Block Max MTU Size */
+
+
+;@{
+:keywordo;;o;	;
+@
+;id;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iy;"mepa_bool_t ;@:	nameo;;o;	;
+@
+;iÖ;"mac_enabled;@:
+array[ :cap0{;{;{	;o;;o;	;
+@
+;iÿ;"mepa_bool_t ;@;o;;o;	;
+@
+;i‰;"mac_operational;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;;"mepa_bool_t ;@;o;;o;	;
+@
+;iG;"oper_point_to_point_mac;@;[ ;0:typedef_nameo;;o;	;
+@
+;i§;"mepa_macsec_port_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i¿;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i’;"mepa_macsec_port_status_t ;@;o;;o;	;
+@
+;iÔ;"controlled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:;"mepa_macsec_port_status_t ;@;o;;o;	;
+@
+;iT;"uncontrolled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i°;"mepa_macsec_port_status_t ;@;o;;o;	;
+@
+;iª;"common;@;[ ;0;o;;o;	;
+@
+;i ;"#mepa_macsec_secy_port_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i;;"typedef;@:type_aliaso;;o;	;
+@
+;iC;"uint32_t ;@;o;;o;	;
+@
+;iL;"mepa_port_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i\;"typedef;@;o;;o;	;
+@
+;id;"uint16_t ;@;o;;o;	;
+@
+;im;"mepa_macsec_vport_id_t;@;[ ;0{
+;o;;o;	;
+@
+;iÀ;"typedef;@;o;;o;	;
+@
+;i”;"uint32_t ;@;o;;o;	;
+@
+;i‹;"mepa_macsec_service_id_t;@;[ ;0{
+;o;;o;	;
+@
+;ia	;"typedef;@:union_type_declare{;o;;o;	;
+@
+;ii	;"
+union;@:union_members[{;{;{	;o;;o;	;
+@
+;iu	;"uint32_t ;@;o;;o;	;
+@
+;i~	;"pn;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŸ	;"uint64_t ;@;o;;o;	;
+@
+;i‚	;"xpn;@;[ ;0;o;;o;	;
+@
+;iD
+;"mepa_macsec_pkt_num_t;@;[ ;0{
+;o;;o;	;
+@
+;i\
+;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;id
+;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;io
+;")MEPA_MACSEC_VALIDATE_FRAMES_DISABLED;@;0{;!{;"o;;o;	;
+@
+;i‘
+;"&MEPA_MACSEC_VALIDATE_FRAMES_CHECK;@;0{;!{;"o;;o;	;
+@
+;iL;"?MEPA_MACSEC_VALIDATE_FRAMES_STRICT                        ;@;0;o;;o;	;
+@
+;iø;"mepa_validate_frames_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@; [	{;!{;"o;;o;	;
+@
+;i;")MEPA_MACSEC_CIPHER_SUITE_GCM_AES_128;@;0{;!{;"o;;o;	;
+@
+;iz;")MEPA_MACSEC_CIPHER_SUITE_GCM_AES_256;@;0{;!{;"o;;o;	;
+@
+;i⁄;"-MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_128;@;0{;!{;"o;;o;	;
+@
+;iK;"?MEPA_MACSEC_CIPHER_SUITE_GCM_AES_XPN_256                  ;@;0;o;;o;	;
+@
+;i∫;"mepa_macsec_ciphersuite_t;@;[ ;0{
+;o;;o;	;
+@
+;iÏ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"mepa_port_no_t           ;@;o;;o;	;
+@
+;i;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iX;"mepa_macsec_service_id_t ;@;o;;o;	;
+@
+;iq;"service_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i©;"mepa_macsec_vport_id_t   ;@;o;;o;	;
+@
+;i¬;"port_id;@;[ ;0;o;;o;	;
+@
+;i+;"mepa_macsec_port_t;@;[ ;0{
+;o;;o;	;
+@
+;i~;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iì;"mepa_mac_t ;@;o;;o;	;
+@
+;iû;"mac_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÙ;"mepa_validate_frames_t ;@;o;;o;	;
+@
+;i;"validate_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;in;"mepa_bool_t ;@;o;;o;	;
+@
+;iz;"replay_protect;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ;"uint32_t ;@;o;;o;	;
+@
+;i;"replay_window;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_;"mepa_bool_t ;@;o;;o;	;
+@
+;ik;"protect_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŸ;"mepa_bool_t ;@;o;;o;	;
+@
+;iÂ;"always_include_sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV;"mepa_bool_t ;@;o;;o;	;
+@
+;ib;"use_es;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»;"mepa_bool_t ;@;o;;o;	;
+@
+;i‘;"use_scb;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;;"mepa_macsec_ciphersuite_t ;@;o;;o;	;
+@
+;iU;"current_cipher_suite;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∫;"uint32_t ;@;o;;o;	;
+@
+;i√;"confidentiality_offset;@;[ ;0;o;;o;	;
+@
+;iQ;"mepa_macsec_secy_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iõ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i∞;"uint8_t ;@;o;;o;	;
+@
+;i∏;"buf;@;[{:	expro;;o;	;
+@
+;iº;"12;@;0;o;;o;	;
+@
+;i;"mepa_macsec_salt_t;@;[ ;0{
+;o;;o;	;
+@
+;i];"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;ir;"uint8_t ;@;o;;o;	;
+@
+;iz;"buf;@;[{;#o;;o;	;
+@
+;i~;"32;@;0{;{;{	;o;;o;	;
+@
+;i“;"uint32_t ;@;o;;o;	;
+@
+;i€;"len;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:;"uint8_t ;@;o;;o;	;
+@
+;iB;"
+h_buf;@;[{;#o;;o;	;
+@
+;iH;"16;@;0{;{;{	;o;;o;	;
+@
+;i´;"mepa_macsec_salt_t ;@;o;;o;	;
+@
+;iæ;"	salt;@;[ ;0;o;;o;	;
+@
+;i;"mepa_macsec_sak_t;@;[ ;0{
+;o;;o;	;
+@
+;iD;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iY;"mepa_mac_t              ;@;o;;o;	;
+@
+;iq;"mac_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≤;"mepa_macsec_vport_id_t  ;@;o;;o;	;
+@
+;i ;"port_id;@;[ ;0;o;;o;	;
+@
+;i;"mepa_macsec_sci_t;@;[ ;0{
+;o;;o;	;
+@
+;iG;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i\;"uint8_t ;@;o;;o;	;
+@
+;id;"buf;@;[{;#o;;o;	;
+@
+;ih;"4;@;0;o;;o;	;
+@
+;iÀ;"mepa_macsec_ssci_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i,;"mepa_macsec_pkt_num_t ;@;o;;o;	;
+@
+;iB;"next_pn;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå;"mepa_macsec_pkt_num_t ;@;o;;o;	;
+@
+;i¢;"lowest_pn;@;[ ;0;o;;o;	;
+@
+;i·;""mepa_macsec_rx_sa_pn_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i2;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iG;"mepa_bool_t ;@;o;;o;	;
+@
+;iS;"in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü;"uint32_t ;@;o;;o;	;
+@
+;i®;"next_pn;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˜;"uint32_t ;@;o;;o;	;
+@
+;i ;"lowest_pn;@;[ ;0{;{;{	;o;;o;	;
+@
+;iQ;"uint32_t ;@;o;;o;	;
+@
+;iZ;"created_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÆ;"uint32_t ;@;o;;o;	;
+@
+;i∑;"started_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@;o;;o;	;
+@
+;i;"stopped_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih;"#mepa_macsec_rx_sa_pn_status_t ;@;o;;o;	;
+@
+;iÜ;"pn_status;@;[ ;0;o;;o;	;
+@
+;iø;"mepa_macsec_rx_sa_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i(;"mepa_macsec_pkt_num_t  ;@;o;;o;	;
+@
+;i?;"next_pn;@;[ ;0;o;;o;	;
+@
+;i{;""mepa_macsec_tx_sa_pn_status_t;@;[ ;0{
+;o;;o;	;
+@
+;iÃ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i·;"mepa_bool_t ;@;o;;o;	;
+@
+;iÌ;"in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;i9 ;"uint32_t ;@;o;;o;	;
+@
+;iB ;"next_pn;@;[ ;0{;{;{	;o;;o;	;
+@
+;ië ;"uint32_t ;@;o;;o;	;
+@
+;iö ;"created_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÓ ;"uint32_t ;@;o;;o;	;
+@
+;i˜ ;"started_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJ!;"uint32_t ;@;o;;o;	;
+@
+;iS!;"stopped_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iß!;"#mepa_macsec_tx_sa_pn_status_t ;@;o;;o;	;
+@
+;i≈!;"pn_status;@;[ ;0;o;;o;	;
+@
+;i";"mepa_macsec_tx_sa_status_t;@;[ ;0{
+;o;;o;	;
+@
+;iK";"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i`";"mepa_validate_frames_t ;@;o;;o;	;
+@
+;iw";"validate_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄";"mepa_bool_t ;@;o;;o;	;
+@
+;iÊ";"replay_protect;@;[ ;0{;{;{	;o;;o;	;
+@
+;iS#;"uint32_t ;@;o;;o;	;
+@
+;i\#;"replay_window;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÀ#;"uint32_t ;@;o;;o;	;
+@
+;i‘#;"confidentiality_offset;@;[ ;0;o;;o;	;
+@
+;ib$;"mepa_macsec_rx_sc_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iª$;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i–$;"mepa_bool_t ;@;o;;o;	;
+@
+;i‹$;"receiving;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1%;"uint32_t ;@;o;;o;	;
+@
+;i:%;"created_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;ié%;"uint32_t ;@;o;;o;	;
+@
+;ió%;"started_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÎ%;"uint32_t ;@;o;;o;	;
+@
+;iÙ%;"stopped_time;@;[ ;0;o;;o;	;
+@
+;iF&;"mepa_macsec_rx_sc_status_t;@;[ ;0{
+;o;;o;	;
+@
+;iç&;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i¢&;"mepa_bool_t ;@;o;;o;	;
+@
+;iÆ&;"protect_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i';"mepa_bool_t ;@;o;;o;	;
+@
+;i(';"always_include_sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô';"mepa_bool_t ;@;o;;o;	;
+@
+;i•';"use_es;@;[ ;0{;{;{	;o;;o;	;
+@
+;i(;"mepa_bool_t ;@;o;;o;	;
+@
+;i(;"use_scb;@;[ ;0{;{;{	;o;;o;	;
+@
+;i~(;"uint32_t ;@;o;;o;	;
+@
+;iá(;"confidentiality_offset;@;[ ;0;o;;o;	;
+@
+;i);"mepa_macsec_tx_sc_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;ia);"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iv);"mepa_macsec_sci_t ;@;o;;o;	;
+@
+;ià);"sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÕ);"mepa_bool_t ;@;o;;o;	;
+@
+;iŸ);"transmitting;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1*;"uint16_t ;@;o;;o;	;
+@
+;i:*;"encoding_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iä*;"uint16_t ;@;o;;o;	;
+@
+;iì*;"enciphering_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ*;"uint32_t ;@;o;;o;	;
+@
+;i*;"created_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD+;"uint32_t ;@;o;;o;	;
+@
+;iM+;"started_time;@;[ ;0{;{;{	;o;;o;	;
+@
+;i°+;"uint32_t ;@;o;;o;	;
+@
+;i™+;"stopped_time;@;[ ;0;o;;o;	;
+@
+;i¸+;"mepa_macsec_tx_sc_status_t;@;[ ;0{
+;o;;o;	;
+@
+;i>,;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i—,;"mepa_bool_t ;@;o;;o;	;
+@
+;i›,;"dis_length_validate;@;[ ;0;o;;o;	;
+@
+;iÙ,;"mepa_macsec_lmac_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i2-;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¬-;"mepa_bool_t ;@;o;;o;	;
+@
+;iŒ-;"dis_length_validate;@;[ ;0;o;;o;	;
+@
+;iÂ-;"mepa_macsec_hmac_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i.;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iQ.;"mepa_macsec_lmac_conf_t ;@;o;;o;	;
+@
+;ii.;"	lmac;@;[ ;0{;{;{	;o;;o;	;
+@
+;ií.;"mepa_macsec_hmac_conf_t ;@;o;;o;	;
+@
+;i™.;"	hmac;@;[ ;0;o;;o;	;
+@
+;i≤.;"mepa_macsec_mac_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iÙ.;"typedef;@;{;o;;o;	;
+@
+;i¸.;"	enum;@; [{;!{;"o;;o;	;
+@
+;i,/;"!MEPA_MACSEC_INIT_BYPASS_NONE;@;0{;!{;"o;;o;	;
+@
+;iv/;"#MEPA_MACSEC_INIT_BYPASS_ENABLE;@;0{;!{;"o;;o;	;
+@
+;i√/;"$MEPA_MACSEC_INIT_BYPASS_DISABLE;@;0;o;;o;	;
+@
+;iÊ/;"mepa_macsec_init_bypass_t;@;[ ;0{
+;o;;o;	;
+@
+;i0;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iO0;"mepa_bool_t ;@;o;;o;	;
+@
+;i[0;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶0;"mepa_bool_t ;@;o;;o;	;
+@
+;i≤0;"dis_ing_nm_macsec_en;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÏ0;"mepa_macsec_mac_conf_t ;@;o;;o;	;
+@
+;i1;"mac_conf;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;1;"mepa_macsec_init_bypass_t ;@;o;;o;	;
+@
+;iU1;"bypass;@;[ ;0;o;;o;	;
+@
+;i_1;"mepa_macsec_init_t;@;[ ;0{
+;o;;o;	;
+@
+;i2;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i32;"uint32_t  ;@;o;;o;	;
+@
+;i=2;"mtu;@;[ ;0{;{;{	;o;;o;	;
+@
+;i”2;"mepa_bool_t ;@;o;;o;	;
+@
+;iﬂ2;"	drop;@;[ ;0{;{;{	;o;;o;	;
+@
+;ix4;"mepa_bool_t ;@;o;;o;	;
+@
+;iÑ4;"vlan_unaware_en;@;[ ;0;o;;o;	;
+@
+;iÚ4;"mepa_macsec_mtu_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;iU6;"mepa_rc ;@;o;;o;	;
+@
+;i]6;"mepa_macsec_init_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;ir6;"struct mepa_device *;@;o;;o;	;
+@
+;iÜ6;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iã6;"Bconst
+                             mepa_macsec_init_t *const ;@;o;;o;	;
+@
+;i»6;"macsec_init;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i7;"mepa_rc ;@;o;;o;	;
+@
+;i
+7;"mepa_macsec_init_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i7;"struct mepa_device *;@;o;;o;	;
+@
+;i37;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iU7;"mepa_macsec_init_t *const ;@;o;;o;	;
+@
+;io7;"macsec_init;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;in9;"mepa_rc ;@;o;;o;	;
+@
+;iv9;"mepa_macsec_secy_conf_add;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iê9;"struct mepa_device *;@;o;;o;	;
+@
+;i§9;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÀ9;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i‰9;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i:;"*const mepa_macsec_secy_conf_t *const ;@;o;;o;	;
+@
+;i1:;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i»;;"mepa_rc ;@;o;;o;	;
+@
+;i–;;"!mepa_macsec_secy_conf_update;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÌ;;"struct mepa_device *;@;o;;o;	;
+@
+;i<;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i+<;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iD<;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;io<;"*const mepa_macsec_secy_conf_t *const ;@;o;;o;	;
+@
+;iî<;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i∑<;"mepa_rc ;@;o;;o;	;
+@
+;iø<;"mepa_macsec_secy_conf_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iŸ<;"struct mepa_device *;@;o;;o;	;
+@
+;iÌ<;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i=;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i-=;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iU=;"$mepa_macsec_secy_conf_t *const ;@;o;;o;	;
+@
+;it=;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iµ=;"mepa_rc ;@;o;;o;	;
+@
+;iΩ=;"mepa_macsec_secy_conf_del;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i◊=;"struct mepa_device *;@;o;;o;	;
+@
+;iÎ=;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i>;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i+>;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i£>;"mepa_rc ;@;o;;o;	;
+@
+;i´>;"$mepa_macsec_secy_controlled_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÀ>;"struct mepa_device *;@;o;;o;	;
+@
+;iﬂ>;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i?;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i%?;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iS?;"const mepa_bool_t ;@;o;;o;	;
+@
+;ie?;"enable;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i¨?;"mepa_rc ;@;o;;o;	;
+@
+;i¥?;"$mepa_macsec_secy_controlled_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i‘?;"struct mepa_device *;@;o;;o;	;
+@
+;iË?;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i@;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i.@;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i\@;"mepa_bool_t *const ;@;o;;o;	;
+@
+;io@;"enable;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i¡@;"mepa_rc ;@;o;;o;	;
+@
+;i…@;"%mepa_macsec_secy_port_status_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÍ@;"struct mepa_device *;@;o;;o;	;
+@
+;i˛@;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i,A;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iEA;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;itA;"+mepa_macsec_secy_port_status_t *const ;@;o;;o;	;
+@
+;iöA;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iPB;"mepa_rc ;@;o;;o;	;
+@
+;iXB;"mepa_macsec_port_get_next;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;irB;"struct mepa_device *;@;o;;o;	;
+@
+;iÜB;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i≠B;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i¬B;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÌB;"%const mepa_macsec_port_t *const ;@;o;;o;	;
+@
+;iC;"search_macsec_port;@;[ ;0{;{	;o;;o;	;
+@
+;iCC;"mepa_macsec_port_t *const ;@;o;;o;	;
+@
+;i]C;"found_macsec_port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÅD;"mepa_rc ;@;o;;o;	;
+@
+;iâD;"mepa_macsec_rx_sc_add;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iüD;"struct mepa_device *;@;o;;o;	;
+@
+;i≥D;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i÷D;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÔD;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iE;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i2E;"sci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i§F;"mepa_rc ;@;o;;o;	;
+@
+;i¨F;"mepa_macsec_rx_sc_update;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i≈F;"struct mepa_device *;@;o;;o;	;
+@
+;iŸF;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iˇF;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iG;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i?G;"%const mepa_macsec_sci_t  *const ;@;o;;o;	;
+@
+;i_G;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iÖG;"+const mepa_macsec_rx_sc_conf_t *const ;@;o;;o;	;
+@
+;i´G;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iŸG;"mepa_rc ;@;o;;o;	;
+@
+;i·G;"mepa_macsec_rx_sc_get_conf;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i¸G;"struct mepa_device *;@;o;;o;	;
+@
+;iH;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i8H;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iQH;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;izH;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iôH;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i¡H;"%mepa_macsec_rx_sc_conf_t *const ;@;o;;o;	;
+@
+;i·H;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iI;"mepa_rc ;@;o;;o;	;
+@
+;i%I;"mepa_macsec_rx_sc_get_next;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i@I;"struct mepa_device *;@;o;;o;	;
+@
+;iTI;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i|I;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iïI;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iæI;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i›I;"search_sci;@;[ ;0{;{	;o;;o;	;
+@
+;iJ;"mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i%J;"found_sci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iaJ;"mepa_rc ;@;o;;o;	;
+@
+;iiJ;"mepa_macsec_rx_sc_del;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iJ;"struct mepa_device *;@;o;;o;	;
+@
+;iìJ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∂J;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iœJ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÛJ;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iK;"sci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i1K;"mepa_rc ;@;o;;o;	;
+@
+;i9K;"!mepa_macsec_rx_sc_status_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iVK;"struct mepa_device *;@;o;;o;	;
+@
+;ijK;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iîK;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i≠K;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÿK;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i˜K;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i!L;"'mepa_macsec_rx_sc_status_t *const ;@;o;;o;	;
+@
+;iCL;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÇM;"mepa_rc ;@;o;;o;	;
+@
+;iäM;"mepa_macsec_tx_sc_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i†M;"struct mepa_device *;@;o;;o;	;
+@
+;i¥M;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i◊M;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iM;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;irO;"mepa_rc ;@;o;;o;	;
+@
+;izO;"mepa_macsec_tx_sc_update;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iìO;"struct mepa_device *;@;o;;o;	;
+@
+;ißO;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÕO;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÊO;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iP;"+const mepa_macsec_tx_sc_conf_t *const ;@;o;;o;	;
+@
+;i3P;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i\P;"mepa_rc ;@;o;;o;	;
+@
+;idP;"mepa_macsec_tx_sc_get_conf;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iP;"struct mepa_device *;@;o;;o;	;
+@
+;iìP;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iªP;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i‘P;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i˝P;"%mepa_macsec_tx_sc_conf_t *const ;@;o;;o;	;
+@
+;iQ;"	conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;ibQ;"mepa_rc ;@;o;;o;	;
+@
+;ijQ;"mepa_macsec_tx_sc_del;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÄQ;"struct mepa_device *;@;o;;o;	;
+@
+;iîQ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∑Q;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i–Q;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÙQ;"mepa_rc ;@;o;;o;	;
+@
+;i¸Q;"!mepa_macsec_tx_sc_status_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iR;"struct mepa_device *;@;o;;o;	;
+@
+;i-R;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iWR;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;ipR;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iõR;"'mepa_macsec_tx_sc_status_t *const ;@;o;;o;	;
+@
+;iΩR;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i6T;"mepa_rc ;@;o;;o;	;
+@
+;i>T;"mepa_macsec_rx_sa_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iTT;"struct mepa_device *;@;o;;o;	;
+@
+;ihT;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iãT;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i§T;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i»T;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iÁT;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i
+U;"const uint16_t ;@;o;;o;	;
+@
+;iU;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i;U;"const uint32_t ;@;o;;o;	;
+@
+;iJU;"lowest_pn;@;[ ;0{;{	;o;;o;	;
+@
+;isU;"$const mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;iíU;"sak;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iDW;"mepa_rc ;@;o;;o;	;
+@
+;iLW;"mepa_macsec_rx_sa_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;ibW;"struct mepa_device *;@;o;;o;	;
+@
+;ivW;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iôW;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i≤W;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i÷W;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iıW;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iX;"const uint16_t ;@;o;;o;	;
+@
+;i'X;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iIX;"uint32_t *const ;@;o;;o;	;
+@
+;iYX;"lowest_pn;@;[ ;0{;{	;o;;o;	;
+@
+;iÇX;"mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;iõX;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;iæX;"mepa_bool_t *const ;@;o;;o;	;
+@
+;i—X;"active;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iØY;"mepa_rc ;@;o;;o;	;
+@
+;i∑Y;"mepa_macsec_rx_sa_activate;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i“Y;"struct mepa_device *;@;o;;o;	;
+@
+;iÊY;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iZ;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i'Z;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iPZ;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;ioZ;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;ióZ;"const uint16_t ;@;o;;o;	;
+@
+;i¶Z;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i[;"mepa_rc ;@;o;;o;	;
+@
+;i[;"mepa_macsec_rx_sa_disable;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i4[;"struct mepa_device *;@;o;;o;	;
+@
+;iH[;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;io[;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;ià[;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i∞[;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iœ[;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iˆ[;"const uint16_t ;@;o;;o;	;
+@
+;i\;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;is\;"mepa_rc ;@;o;;o;	;
+@
+;i{\;"mepa_macsec_rx_sa_del;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ië\;"struct mepa_device *;@;o;;o;	;
+@
+;i•\;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i»\;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i·\;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i];"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i$];"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iG];"const uint16_t ;@;o;;o;	;
+@
+;iV];"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i§];"mepa_rc ;@;o;;o;	;
+@
+;i¨];"'mepa_macsec_rx_sa_lowest_pn_update;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;iœ];"struct mepa_device *;@;o;;o;	;
+@
+;i„];"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i^;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i,^;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i]^;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i|^;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i¨^;"const uint16_t ;@;o;;o;	;
+@
+;iª^;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iÍ^;"const uint32_t ;@;o;;o;	;
+@
+;i˘^;"lowest_pn;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iì`;"mepa_rc ;@;o;;o;	;
+@
+;iõ`;"!mepa_macsec_rx_sa_status_get;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i∏`;"struct mepa_device *;@;o;;o;	;
+@
+;iÃ`;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iˆ`;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;ia;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i:a;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iYa;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iÉa;"const uint16_t ;@;o;;o;	;
+@
+;iía;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iªa;"'mepa_macsec_rx_sa_status_t *const ;@;o;;o;	;
+@
+;i›a;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iSc;"mepa_rc ;@;o;;o;	;
+@
+;i[c;"mepa_macsec_rx_seca_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;isc;"struct mepa_device *;@;o;;o;	;
+@
+;iác;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¨c;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i≈c;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÎc;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i
+d;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i/d;"const uint16_t ;@;o;;o;	;
+@
+;i>d;"an;@;[ ;0{;{	;o;;o;	;
+@
+;ibd;"!const mepa_macsec_pkt_num_t ;@;o;;o;	;
+@
+;i~d;"lowest_pn;@;[ ;0{;{	;o;;o;	;
+@
+;i©d;"$const mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;i»d;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;iÌd;"%const mepa_macsec_ssci_t *const ;@;o;;o;	;
+@
+;ie;"	ssci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iJe;"mepa_rc ;@;o;;o;	;
+@
+;iRe;"mepa_macsec_rx_seca_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;ije;"struct mepa_device *;@;o;;o;	;
+@
+;i~e;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i£e;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iºe;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i‚e;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;if;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i&f;"const uint16_t ;@;o;;o;	;
+@
+;i5f;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iYf;""mepa_macsec_pkt_num_t *const ;@;o;;o;	;
+@
+;ivf;"lowest_pn;@;[ ;0{;{	;o;;o;	;
+@
+;i°f;"mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;i∫f;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;iﬂf;"mepa_bool_t *const ;@;o;;o;	;
+@
+;iÚf;"active;@;[ ;0{;{	;o;;o;	;
+@
+;ig;"mepa_macsec_ssci_t *const ;@;o;;o;	;
+@
+;i4g;"	ssci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iág;"mepa_rc ;@;o;;o;	;
+@
+;ièg;")mepa_macsec_rx_seca_lowest_pn_update;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i¥g;"struct mepa_device *;@;o;;o;	;
+@
+;i»g;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i˙g;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;ih;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iFh;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;ieh;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;ióh;"const uint16_t ;@;o;;o;	;
+@
+;i¶h;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i◊h;"!const mepa_macsec_pkt_num_t ;@;o;;o;	;
+@
+;iÛh;"lowest_pn;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÈk;"mepa_rc ;@;o;;o;	;
+@
+;iÒk;"mepa_macsec_tx_sa_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;il;"struct mepa_device *;@;o;;o;	;
+@
+;il;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i>l;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iWl;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i{l;"const uint16_t ;@;o;;o;	;
+@
+;iäl;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i¨l;"const uint32_t ;@;o;;o;	;
+@
+;iªl;"next_pn;@;[ ;0{;{	;o;;o;	;
+@
+;i‚l;"const mepa_bool_t ;@;o;;o;	;
+@
+;iÙl;"confidentiality;@;[ ;0{;{	;o;;o;	;
+@
+;i#m;"$const mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;iBm;"sak;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;imm;"mepa_rc ;@;o;;o;	;
+@
+;ium;"mepa_macsec_tx_sa_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iãm;"struct mepa_device *;@;o;;o;	;
+@
+;iüm;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¬m;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i€m;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iˇm;"const uint16_t ;@;o;;o;	;
+@
+;in;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i0n;"uint32_t *const ;@;o;;o;	;
+@
+;i@n;"next_pn;@;[ ;0{;{	;o;;o;	;
+@
+;ign;"mepa_bool_t *const ;@;o;;o;	;
+@
+;izn;"confidentiality;@;[ ;0{;{	;o;;o;	;
+@
+;i©n;"mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;i¬n;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;iÂn;"mepa_bool_t *const ;@;o;;o;	;
+@
+;i¯n;"active;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i†o;"mepa_rc ;@;o;;o;	;
+@
+;i®o;"mepa_macsec_tx_sa_activate;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i√o;"struct mepa_device *;@;o;;o;	;
+@
+;i◊o;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iˇo;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;ip;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iAp;"const uint16_t ;@;o;;o;	;
+@
+;iPp;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iΩp;"mepa_rc ;@;o;;o;	;
+@
+;i≈p;"mepa_macsec_tx_sa_disable;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iﬂp;"struct mepa_device *;@;o;;o;	;
+@
+;iÛp;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iq;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i3q;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i[q;"const uint16_t ;@;o;;o;	;
+@
+;ijq;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÿq;"mepa_rc ;@;o;;o;	;
+@
+;i‡q;"mepa_macsec_tx_sa_del;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iˆq;"struct mepa_device *;@;o;;o;	;
+@
+;i
+r;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i-r;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iFr;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;ijr;"const uint16_t ;@;o;;o;	;
+@
+;iyr;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;it;"mepa_rc ;@;o;;o;	;
+@
+;it;"!mepa_macsec_tx_sa_status_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i,t;"struct mepa_device *;@;o;;o;	;
+@
+;i@t;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;ijt;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÉt;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÆt;"const uint16_t ;@;o;;o;	;
+@
+;iΩt;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iÊt;"'mepa_macsec_tx_sa_status_t *const ;@;o;;o;	;
+@
+;iu;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÕv;"mepa_rc ;@;o;;o;	;
+@
+;i’v;"mepa_macsec_tx_seca_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÌv;"struct mepa_device *;@;o;;o;	;
+@
+;iw;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i&w;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i?w;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iew;"const uint16_t ;@;o;;o;	;
+@
+;itw;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iòw;"!const mepa_macsec_pkt_num_t ;@;o;;o;	;
+@
+;i¥w;"next_pn;@;[ ;0{;{	;o;;o;	;
+@
+;i›w;"const mepa_bool_t ;@;o;;o;	;
+@
+;iÔw;"confidentiality;@;[ ;0{;{	;o;;o;	;
+@
+;i x;"$const mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;i?x;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;idx;"%const mepa_macsec_ssci_t *const ;@;o;;o;	;
+@
+;iÑx;"	ssci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iœx;"mepa_rc ;@;o;;o;	;
+@
+;i◊x;"mepa_macsec_tx_seca_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÔx;"struct mepa_device *;@;o;;o;	;
+@
+;iy;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i(y;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iAy;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;igy;"const uint16_t ;@;o;;o;	;
+@
+;ivy;"an;@;[ ;0{;{	;o;;o;	;
+@
+;iöy;""mepa_macsec_pkt_num_t *const ;@;o;;o;	;
+@
+;i∑y;"next_pn;@;[ ;0{;{	;o;;o;	;
+@
+;i‡y;"mepa_bool_t *const ;@;o;;o;	;
+@
+;iÛy;"confidentiality;@;[ ;0{;{	;o;;o;	;
+@
+;i$z;"mepa_macsec_sak_t *const ;@;o;;o;	;
+@
+;i=z;"sak;@;[ ;0{;{	;o;;o;	;
+@
+;ibz;"mepa_bool_t *const ;@;o;;o;	;
+@
+;iuz;"active;@;[ ;0{;{	;o;;o;	;
+@
+;iùz;"mepa_macsec_ssci_t *const ;@;o;;o;	;
+@
+;i∑z;"	ssci;@;[ ;0;0{
+;o;;o;	;
+@
+;iœ{;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i‰{;"uint64_t ;@;o;;o;	;
+@
+;iÌ{;"if_in_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:|;"uint64_t ;@;o;;o;	;
+@
+;iC|;"if_in_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iê|;"uint64_t ;@;o;;o;	;
+@
+;iô|;"if_in_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÊ|;"uint64_t ;@;o;;o;	;
+@
+;iÔ|;"if_in_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i<};"uint64_t ;@;o;;o;	;
+@
+;iE};"if_in_discards;@;[ ;0{;{;{	;o;;o;	;
+@
+;ií};"uint64_t ;@;o;;o;	;
+@
+;iõ};"if_in_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;iË};"uint64_t ;@;o;;o;	;
+@
+;iÒ};"if_out_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>~;"uint64_t ;@;o;;o;	;
+@
+;iG~;"if_out_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iî~;"uint64_t ;@;o;;o;	;
+@
+;iù~;"if_out_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍ~;"uint64_t ;@;o;;o;	;
+@
+;iÛ~;"if_out_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@;"uint64_t ;@;o;;o;	;
+@
+;iI;"if_out_errors;@;[ ;0;o;;o;	;
+@
+;iî;""mepa_macsec_common_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;iÓ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÄ;"uint64_t ;@;o;;o;	;
+@
+;iÄ;"if_in_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iYÄ;"uint64_t ;@;o;;o;	;
+@
+;ibÄ;"if_in_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØÄ;"uint64_t ;@;o;;o;	;
+@
+;i∏Ä;"if_in_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÅ;"uint64_t ;@;o;;o;	;
+@
+;iÅ;"if_in_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i[Å;"uint64_t ;@;o;;o;	;
+@
+;idÅ;"if_in_discards;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±Å;"uint64_t ;@;o;;o;	;
+@
+;i∫Å;"if_in_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ;"uint64_t ;@;o;;o;	;
+@
+;iÇ;"if_out_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i]Ç;"uint64_t ;@;o;;o;	;
+@
+;ifÇ;"if_out_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≥Ç;"uint64_t ;@;o;;o;	;
+@
+;iºÇ;"if_out_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i	É;"uint64_t ;@;o;;o;	;
+@
+;iÉ;"if_out_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_É;"uint64_t ;@;o;;o;	;
+@
+;ihÉ;"if_out_errors;@;[ ;0;o;;o;	;
+@
+;i≥É;"(mepa_macsec_uncontrolled_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;iÑ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÑ;"uint64_t ;@;o;;o;	;
+@
+;i&Ñ;"if_in_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;isÑ;"uint64_t ;@;o;;o;	;
+@
+;i|Ñ;"if_in_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…Ñ;"uint64_t ;@;o;;o;	;
+@
+;i“Ñ;"if_in_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i4Ö;"uint64_t ;@;o;;o;	;
+@
+;i=Ö;"if_in_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iüÖ;"uint64_t ;@;o;;o;	;
+@
+;i®Ö;"if_in_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+Ü;"uint64_t ;@;o;;o;	;
+@
+;iÜ;"if_in_discards;@;[ ;0{;{;{	;o;;o;	;
+@
+;i`Ü;"uint64_t ;@;o;;o;	;
+@
+;iiÜ;"if_in_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂Ü;"uint64_t ;@;o;;o;	;
+@
+;iøÜ;"if_out_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iá;"uint64_t ;@;o;;o;	;
+@
+;iá;"if_out_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;ibá;"uint64_t ;@;o;;o;	;
+@
+;iká;"if_out_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏á;"uint64_t ;@;o;;o;	;
+@
+;i¡á;"if_out_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$à;"uint64_t ;@;o;;o;	;
+@
+;i-à;"if_out_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iêà;"uint64_t ;@;o;;o;	;
+@
+;iôà;"if_out_broadcast_pkts;@;[ ;0;o;;o;	;
+@
+;i˙à;"%mepa_macsec_secy_port_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;iOâ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;idâ;"uint64_t ;@;o;;o;	;
+@
+;imâ;"in_pkts_untagged;@;[ ;0{;{;{	;o;;o;	;
+@
+;igä;"uint64_t ;@;o;;o;	;
+@
+;ipä;"in_pkts_no_tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;iã;"uint64_t ;@;o;;o;	;
+@
+;iã;"in_pkts_bad_tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;i°ã;"uint64_t ;@;o;;o;	;
+@
+;i™ã;"in_pkts_unknown_sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;i†å;"uint64_t ;@;o;;o;	;
+@
+;i©å;"in_pkts_no_sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;i°ç;"uint64_t ;@;o;;o;	;
+@
+;i™ç;"in_pkts_overrun;@;[ ;0{;{;{	;o;;o;	;
+@
+;iùé;"uint64_t ;@;o;;o;	;
+@
+;i¶é;"in_octets_validated;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝é;"uint64_t ;@;o;;o;	;
+@
+;iè;"in_octets_decrypted;@;[ ;0{;{;{	;o;;o;	;
+@
+;i]è;"uint64_t ;@;o;;o;	;
+@
+;ifè;"out_pkts_untagged;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑ê;"uint64_t ;@;o;;o;	;
+@
+;i¿ê;"out_pkts_too_long;@;[ ;0{;{;{	;o;;o;	;
+@
+;iaë;"uint64_t ;@;o;;o;	;
+@
+;ijë;"out_octets_protected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i„ë;"uint64_t ;@;o;;o;	;
+@
+;iÏë;"out_octets_encrypted;@;[ ;0;o;;o;	;
+@
+;i_í;" mepa_macsec_secy_counters_t;@;[ ;0{;o;;o;	;
+@
+;i¬í;"o#define MEPA_MACSEC_CAP_GCM_AES_128       0x0001              /**< GCM-AES-128 cipher suite capability */
+;@{;o;;o;	;
+@
+;i,ì;"o#define MEPA_MACSEC_CAP_GCM_AES_256       0x0002              /**< GCM-AES-256 cipher suite capability */
+;@{;o;;o;	;
+@
+;iñì;"|#define MEPA_MACSEC_CAP_GCM_AES_XPN_128   0x0004              /**< GCM-AES-XPN-256 cipher suite capability (extended PN) */
+;@{;o;;o;	;
+@
+;iî;"}#define MEPA_MACSEC_CAP_GCM_AES_XPN_256   0x0008              /**< GCM-AES-XPN-256 cipher suite capability (extended PN) */
+
+;@{
+;o;;o;	;
+@
+;i¿î;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i’î;"uint16_t ;@;o;;o;	;
+@
+;iﬁî;"max_peer_scs;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2ï;"uint16_t ;@;o;;o;	;
+@
+;i;ï;"max_receive_keys;@;[ ;0{;{;{	;o;;o;	;
+@
+;ièï;"uint16_t ;@;o;;o;	;
+@
+;iòï;"max_transmit_keys;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÏï;"uint32_t ;@;o;;o;	;
+@
+;iıï;"ciphersuite_cap;@;[ ;0;o;;o;	;
+@
+;ihñ;"mepa_macsec_secy_cap_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;iªñ;"mepa_rc ;@;o;;o;	;
+@
+;i√ñ;"(mepa_macsec_controlled_counters_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÁñ;"struct mepa_device *;@;o;;o;	;
+@
+;i˚ñ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i,ó;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iEó;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iwó;"-mepa_macsec_secy_port_counters_t *const ;@;o;;o;	;
+@
+;iüó;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÏó;"mepa_rc ;@;o;;o;	;
+@
+;iÙó;"*mepa_macsec_uncontrolled_counters_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iò;"+struct mepa_device                   *;@;o;;o;	;
+@
+;i@ò;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;isò;")const mepa_port_no_t                ;@;o;;o;	;
+@
+;ióò;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iŒò;"0mepa_macsec_uncontrolled_counters_t *const ;@;o;;o;	;
+@
+;i˘ò;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i@ô;"mepa_rc ;@;o;;o;	;
+@
+;iHô;"$mepa_macsec_common_counters_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;ihô;"struct mepa_device *;@;o;;o;	;
+@
+;i|ô;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i©ô;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iæô;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÔô;"*mepa_macsec_common_counters_t *const ;@;o;;o;	;
+@
+;iö;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i_ö;"mepa_rc ;@;o;;o;	;
+@
+;igö;"mepa_macsec_secy_cap_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÄö;"struct mepa_device *;@;o;;o;	;
+@
+;iîö;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∫ö;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iœö;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˘ö;"#mepa_macsec_secy_cap_t *const ;@;o;;o;	;
+@
+;iõ;"cap;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i3õ;"mepa_rc ;@;o;;o;	;
+@
+;i;õ;""mepa_macsec_secy_counters_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iYõ;"struct mepa_device *;@;o;;o;	;
+@
+;imõ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iòõ;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i±õ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i›õ;"(mepa_macsec_secy_counters_t *const ;@;o;;o;	;
+@
+;i ú;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i¡ú;"mepa_rc ;@;o;;o;	;
+@
+;i…ú;" mepa_macsec_counters_update;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÂú;"struct mepa_device *;@;o;;o;	;
+@
+;i˘ú;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i"ù;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i7ù;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iuù;"mepa_rc ;@;o;;o;	;
+@
+;i}ù;"mepa_macsec_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iòù;"struct mepa_device *;@;o;;o;	;
+@
+;i¨ù;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i‘ù;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÈù;"port_no;@;[ ;0;0{
+;o;;o;	;
+@
+;i ü;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i+ü;"uint64_t ;@;o;;o;	;
+@
+;i4ü;"in_pkts_unchecked;@;[ ;0{;{;{	;o;;o;	;
+@
+;i—†;"uint64_t ;@;o;;o;	;
+@
+;i⁄†;"in_pkts_delayed;@;[ ;0{;{;{	;o;;o;	;
+@
+;i.°;"uint64_t ;@;o;;o;	;
+@
+;i7°;"in_pkts_late;@;[ ;0{;{;{	;o;;o;	;
+@
+;ià°;"uint64_t ;@;o;;o;	;
+@
+;ië°;"in_pkts_ok;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‡°;"uint64_t ;@;o;;o;	;
+@
+;iÈ°;"in_pkts_invalid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=¢;"uint64_t ;@;o;;o;	;
+@
+;iF¢;"in_pkts_not_valid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iõ¢;"uint64_t ;@;o;;o;	;
+@
+;i§¢;"in_pkts_not_using_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝¢;"uint64_t ;@;o;;o;	;
+@
+;i£;"in_pkts_unused_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iT£;"uint64_t ;@;o;;o;	;
+@
+;i]£;"in_octets_validated;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±£;"uint64_t ;@;o;;o;	;
+@
+;i∫£;"in_octets_decrypted;@;[ ;0;o;;o;	;
+@
+;i§;"!mepa_macsec_rx_sc_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i_§;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;it§;"uint64_t ;@;o;;o;	;
+@
+;i}§;"out_pkts_protected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i›§;"uint64_t ;@;o;;o;	;
+@
+;iÊ§;"out_pkts_encrypted;@;[ ;0{;{;{	;o;;o;	;
+@
+;iG•;"uint64_t ;@;o;;o;	;
+@
+;iP•;"out_octets_protected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∆•;"uint64_t ;@;o;;o;	;
+@
+;iœ•;"out_octets_encrypted;@;[ ;0;o;;o;	;
+@
+;i?¶;"!mepa_macsec_tx_sc_counters_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;iv¶;"mepa_rc ;@;o;;o;	;
+@
+;i~¶;"#mepa_macsec_rx_sc_counters_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iù¶;"struct mepa_device *;@;o;;o;	;
+@
+;i±¶;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i›¶;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iˆ¶;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i#ß;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iBß;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;inß;")mepa_macsec_rx_sc_counters_t *const ;@;o;;o;	;
+@
+;iíß;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i¥ß;"mepa_rc ;@;o;;o;	;
+@
+;iºß;"#mepa_macsec_tx_sc_counters_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i€ß;"struct mepa_device *;@;o;;o;	;
+@
+;iÔß;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i®;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i4®;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;ia®;")mepa_macsec_tx_sc_counters_t *const ;@;o;;o;	;
+@
+;iÖ®;"counters;@;[ ;0;0{
+;o;;o;	;
+@
+;iü©;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i≤©;"uint64_t ;@;o;;o;	;
+@
+;iª©;"out_pkts_protected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™;"uint64_t ;@;o;;o;	;
+@
+;i#™;"out_pkts_encrypted;@;[ ;0;o;;o;	;
+@
+;iÉ™;"!mepa_macsec_tx_sa_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i÷™;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÎ™;"uint64_t ;@;o;;o;	;
+@
+;iÙ™;"in_pkts_ok;@;[ ;0{;{;{	;o;;o;	;
+@
+;iC´;"uint64_t ;@;o;;o;	;
+@
+;iL´;"in_pkts_invalid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü´;"uint64_t ;@;o;;o;	;
+@
+;i®´;"in_pkts_not_valid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝´;"uint64_t ;@;o;;o;	;
+@
+;i¨;"in_pkts_not_using_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV¨;"uint64_t ;@;o;;o;	;
+@
+;i_¨;"in_pkts_unused_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i√¨;"uint64_t ;@;o;;o;	;
+@
+;iÃ¨;"in_pkts_unchecked;@;[ ;0{;{;{	;o;;o;	;
+@
+;ihÆ;"uint64_t ;@;o;;o;	;
+@
+;iqÆ;"in_pkts_delayed;@;[ ;0{;{;{	;o;;o;	;
+@
+;iƒÆ;"uint64_t ;@;o;;o;	;
+@
+;iÕÆ;"in_pkts_late;@;[ ;0;o;;o;	;
+@
+;iØ;"!mepa_macsec_rx_sa_counters_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;iQØ;"mepa_rc ;@;o;;o;	;
+@
+;iYØ;"#mepa_macsec_tx_sa_counters_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ixØ;"struct mepa_device *;@;o;;o;	;
+@
+;iåØ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∏Ø;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i—Ø;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i˛Ø;"const uint16_t ;@;o;;o;	;
+@
+;i∞;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i8∞;")mepa_macsec_tx_sa_counters_t *const ;@;o;;o;	;
+@
+;i\∞;"counters;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i∞;"mepa_rc ;@;o;;o;	;
+@
+;iá∞;"#mepa_macsec_rx_sa_counters_get;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i¶∞;"struct mepa_device *;@;o;;o;	;
+@
+;i∫∞;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ∞;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iˇ∞;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i,±;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iK±;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iw±;"const uint16_t ;@;o;;o;	;
+@
+;iÜ±;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i±±;")mepa_macsec_rx_sa_counters_t *const ;@;o;;o;	;
+@
+;i’±;"counters;@;[ ;0;0{;o;;o;	;
+@
+;iº≤;"V#define MEPA_MACSEC_MATCH_DISABLE        0x0001           /**< Disable match  */
+;@{;o;;o;	;
+@
+;i≥;"S#define MEPA_MACSEC_MATCH_DMAC           0x0002           /**< DMAC match  */
+;@{;o;;o;	;
+@
+;i[≥;"S#define MEPA_MACSEC_MATCH_ETYPE          0x0004           /**< ETYPE match */
+;@{;o;;o;	;
+@
+;i©≥;"S#define MEPA_MACSEC_MATCH_VLAN_ID        0x0008           /**< VLAN match  */
+;@{;o;;o;	;
+@
+;i˜≥;"X#define MEPA_MACSEC_MATCH_VLAN_ID_INNER  0x0010           /**< Inner VLAN match */
+;@{;o;;o;	;
+@
+;iJ¥;"Y#define MEPA_MACSEC_MATCH_BYPASS_HDR     0x0020           /**< MPLS header match */
+;@{;o;;o;	;
+@
+;iû¥;"q#define MEPA_MACSEC_MATCH_IS_CONTROL     0x0040           /**< Control frame match e.g. Ethertype 0x888E */
+;@{;o;;o;	;
+@
+;i
+µ;"e#define MEPA_MACSEC_MATCH_HAS_VLAN       0x0080           /**< The frame contains a VLAN tag */
+;@{;o;;o;	;
+@
+;ijµ;"l#define MEPA_MACSEC_MATCH_HAS_VLAN_INNER 0x0100           /**< The frame contains an inner VLAN tag */
+;@{;o;;o;	;
+@
+;i—µ;"\#define MEPA_MACSEC_MATCH_SMAC           0x0200           /**< Source MAC address  */
+
+;@{;o;;o;	;
+@
+;i(∂;"i#define MEPA_MACSEC_MATCH_PRIORITY_LOWEST 15              /**< Lowest possible matching priority */
+;@{;o;;o;	;
+@
+;iå∂;"]#define MEPA_MACSEC_MATCH_PRIORITY_LOW    12              /**< Low matching priority */
+;@{;o;;o;	;
+@
+;i‰∂;"`#define MEPA_MACSEC_MATCH_PRIORITY_MID     8              /**< Medium matching priority */
+;@{;o;;o;	;
+@
+;i?∑;"^#define MEPA_MACSEC_MATCH_PRIORITY_HIGH    4              /**< High matching priority */
+;@{;o;;o;	;
+@
+;iò∑;"k#define MEPA_MACSEC_MATCH_PRIORITY_HIGHEST 0              /**< Hihhest possible matching priority */
+
+;@{
+;o;;o;	;
+@
+;i*∏;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i?∏;"uint32_t            ;@;o;;o;	;
+@
+;iS∏;"
+match;@;[ ;0{;{;{	;o;;o;	;
+@
+;iπ;"mepa_mac_t     ;@;o;;o;	;
+@
+;iπ;"	dmac;@;[ ;0{;{;{	;o;;o;	;
+@
+;itπ;"mepa_etype_t   ;@;o;;o;	;
+@
+;iÉπ;"
+etype;@;[ ;0;o;;o;	;
+@
+;iÃπ;"+mepa_macsec_control_frame_match_conf_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i®∫;"mepa_rc ;@;o;;o;	;
+@
+;i∞∫;"-mepa_macsec_control_frame_match_conf_set;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iŸ∫;"struct mepa_device *;@;o;;o;	;
+@
+;iÌ∫;"	dev ;@;[ ;0{;{	;o;;o;	;
+@
+;i$ª;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i9ª;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;isª;"9const mepa_macsec_control_frame_match_conf_t *const ;@;o;;o;	;
+@
+;ißª;"	conf;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁª;"uint32_t *const ;@;o;;o;	;
+@
+;iÓª;"rule_id;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i&º;"mepa_rc ;@;o;;o;	;
+@
+;i.º;"-mepa_macsec_control_frame_match_conf_del;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iWº;"struct mepa_device *;@;o;;o;	;
+@
+;ikº;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i°º;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i∂º;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iº;"const uint32_t ;@;o;;o;	;
+@
+;iˇº;"rule_id;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i9Ω;"mepa_rc ;@;o;;o;	;
+@
+;iAΩ;"-mepa_macsec_control_frame_match_conf_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ijΩ;"struct mepa_device *;@;o;;o;	;
+@
+;i~Ω;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¥Ω;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i…Ω;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iæ;"3mepa_macsec_control_frame_match_conf_t *const ;@;o;;o;	;
+@
+;i1æ;"	conf;@;[ ;0{;{	;o;;o;	;
+@
+;ihæ;"uint32_t ;@;o;;o;	;
+@
+;iqæ;"rule_id;@;[ ;0;0{
+;o;;o;	;
+@
+;i•∆;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;io«;"uint32_t          ;@;o;;o;	;
+@
+;iÅ«;"
+match;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…;"mepa_bool_t         ;@;o;;o;	;
+@
+;i$…;"is_control;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ;"mepa_bool_t         ;@;o;;o;	;
+@
+;i0 ;"has_vlan_tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;iLÀ;"mepa_bool_t         ;@;o;;o;	;
+@
+;i`À;"has_vlan_inner_tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÃ;"mepa_etype_t ;@;o;;o;	;
+@
+;i(Ã;"
+etype;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÀÃ;"mepa_vid_t   ;@;o;;o;	;
+@
+;iÿÃ;"vid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iåÕ;"mepa_vid_t   ;@;o;;o;	;
+@
+;iôÕ;"vid_inner;@;[ ;0{;{;{	;o;;o;	;
+@
+;i`Œ;"uint8_t           ;@;o;;o;	;
+@
+;irŒ;"hdr;@;[{;#o;;o;	;
+@
+;ivŒ;"8;@;0{;{;{	;o;;o;	;
+@
+;i≠Œ;"uint8_t           ;@;o;;o;	;
+@
+;iøŒ;"hdr_mask;@;[{;#o;;o;	;
+@
+;i»Œ;"8;@;0{;{;{	;o;;o;	;
+@
+;icœ;"uint8_t           ;@;o;;o;	;
+@
+;iuœ;"priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$–;"mepa_mac_t   ;@;o;;o;	;
+@
+;i1–;"src_mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‰–;"mepa_mac_t   ;@;o;;o;	;
+@
+;iÒ–;"dest_mac;@;[ ;0;o;;o;	;
+@
+;i˝–;" mepa_macsec_match_pattern_t;@;[ ;0{
+;o;;o;	;
+@
+;iB—;"typedef;@;{;o;;o;	;
+@
+;iJ—;"	enum;@; [	{;!{	;"o;;o;	;
+@
+;ip—;""MEPA_MACSEC_MATCH_ACTION_DROP;@:operatoro;;o;	;
+@
+;iç—;"=;@;#o;;o;	;
+@
+;ié—;"0;@;0{;!{	;"o;;o;	;
+@
+;i —;"-MEPA_MACSEC_MATCH_ACTION_CONTROLLED_PORT;@;&o;;o;	;
+@
+;iÚ—;"=;@;#o;;o;	;
+@
+;iÛ—;"1;@;0{;!{	;"o;;o;	;
+@
+;i2“;"/MEPA_MACSEC_MATCH_ACTION_UNCONTROLLED_PORT;@;&o;;o;	;
+@
+;i\“;"=;@;#o;;o;	;
+@
+;i]“;"2;@;0{;!{	;"o;;o;	;
+@
+;i´“;""MEPA_MACSEC_MATCH_ACTION_CNT ;@;&o;;o;	;
+@
+;i»“;"=;@;#o;;o;	;
+@
+;i “;"3;@;0;o;;o;	;
+@
+;iœ“;"mepa_macsec_match_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i”;"typedef;@;{;o;;o;	;
+@
+;i!”;"	enum;@; [{;!{	;"o;;o;	;
+@
+;ig”;""MEPA_MACSEC_DIRECTION_INGRESS;@;&o;;o;	;
+@
+;iÑ”;"=;@;#o;;o;	;
+@
+;iÖ”;"0;@;0{;!{	;"o;;o;	;
+@
+;i ”;"!MEPA_MACSEC_DIRECTION_EGRESS;@;&o;;o;	;
+@
+;iÊ”;"=;@;#o;;o;	;
+@
+;iÁ”;"1;@;0{;!{	;"o;;o;	;
+@
+;i"‘;"MEPA_MACSEC_DIRECTION_CNT ;@;&o;;o;	;
+@
+;i<‘;"=;@;#o;;o;	;
+@
+;i>‘;"2;@;0;o;;o;	;
+@
+;iD‘;"mepa_macsec_direction_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;iÓ’;"mepa_rc ;@;o;;o;	;
+@
+;iˆ’;"mepa_macsec_pattern_set;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i÷;"struct mepa_device *;@;o;;o;	;
+@
+;i"÷;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iG÷;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i`÷;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÜ÷;"#const mepa_macsec_direction_t ;@;o;;o;	;
+@
+;i§÷;"direction;@;[ ;0{;{	;o;;o;	;
+@
+;iœ÷;"&const mepa_macsec_match_action_t ;@;o;;o;	;
+@
+;i÷;"action;@;[ ;0{;{	;o;;o;	;
+@
+;i◊;".const mepa_macsec_match_pattern_t *const ;@;o;;o;	;
+@
+;iA◊;"pattern;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;ir◊;"mepa_rc ;@;o;;o;	;
+@
+;iz◊;"mepa_macsec_pattern_del;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ií◊;"struct mepa_device *;@;o;;o;	;
+@
+;i¶◊;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÀ◊;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i‰◊;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i
+ÿ;"#const mepa_macsec_direction_t ;@;o;;o;	;
+@
+;i(ÿ;"direction;@;[ ;0{;{	;o;;o;	;
+@
+;iSÿ;"&const mepa_macsec_match_action_t ;@;o;;o;	;
+@
+;itÿ;"action;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i§ÿ;"mepa_rc ;@;o;;o;	;
+@
+;i¨ÿ;"mepa_macsec_pattern_get;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;iƒÿ;"struct mepa_device *;@;o;;o;	;
+@
+;iÿÿ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i˝ÿ;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iŸ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i<Ÿ;"#const mepa_macsec_direction_t ;@;o;;o;	;
+@
+;iZŸ;"direction;@;[ ;0{;{	;o;;o;	;
+@
+;iÖŸ;"&const mepa_macsec_match_action_t ;@;o;;o;	;
+@
+;i¶Ÿ;"action;@;[ ;0{;{	;o;;o;	;
+@
+;iŒŸ;"(mepa_macsec_match_pattern_t *const ;@;o;;o;	;
+@
+;iÒŸ;"pattern;@;[ ;0;0{
+;o;;o;	;
+@
+;i$⁄;"typedef;@;{;o;;o;	;
+@
+;i,⁄;"	enum;@; [{;!{	;"o;;o;	;
+@
+;i7⁄;"'MEPA_MACSEC_DEFAULT_ACTION_DROP   ;@;&o;;o;	;
+@
+;iY⁄;"=;@;#o;;o;	;
+@
+;i[⁄;"0;@;0{;!{	;"o;;o;	;
+@
+;iv⁄;"'MEPA_MACSEC_DEFAULT_ACTION_BYPASS ;@;&o;;o;	;
+@
+;iò⁄;"=;@;#o;;o;	;
+@
+;iö⁄;"1;@;0;o;;o;	;
+@
+;iµ⁄;"!mepa_macsec_default_action_t;@;[ ;0{
+;o;;o;	;
+@
+;iX€;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÙ€;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;i‹;"'ingress_non_control_and_non_macsec;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¡‹;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;iﬁ‹;"#ingress_control_and_non_macsec;@;[ ;0{;{;{	;o;;o;	;
+@
+;iä›;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;iß›;"#ingress_non_control_and_macsec;@;[ ;0{;{;{	;o;;o;	;
+@
+;iOﬁ;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;ilﬁ;"ingress_control_and_macsec;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‚ﬁ;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;iˇﬁ;"egress_control;@;[ ;0{;{;{	;o;;o;	;
+@
+;imﬂ;""mepa_macsec_default_action_t ;@;o;;o;	;
+@
+;iäﬂ;"egress_non_control;@;[ ;0;o;;o;	;
+@
+;i†ﬂ;"(mepa_macsec_default_action_policy_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i„ﬂ;"mepa_rc ;@;o;;o;	;
+@
+;iÎﬂ;"#mepa_macsec_default_action_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i
+‡;"struct mepa_device *;@;o;;o;	;
+@
+;i‡;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iJ‡;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i_‡;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iè‡;"6const mepa_macsec_default_action_policy_t *const ;@;o;;o;	;
+@
+;i¿‡;"policy;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i‰‡;"mepa_rc ;@;o;;o;	;
+@
+;iÏ‡;"#mepa_macsec_default_action_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i·;"struct mepa_device *;@;o;;o;	;
+@
+;i·;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iK·;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i`·;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iê·;"0mepa_macsec_default_action_policy_t *const ;@;o;;o;	;
+@
+;iª·;"policy;@;[ ;0;0{
+;o;;o;	;
+@
+;i’‚;"typedef;@;{;o;;o;	;
+@
+;i›‚;"	enum;@; [{;!{;"o;;o;	;
+@
+;iË‚;"MEPA_MACSEC_BYPASS_NONE;@;0{;!{;"o;;o;	;
+@
+;i;„;"MEPA_MACSEC_BYPASS_TAG;@;0{;!{;"o;;o;	;
+@
+;ië„;"MEPA_MACSEC_BYPASS_HDR;@;0;o;;o;	;
+@
+;iÁ„;"mepa_macsec_bypass_t;@;[ ;0{
+;o;;o;	;
+@
+;i&‰;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;‰;"mepa_macsec_bypass_t  ;@;o;;o;	;
+@
+;iQ‰;"	mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢‰;"uint32_t ;@;o;;o;	;
+@
+;i´‰;"hdr_bypass_len;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>Ê;"mepa_etype_t ;@;o;;o;	;
+@
+;iKÊ;"hdr_etype;@;[ ;0;o;;o;	;
+@
+;iﬁÁ;"mepa_macsec_bypass_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i!Ë;"typedef;@;{;o;;o;	;
+@
+;i)Ë;"	enum;@; [{;!{;"o;;o;	;
+@
+;i4Ë;" MEPA_MACSEC_BYPASS_TAG_ZERO;@;0{;!{;"o;;o;	;
+@
+;izË;"MEPA_MACSEC_BYPASS_TAG_ONE;@;0{;!{;"o;;o;	;
+@
+;i≈Ë;"MEPA_MACSEC_BYPASS_TAG_TWO;@;0;o;;o;	;
+@
+;iÈ;"mepa_macsec_tag_bypass_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i_È;"mepa_rc ;@;o;;o;	;
+@
+;igÈ;" mepa_macsec_bypass_mode_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÉÈ;"struct mepa_device *;@;o;;o;	;
+@
+;ióÈ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¿È;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i’È;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÍ;",const mepa_macsec_bypass_mode_t *const ;@;o;;o;	;
+@
+;i)Í;"bypass;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iUÍ;"mepa_rc ;@;o;;o;	;
+@
+;i]Í;" mepa_macsec_bypass_mode_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iyÍ;"struct mepa_device *;@;o;;o;	;
+@
+;içÍ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∂Í;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÀÍ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i¯Í;"&mepa_macsec_bypass_mode_t *const ;@;o;;o;	;
+@
+;iÎ;"bypass;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;izÎ;"mepa_rc ;@;o;;o;	;
+@
+;iÇÎ;"mepa_macsec_bypass_tag_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iùÎ;"struct mepa_device *;@;o;;o;	;
+@
+;i±Î;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iŸÎ;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÚÎ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÏ;"$const mepa_macsec_tag_bypass_t ;@;o;;o;	;
+@
+;i:Ï;"tag;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iuÏ;"mepa_rc ;@;o;;o;	;
+@
+;i}Ï;"mepa_macsec_bypass_tag_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iòÏ;"struct mepa_device *;@;o;;o;	;
+@
+;i¨Ï;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i‘Ï;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÌÏ;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÌ;"%mepa_macsec_tag_bypass_t *const ;@;o;;o;	;
+@
+;i6Ì;"tag;@;[ ;0;0{;o;;o;	;
+@
+;iÓ;"s#define MEPA_MACSEC_FRAME_CAPTURE_SIZE_MAX 504 /**< The maximum frame size supported for MACSEC capturing */
+
+;@{
+;o;;o;	;
+@
+;iØÓ;"typedef;@;{;o;;o;	;
+@
+;i∑Ó;"	enum;@; [{;!{;"o;;o;	;
+@
+;i¬Ó;"&MEPA_MACSEC_FRAME_CAPTURE_DISABLE;@;0{;!{;"o;;o;	;
+@
+;iÔ;"&MEPA_MACSEC_FRAME_CAPTURE_INGRESS;@;0{;!{;"o;;o;	;
+@
+;isÔ;"%MEPA_MACSEC_FRAME_CAPTURE_EGRESS;@;0;o;;o;	;
+@
+;iÃÔ;" mepa_macsec_frame_capture_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i;"mepa_rc ;@;o;;o;	;
+@
+;i;"mepa_macsec_mtu_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i3;"struct mepa_device *;@;o;;o;	;
+@
+;iG;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;ih;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i};"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i¢;"$const mepa_macsec_mtu_t *const ;@;o;;o;	;
+@
+;i¡;"mtu_conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÛ;"mepa_rc ;@;o;;o;	;
+@
+;i˚;"mepa_macsec_mtu_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÒ;"struct mepa_device *;@;o;;o;	;
+@
+;i#Ò;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iDÒ;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iYÒ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i~Ò;"mepa_macsec_mtu_t *;@;o;;o;	;
+@
+;iëÒ;"mtu_conf;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i‚Û;"mepa_rc ;@;o;;o;	;
+@
+;iÍÛ;""mepa_macsec_frame_capture_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÙ;"struct mepa_device *;@;o;;o;	;
+@
+;iÙ;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iGÙ;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i\Ù;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iãÙ;"'const mepa_macsec_frame_capture_t ;@;o;;o;	;
+@
+;i≠Ù;"capture;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iı;"mepa_rc ;@;o;;o;	;
+@
+;iı;"mepa_macsec_frame_get;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i#ı;"struct mepa_device *;@;o;;o;	;
+@
+;i7ı;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iZı;"const mepa_port_no_t ;@;o;;o;	;
+@
+;ioı;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iñı;"const uint32_t ;@;o;;o;	;
+@
+;i•ı;"buf_length;@;[ ;0{;{	;o;;o;	;
+@
+;iœı;"uint32_t *const ;@;o;;o;	;
+@
+;iﬂı;"return_length;@;[ ;0{;{	;o;;o;	;
+@
+;iˆ;"uint8_t *const ;@;o;;o;	;
+@
+;iˆ;"
+frame;@;[ ;0;0{
+;o;;o;	;
+@
+;iCˆ;"typedef;@;{;o;;o;	;
+@
+;iKˆ;"	enum;@; [	{;!{	;"o;;o;	;
+@
+;iVˆ;"MEPA_MACSEC_SEQ_NONE  ;@;&o;;o;	;
+@
+;ilˆ;"=;@;#o;;o;	;
+@
+;inˆ;"0x0;@;0{;!{	;"o;;o;	;
+@
+;iwˆ;"%MEPA_MACSEC_SEQ_THRESHOLD_EVENT ;@;&o;;o;	;
+@
+;ióˆ;"=;@;#o;;o;	;
+@
+;iôˆ;"0x1;@;0{;!{	;"o;;o;	;
+@
+;i¢ˆ;"%MEPA_MACSEC_SEQ_ROLLOVER_EVENT  ;@;&o;;o;	;
+@
+;i¬ˆ;"=;@;#o;;o;	;
+@
+;iƒˆ;"0x2;@;0{;!{	;"o;;o;	;
+@
+;iÕˆ;"MEPA_MACSEC_SEQ_ALL   ;@;&o;;o;	;
+@
+;i„ˆ;"=;@;#o;;o;	;
+@
+;iÂˆ;"	0x3
+;@;0;o;;o;	;
+@
+;iÎˆ;"mepa_macsec_event_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i-˜;"mepa_rc ;@;o;;o;	;
+@
+;i5˜;"!mepa_macsec_event_enable_set;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iR˜;"struct mepa_device *;@;o;;o;	;
+@
+;if˜;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iê˜;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i•˜;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i”˜;"const mepa_macsec_event_t ;@;o;;o;	;
+@
+;iÌ˜;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;i¯;"const mepa_bool_t ;@;o;;o;	;
+@
+;i-¯;"enable;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iZ¯;"mepa_rc ;@;o;;o;	;
+@
+;ib¯;"!mepa_macsec_event_enable_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i¯;"struct mepa_device *;@;o;;o;	;
+@
+;iì¯;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iΩ¯;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i“¯;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i ˘;" mepa_macsec_event_t *const ;@;o;;o;	;
+@
+;i˘;"ev_mask;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iL˘;"mepa_rc ;@;o;;o;	;
+@
+;iT˘;"mepa_macsec_event_poll;@;[ ;0;%[{;{	;o;;o;	;
+@
+;ik˘;"struct mepa_device *;@;o;;o;	;
+@
+;i˘;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i£˘;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i∏˘;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‡˘;" mepa_macsec_event_t *const ;@;o;;o;	;
+@
+;i˚˘;"ev_mask;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i/˙;"mepa_rc ;@;o;;o;	;
+@
+;i7˙;"(mepa_macsec_event_seq_threshold_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i[˙;"struct mepa_device *;@;o;;o;	;
+@
+;io˙;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i†˙;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iµ˙;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÍ˙;"const uint32_t ;@;o;;o;	;
+@
+;i˘˙;"threshold;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i(˚;"mepa_rc ;@;o;;o;	;
+@
+;i0˚;"(mepa_macsec_event_seq_threshold_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iT˚;"struct mepa_device *;@;o;;o;	;
+@
+;ih˚;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iô˚;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÆ˚;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i„˚;"uint32_t *const ;@;o;;o;	;
+@
+;iÛ˚;"threshold;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i2¸;"mepa_rc ;@;o;;o;	;
+@
+;i:¸;" mepa_macsec_egr_intr_sa_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iV¸;"struct mepa_device *;@;o;;o;	;
+@
+;ij¸;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iì¸;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i®¸;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i’¸;"mepa_macsec_port_t *const ;@;o;;o;	;
+@
+;iÔ¸;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i˝;"uint16_t *const ;@;o;;o;	;
+@
+;i)˝;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iX˝;"mepa_rc ;@;o;;o;	;
+@
+;i`˝;"mepa_macsec_csr_read;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;iu˝;"struct mepa_device *;@;o;;o;	;
+@
+;iâ˝;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i´˝;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i¿˝;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ˝;"const uint16_t ;@;o;;o;	;
+@
+;iı˝;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;i˛;"const uint32_t ;@;o;;o;	;
+@
+;i&˛;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iI˛;"uint32_t *const ;@;o;;o;	;
+@
+;iY˛;"
+value;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iã˛;"mepa_rc ;@;o;;o;	;
+@
+;iì˛;"mepa_macsec_csr_write;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i©˛;"struct mepa_device *;@;o;;o;	;
+@
+;iΩ˛;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i‡˛;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iı˛;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iˇ;"const uint32_t ;@;o;;o;	;
+@
+;i+ˇ;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;iNˇ;"const uint32_t ;@;o;;o;	;
+@
+;i]ˇ;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iÅˇ;"const uint32_t ;@;o;;o;	;
+@
+;iêˇ;"
+value;@;[ ;0;0{
+;o;;o;	;
+@
+;i„ˇ;"typedef;@;{;[8{;{;{	;o;;o;	;
+@
+;i¯ˇ;"uint32_t ;@;o;;o;	;
+@
+;i ;"invalid_sci_macaddr;@;[ ;0{;{;{	;o;;o;	;
+@
+;it ;"uint32_t ;@;o;;o;	;
+@
+;i} ;"macsec_not_enabled;@;[ ;0{;{;{	;o;;o;	;
+@
+;iË ;"uint32_t ;@;o;;o;	;
+@
+;iÒ ;"secy_already_in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;id;"uint32_t ;@;o;;o;	;
+@
+;im;"no_secy_found;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄;"uint32_t ;@;o;;o;	;
+@
+;i„;"no_secy_vacency;@;[ ;0{;{;{	;o;;o;	;
+@
+;iR;"uint32_t ;@;o;;o;	;
+@
+;i[;"invalid_validate_frm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœ;"uint32_t ;@;o;;o;	;
+@
+;iÿ;"invalid_hdr_bypass_len;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN;"uint32_t ;@;o;;o;	;
+@
+;iW;"sc_not_found;@;[ ;0{;{;{	;o;;o;	;
+@
+;i√;"uint32_t ;@;o;;o;	;
+@
+;iÃ;"could_not_prg_sa_match;@;[ ;0{;{;{	;o;;o;	;
+@
+;iB;"uint32_t ;@;o;;o;	;
+@
+;iK;"could_not_prg_sa_flow;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¿;"uint32_t ;@;o;;o;	;
+@
+;i…;"could_not_ena_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i9;"uint32_t ;@;o;;o;	;
+@
+;iB;"could_not_set_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≤;"uint32_t ;@;o;;o;	;
+@
+;iª;"no_ctrl_frm_match;@;[ ;0{;{;{	;o;;o;	;
+@
+;i,;"uint32_t ;@;o;;o;	;
+@
+;i5;"could_not_set_pattern;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™;"uint32_t ;@;o;;o;	;
+@
+;i≥;"timeout_issue;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ;"uint32_t ;@;o;;o;	;
+@
+;i);"could_not_empty_egress;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü;"uint32_t ;@;o;;o;	;
+@
+;i®;"an_not_created;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@;o;;o;	;
+@
+;i;"could_not_empty_ingress;@;[ ;0{;{;{	;o;;o;	;
+@
+;iñ;"uint32_t ;@;o;;o;	;
+@
+;iü;"tx_sc_not_exist;@;[ ;0{;{;{	;o;;o;	;
+@
+;i	;"uint32_t ;@;o;;o;	;
+@
+;i	;"could_not_disable_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iã	;"uint32_t ;@;o;;o;	;
+@
+;iî	;"could_not_del_rx_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+;"uint32_t ;@;o;;o;	;
+@
+;i
+;"could_not_del_tx_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉ
+;"uint32_t ;@;o;;o;	;
+@
+;iå
+;"pattern_not_set;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˚
+;"uint32_t ;@;o;;o;	;
+@
+;i;"hw_resource_exhusted;@;[ ;0{;{;{	;o;;o;	;
+@
+;ix;"uint32_t ;@;o;;o;	;
+@
+;iÅ;"sci_already_exist;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ;"uint32_t ;@;o;;o;	;
+@
+;i¸;"sc_resource_not_found;@;[ ;0{;{;{	;o;;o;	;
+@
+;iq;"uint32_t ;@;o;;o;	;
+@
+;iz;"rx_an_already_in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÓ;"uint32_t ;@;o;;o;	;
+@
+;i˜;"empty_record;@;[ ;0{;{;{	;o;;o;	;
+@
+;ic;"uint32_t ;@;o;;o;	;
+@
+;il;"could_not_prg_xform;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ;"uint32_t ;@;o;;o;	;
+@
+;iË;"could_not_toggle_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i[;"uint32_t ;@;o;;o;	;
+@
+;id;"tx_an_already_in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÿ;"uint32_t ;@;o;;o;	;
+@
+;i·;"all_available_sa_in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;iX;"uint32_t ;@;o;;o;	;
+@
+;ia;"match_disable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒ;"uint32_t ;@;o;;o;	;
+@
+;i◊;"all_cp_rules_in_use;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJ;"uint32_t ;@;o;;o;	;
+@
+;iS;"pattern_prio_not_valid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…;"uint32_t ;@;o;;o;	;
+@
+;i“;"buffer_too_small;@;[ ;0{;{;{	;o;;o;	;
+@
+;iB;"uint32_t ;@;o;;o;	;
+@
+;iK;"frm_too_long;@;[ ;0{;{;{	;o;;o;	;
+@
+;iπ;"uint32_t ;@;o;;o;	;
+@
+;i¬;"frm_truncated;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1;"uint32_t ;@;o;;o;	;
+@
+;i:;"phy_powered_down;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™;"uint32_t ;@;o;;o;	;
+@
+;i≥;"phy_not_macsec_capable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i);"uint32_t ;@;o;;o;	;
+@
+;i2;"an_not_exist;@;[ ;0{;{;{	;o;;o;	;
+@
+;iû;"uint32_t ;@;o;;o;	;
+@
+;iß;"no_pattern_cfg;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@;o;;o;	;
+@
+;i;"unexpected_speed;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå;"uint32_t ;@;o;;o;	;
+@
+;iï;"max_mtu;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¸;"uint32_t ;@;o;;o;	;
+@
+;i;"unexpected_cp_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;iu;"uint32_t ;@;o;;o;	;
+@
+;i~;"could_not_disable_an;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÚ;"uint32_t ;@;o;;o;	;
+@
+;i˚;"rule_out_of_range;@;[ ;0{;{;{	;o;;o;	;
+@
+;il;"uint32_t ;@;o;;o;	;
+@
+;iu;"rule_not_exit;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‚;"uint32_t ;@;o;;o;	;
+@
+;iÎ;"csr_read;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL;"uint32_t ;@;o;;o;	;
+@
+;iU;"csr_write;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑;"uint32_t ;@;o;;o;	;
+@
+;i¿;"unknown_rc_code;@;[ ;0;o;;o;	;
+@
+;i;""mepa_macsec_rc_dbg_counters_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i\;"mepa_rc ;@;o;;o;	;
+@
+;id;" mepa_macsec_dbg_counter_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÄ;"struct mepa_device *;@;o;;o;	;
+@
+;iî;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iΩ;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i“;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iˇ;"*mepa_macsec_rc_dbg_counters_t *const ;@;o;;o;	;
+@
+;i$;"counters;@;[ ;0;0{;o;;o;	;
+@
+;i1;"Y#define deb_counter_get mepa_macsec_dbg_counter_get /**< Backward compatibility */
+
+;@{
+;o;;o;	;
+@
+;iÜ;"typedef;@;{;[*{;{;{	;o;;o;	;
+@
+;i∂;"uint64_t ;@;o;;o;	;
+@
+;iø;"if_rx_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ;"uint64_t ;@;o;;o;	;
+@
+;i¸;"if_rx_in_bytes;@;[ ;0{;{;{	;o;;o;	;
+@
+;i0;"uint32_t ;@;o;;o;	;
+@
+;i9;"if_rx_pause_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;im;"uint32_t ;@;o;;o;	;
+@
+;iv;"if_rx_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i™;"uint32_t ;@;o;;o;	;
+@
+;i≥;"if_rx_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ;"uint32_t ;@;o;;o;	;
+@
+;i;"if_rx_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$;"uint32_t ;@;o;;o;	;
+@
+;i-;"if_rx_discards;@;[ ;0{;{;{	;o;;o;	;
+@
+;ia;"uint32_t ;@;o;;o;	;
+@
+;ij;"if_rx_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü;"uint64_t ;@;o;;o;	;
+@
+;i®;"if_rx_StatsPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ;"uint32_t ;@;o;;o;	;
+@
+;iË;"if_rx_CRCAlignErrors;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@;o;;o;	;
+@
+;i(;"if_rx_UndersizePkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_;"uint32_t ;@;o;;o;	;
+@
+;ih;"if_rx_OversizePkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü;"uint32_t ;@;o;;o;	;
+@
+;i®;"if_rx_Fragments;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ;"uint32_t ;@;o;;o;	;
+@
+;iË;"if_rx_Jabbers;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"uint32_t ;@;o;;o;	;
+@
+;i(;"if_rx_Pkts64Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih;"uint32_t ;@;o;;o;	;
+@
+;iq;"if_rx_Pkts65to127Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±;"uint32_t ;@;o;;o;	;
+@
+;i∫;"if_rx_Pkts128to255Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˙;"uint32_t ;@;o;;o;	;
+@
+;i;"if_rx_Pkts256to511Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iC;"uint32_t ;@;o;;o;	;
+@
+;iL;"if_rx_Pkts512to1023Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå;"uint32_t ;@;o;;o;	;
+@
+;iï;"if_rx_Pkts1024to1518Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’;"uint32_t ;@;o;;o;	;
+@
+;iﬁ;"if_rx_Pkts1519toMaxOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i: ;"uint64_t ;@;o;;o;	;
+@
+;iC ;"if_tx_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw ;"uint32_t ;@;o;;o;	;
+@
+;iÄ ;"if_tx_pause_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¥ ;"uint32_t ;@;o;;o;	;
+@
+;iΩ ;"if_tx_ucast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÒ ;"uint32_t ;@;o;;o;	;
+@
+;i˙ ;"if_tx_multicast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i.!;"uint32_t ;@;o;;o;	;
+@
+;i7!;"if_tx_broadcast_pkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;ik!;"uint32_t ;@;o;;o;	;
+@
+;it!;"if_tx_errors;@;[ ;0{;{;{	;o;;o;	;
+@
+;i©!;"uint32_t ;@;o;;o;	;
+@
+;i≤!;"if_tx_DropEvents;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÙ!;"uint64_t ;@;o;;o;	;
+@
+;i˝!;"if_tx_StatsPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?";"uint32_t ;@;o;;o;	;
+@
+;iH";"if_tx_Collisions;@;[ ;0{;{;{	;o;;o;	;
+@
+;iä";"uint32_t ;@;o;;o;	;
+@
+;iì";"if_tx_Pkts64Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’";"uint32_t ;@;o;;o;	;
+@
+;iﬁ";"if_tx_Pkts65to127Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i #;"uint32_t ;@;o;;o;	;
+@
+;i)#;"if_tx_Pkts128to255Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;ik#;"uint32_t ;@;o;;o;	;
+@
+;it#;"if_tx_Pkts256to511Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂#;"uint32_t ;@;o;;o;	;
+@
+;iø#;"if_tx_Pkts512to1023Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$;"uint32_t ;@;o;;o;	;
+@
+;i
+$;"if_tx_Pkts1024to1518Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL$;"uint32_t ;@;o;;o;	;
+@
+;iU$;"if_tx_Pkts1519toMaxOctets;@;[ ;0;o;;o;	;
+@
+;iï$;"mepa_macsec_mac_counters_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;i·$;"mepa_rc ;@;o;;o;	;
+@
+;iÈ$;""mepa_macsec_hmac_counters_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;i%;"struct mepa_device *;@;o;;o;	;
+@
+;i%;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iF%;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i[%;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iä%;"'mepa_macsec_mac_counters_t *const ;@;o;;o;	;
+@
+;i¨%;"counters;@;[ ;0{;{	;o;;o;	;
+@
+;i‹%;"const mepa_bool_t ;@;o;;o;	;
+@
+;iÓ%;"
+clear;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i&&;"mepa_rc ;@;o;;o;	;
+@
+;i.&;""mepa_macsec_lmac_counters_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iL&;"struct mepa_device *;@;o;;o;	;
+@
+;i`&;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iã&;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i†&;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iœ&;"'mepa_macsec_mac_counters_t *const ;@;o;;o;	;
+@
+;iÒ&;"counters;@;[ ;0{;{	;o;;o;	;
+@
+;i!';"const mepa_bool_t ;@;o;;o;	;
+@
+;i3';"
+clear;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;ix';"mepa_rc ;@;o;;o;	;
+@
+;iÄ';"mepa_macsec_is_capable;@;[ ;0;%[{;{	;o;;o;	;
+@
+;ió';"struct mepa_device *;@;o;;o;	;
+@
+;i´';"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iœ';"const mepa_port_no_t ;@;o;;o;	;
+@
+;i‰';"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i(;"mepa_bool_t *;@;o;;o;	;
+@
+;i(;"capable;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iS(;"mepa_rc ;@;o;;o;	;
+@
+;i[(;"mepa_macsec_dbg_reg_dump;@;[ ;0;%[{;{	;o;;o;	;
+@
+;it(;"struct mepa_device *;@;o;;o;	;
+@
+;ià(;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ(;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i√(;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÌ(;"const mepa_debug_print_t ;@;o;;o;	;
+@
+;i);"pr;@;[ ;0;0{
+;o;;o;	;
+@
+;i*;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i1*;"uint8_t ;@;o;;o;	;
+@
+;i9*;"
+no_sa;@;[ ;0{;{;{	;o;;o;	;
+@
+;i*;"uint8_t ;@;o;;o;	;
+@
+;iá*;"
+sa_id;@;[{;#o;;o;	;
+@
+;iç*;"MEPA_MACSEC_SA_PER_SC_MAX;@;0;o;;o;	;
+@
+;i«*;"mepa_sc_inst_count_t;@;[ ;0{
+;o;;o;	;
+@
+;iÒ+;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i,;"uint8_t ;@;o;;o;	;
+@
+;i,;"no_txsc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iW,;"uint8_t ;@;o;;o;	;
+@
+;i_,;"txsc_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i§,;"mepa_macsec_sci_t ;@;o;;o;	;
+@
+;i∂,;"tx_sci;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬁ,;"mepa_sc_inst_count_t ;@;o;;o;	;
+@
+;iÛ,;"txsc_inst_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;i!-;"uint8_t ;@;o;;o;	;
+@
+;i)-;"no_rxsc;@;[ ;0{;{;{	;o;;o;	;
+@
+;ir-;"uint8_t ;@;o;;o;	;
+@
+;iz-;"rxsc_id;@;[{;#o;;o;	;
+@
+;iÇ-;"MEPA_MACSEC_MAX_SC_RX;@;0{;{;{	;o;;o;	;
+@
+;iø-;"mepa_macsec_sci_t ;@;o;;o;	;
+@
+;i—-;"rx_sci;@;[{;#o;;o;	;
+@
+;iÿ-;"MEPA_MACSEC_MAX_SC_RX;@;0{;{;{	;o;;o;	;
+@
+;i.;"mepa_sc_inst_count_t ;@;o;;o;	;
+@
+;i%.;"rxsc_inst_count;@;[{;#o;;o;	;
+@
+;i5.;"MEPA_MACSEC_MAX_SC_RX;@;0;o;;o;	;
+@
+;ih.;"mepa_secy_inst_count_t;@;[ ;0{
+;o;;o;	;
+@
+;iì/;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i®/;"uint8_t ;@;o;;o;	;
+@
+;i∞/;"no_secy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ/;"uint8_t ;@;o;;o;	;
+@
+;i˚/;"secy_vport;@;[{;#o;;o;	;
+@
+;i0;"MEPA_MACSEC_MAX_SECY;@;0{;{;{	;o;;o;	;
+@
+;iF0;"mepa_secy_inst_count_t ;@;o;;o;	;
+@
+;i]0;"secy_inst_count;@;[{;#o;;o;	;
+@
+;im0;"MEPA_MACSEC_MAX_SECY;@;0;o;;o;	;
+@
+;iù0;"mepa_macsec_inst_count_t;@;[ ;0{;${;{	;o;;o;	;
+@
+;iˇ0;"mepa_rc ;@;o;;o;	;
+@
+;i1;"mepa_macsec_inst_count_get;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i"1;"struct mepa_device *;@;o;;o;	;
+@
+;i61;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i^1;"const mepa_port_no_t   ;@;o;;o;	;
+@
+;iu1;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i°1;"mepa_macsec_inst_count_t *;@;o;;o;	;
+@
+;iª1;"
+count;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÓ1;"mepa_rc ;@;o;;o;	;
+@
+;iˆ1;"$mepa_macsec_lmac_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i2;"struct mepa_device *;@;o;;o;	;
+@
+;i*2;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iW2;"const mepa_port_no_t ;@;o;;o;	;
+@
+;il2;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i°2;"mepa_rc ;@;o;;o;	;
+@
+;i©2;"$mepa_macsec_hmac_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i…2;"struct mepa_device *;@;o;;o;	;
+@
+;i›2;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i
+3;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i3;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iS3;"mepa_rc ;@;o;;o;	;
+@
+;i[3;"%mepa_macsec_debug_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i|3;"struct mepa_device *;@;o;;o;	;
+@
+;iê3;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iæ3;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i”3;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i 4;"mepa_rc ;@;o;;o;	;
+@
+;i4;"&mepa_macsec_common_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i*4;"struct mepa_device *;@;o;;o;	;
+@
+;i>4;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;im4;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÇ4;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iª4;"mepa_rc ;@;o;;o;	;
+@
+;i√4;",mepa_macsec_uncontrolled_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÎ4;"struct mepa_device *;@;o;;o;	;
+@
+;iˇ4;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i45;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iI5;"port_no;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iÄ5;"mepa_rc ;@;o;;o;	;
+@
+;ià5;"+mepa_macsec_controlled_counters_clear ;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iØ5;"struct mepa_device *;@;o;;o;	;
+@
+;i√5;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i˜5;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i6;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i96;"mepa_rc ;@;o;;o;	;
+@
+;iA6;"$mepa_macsec_rxsa_counters_clear;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ia6;"struct mepa_device *;@;o;;o;	;
+@
+;iu6;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¢6;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iª6;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iÈ6;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;i7;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;i57;"const uint16_t ;@;o;;o;	;
+@
+;iD7;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;ik7;"mepa_rc ;@;o;;o;	;
+@
+;is7;"$mepa_macsec_rxsc_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iì7;"struct mepa_device *;@;o;;o;	;
+@
+;iß7;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i‘7;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iÌ7;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i8;"%const mepa_macsec_sci_t  *const ;@;o;;o;	;
+@
+;i;8;"sci;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;ic8;"mepa_rc ;@;o;;o;	;
+@
+;ik8;"$mepa_macsec_txsa_counters_clear;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iã8;"struct mepa_device *;@;o;;o;	;
+@
+;iü8;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÃ8;"const mepa_macsec_port_t  ;@;o;;o;	;
+@
+;iÊ8;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i9;"const uint16_t  ;@;o;;o;	;
+@
+;i$9;"an;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iK9;"mepa_rc ;@;o;;o;	;
+@
+;iS9;"%mepa_macsec_txsc_counters_clear ;@;[ ;0;%[{;{	;o;;o;	;
+@
+;it9;"struct mepa_device *;@;o;;o;	;
+@
+;ià9;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i∂9;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iœ9;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i˜9;"mepa_rc ;@;o;;o;	;
+@
+;iˇ9;"%mepa_macsec_secy_counters_clear ;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i :;"struct mepa_device *;@;o;;o;	;
+@
+;i4:;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;ib:;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i{:;"	port;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i®:;"mepa_rc ;@;o;;o;	;
+@
+;i∞:;"(mepa_macsec_port_enable_status_get ;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i‘:;"struct mepa_device *;@;o;;o;	;
+@
+;iË:;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i;;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i.;;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ic;;"mepa_bool_t *;@;o;;o;	;
+@
+;ip;;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i†;;"mepa_rc ;@;o;;o;	;
+@
+;i®;;"$mepa_macsec_rxsa_an_status_get ;@;[ ;0;%[
+{;{	;o;;o;	;
+@
+;i»;;"struct mepa_device *;@;o;;o;	;
+@
+;i‹;;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i	<;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;i"<;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iP<;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;io<;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iú<;"const uint16_t ;@;o;;o;	;
+@
+;i´<;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i◊<;"mepa_bool_t *;@;o;;o;	;
+@
+;i‰<;"status;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;i$=;"mepa_rc ;@;o;;o;	;
+@
+;i,=;"mepa_mac_block_mtu_get;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;iC=;"struct mepa_device *;@;o;;o;	;
+@
+;iW=;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i{=;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iê=;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i∏=;"uint16_t *const ;@;o;;o;	;
+@
+;i»=;"mtu_value;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ=;"mepa_bool_t *const ;@;o;;o;	;
+@
+;i>;"mtu_tag_check;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iL>;"mepa_rc ;@;o;;o;	;
+@
+;iT>;"mepa_mac_block_mtu_set;@;[ ;0;%[	{;{	;o;;o;	;
+@
+;ik>;"struct mepa_device *;@;o;;o;	;
+@
+;i>;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i£>;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i∏>;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‡>;"const uint16_t ;@;o;;o;	;
+@
+;iÔ>;"mtu_value;@;[ ;0{;{	;o;;o;	;
+@
+;i?;"const mepa_bool_t ;@;o;;o;	;
+@
+;i+?;"mtu_tag_check;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;il?;"mepa_rc ;@;o;;o;	;
+@
+;it?;")mepa_macsec_fcbuf_frame_gap_comp_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iô?;"struct mepa_device *;@;o;;o;	;
+@
+;i≠?;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iﬂ?;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÙ?;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i*@;"const uint8_t ;@;o;;o;	;
+@
+;i8@;"frm_gap;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;in@;"mepa_rc ;@;o;;o;	;
+@
+;iv@;"'mepa_macsec_dbg_fcb_block_reg_dump;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iô@;"struct mepa_device *;@;o;;o;	;
+@
+;i≠@;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i›@;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iÚ@;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i&A;"const mepa_debug_print_t ;@;o;;o;	;
+@
+;i?A;"pr;@;[ ;0;0{;${;{	;o;;o;	;
+@
+;iqA;"mepa_rc ;@;o;;o;	;
+@
+;iyA;"5mepa_macsec_dbg_frm_match_handling_ctrl_reg_dump;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i™A;"struct mepa_device *;@;o;;o;	;
+@
+;iæA;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i¸A;"const mepa_port_no_t ;@;o;;o;	;
+@
+;iB;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iSB;"const mepa_debug_print_t ;@;o;;o;	;
+@
+;ilB;"pr;@;[ ;0;0{;o;;o;	;
+@
+;isB;"1#ifdef MEPA_MACSEC_FIFO_OVERFLOW_WORKAROUND
+;@{;${;{	;o;;o;	;
+@
+;i…B;"mepa_rc ;@;o;;o;	;
+@
+;i—B;"mepa_macsec_dbg_reconfig;@;[ ;0;%[{;{	;o;;o;	;
+@
+;iÍB;"struct mepa_device *;@;o;;o;	;
+@
+;i˛B;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;i$C;"const mepa_port_no_t ;@;o;;o;	;
+@
+;i9C;"port_no;@;[ ;0;0{;o;;o;	;
+@
+;iCC;"#endif
+
+;@{;${;{	;o;;o;	;
+@
+;iC;"mepa_rc ;@;o;;o;	;
+@
+;iáC;"#mepa_macsec_dbg_update_seq_set;@;[ ;0;%[{;{	;o;;o;	;
+@
+;i¶C;"struct mepa_device *;@;o;;o;	;
+@
+;i∫C;"dev;@;[ ;0{;{	;o;;o;	;
+@
+;iÊC;"const mepa_macsec_port_t ;@;o;;o;	;
+@
+;iˇC;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;i,D;"$const mepa_macsec_sci_t *const ;@;o;;o;	;
+@
+;iKD;"sci;@;[ ;0{;{	;o;;o;	;
+@
+;iwD;"uint16_t ;@;o;;o;	;
+@
+;iÄD;"an;@;[ ;0{;{	;o;;o;	;
+@
+;i´D;"mepa_bool_t ;@;o;;o;	;
+@
+;i∑D;"egr;@;[ ;0{;{	;o;;o;	;
+@
+;i„D;"const mepa_bool_t ;@;o;;o;	;
+@
+;iıD;"disable;@;[ ;0;0{;o;;o;	;
+@
+;i∏E;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i‡E;"$#endif /**< _MEPA_TS_API_H_ */
+;@

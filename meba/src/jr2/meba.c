@@ -388,89 +388,35 @@ static void init_port_serval2(meba_inst_t inst, mesa_port_no_t port_no, meba_por
 
 static void init_port_cu48(meba_inst_t inst, mesa_port_no_t port_no, meba_port_entry_t *entry)
 {
+   
     meba_board_state_t *board = INST2BOARD(inst);
-    if (port_no < 48) {
-        /* Port 0-47: Copper ports */
-        entry->map.chip_port       = port_no;
-        entry->map.miim_controller = port_no < 24 ? MESA_MIIM_CONTROLLER_1 : MESA_MIIM_CONTROLLER_2;
-        entry->map.miim_addr       = port_no < 24 ? port_no : port_no - 24;
-        entry->map.max_bw          = MESA_BW_1G;
-        entry->mac_if              = MESA_PORT_INTERFACE_QSGMII;
-        entry->cap                 = MEBA_PORT_CAP_TRI_SPEED_COPPER;
-        entry->poe_chip_port       = entry->map.chip_port % 24; // Each PD69200 controller controls 24 ports.
-        entry->poe_support         = true;
-    } else if (port_no < 50 &&
-               (inst->props.target == MESA_TARGET_SPARX_IV_90 ||
-                inst->props.target == MESA_TARGET_JAGUAR_2)) {
-        /* Port 48-49: 10G ports SFI or XAUI */
-        /* Detect 10G PHY, can be a VTSS PHY or X2/Xenpak module */
-        /* If a device is found then this XAUI port is activated and a SFP+ port disabled */
+    if ((port_no < 18) || (port_no == 20)) {
+        entry->map.chip_port = port_no;
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
+        entry->map.max_bw = MESA_BW_1G;
+        entry->mac_if = MESA_PORT_INTERFACE_SERDES;
+        entry->cap = MEBA_PORT_CAP_1G_FDX;
+
+    } else if ((port_no > 17) && (port_no < 27) && (port_no != 20)){
+        entry->map.chip_port = port_no;
+        entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
+        entry->map.miim_addr = port_no == 18 ? 4 : (port_no == 19 ? 5 : (port_no == 21 ? 6 : (port_no == 22 ? 7 : (port_no == 23 ? 8 : (port_no == 24 ? 9 : (port_no == 25 ? 10 : 11))))));
+        entry->map.max_bw = MESA_BW_1G;
+        entry->mac_if = MESA_PORT_INTERFACE_SGMII;
+        entry->cap = MEBA_PORT_CAP_TRI_SPEED;
+
+    } else if (port_no > 48 && port_no < 53 && inst->props.target == MESA_TARGET_SPARX_IV_80) {
+
         board->detect.port_no = port_no;
         board->detect.miim_addr[0] = (port_no - 24);
         board->detect.cap = 0;
-        entry->map.max_bw = MESA_BW_10G; // 10G
-
-        if (jr2_10g_detect(inst)) {
-            /* API Port 48,49 = XAUI chip ports 49,50 - possibly VTSS PHYs */
-            entry->map.chip_port       = port_no + 1;
-            entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
-            entry->map.miim_addr       = board->detect.miim_addr[0];
-            entry->mac_if              = MESA_PORT_INTERFACE_XAUI;
-            entry->cap                 = board->detect.cap;
-        } else {
-            /* API Port 48,49 = SFP+ chip ports 50,49 */
-            entry->map.chip_port       = port_no == 48 ? 50 : 49;
-            entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
-            entry->mac_if              = MESA_PORT_INTERFACE_SFI;
-            entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
-        }
-    } else if (port_no < 52 &&
-               (inst->props.target == MESA_TARGET_SPARX_IV_90) &&
-               (port_no != board->port_cnt - 1)) {
-        /* API Port 50,51: 10G SFI ports 52,51 */
-        entry->map.chip_port       = port_no == 50 ? 52 : 51;
+        entry->map.max_bw = MESA_BW_10G;
+        entry->map.chip_port = port_no;
         entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
-        entry->map.max_bw          = MESA_BW_10G; // 10G
-        entry->mac_if              = MESA_PORT_INTERFACE_SFI;
-        entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
-    } else if (port_no < 50 && inst->props.target == MESA_TARGET_SPARX_IV_80) {
-        /* Port 48-49: 10G ports SFI or XAUI */
-        /* Detect 10G PHY, can be a VTSS PHY or X2/Xenpak module */
-        /* If a device is found then this XAUI port is activated and a  SFP+ port disabled */
-        board->detect.port_no = port_no;
-        board->detect.miim_addr[0] = (port_no - 24);
-        board->detect.cap = 0;
-        entry->map.max_bw = MESA_BW_10G; // 10G
-
-        if (jr2_10g_detect(inst)) {
-            /* API Port 48,49: XAUI chip ports 49,50 - possibly VTSS PHYs */
-            entry->map.chip_port       = port_no + 1;
-            entry->map.miim_controller = MESA_MIIM_CONTROLLER_0;
-            entry->map.miim_addr       = board->detect.miim_addr[0];
-            entry->mac_if              = MESA_PORT_INTERFACE_XAUI;
-            entry->cap                 = board->detect.cap;
-        } else {
-            /* API Port 48-49: SFP+ chip ports:51,52 */
-            entry->map.chip_port       = port_no == 48 ? 52 : 51;
-            entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
-            entry->mac_if              = MESA_PORT_INTERFACE_SFI;
-            entry->cap                 = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
-        }
-    } else if (port_no < 52 && inst->props.target == MESA_TARGET_SPARX_IV_52) {
-        /* Port 48-51: SFP */
-        entry->map.chip_port       = port_no + ((port_no & 1) ? 0 : 2);
-        entry->map.miim_controller = MESA_MIIM_CONTROLLER_NONE;
-        entry->map.max_bw          = MESA_BW_1G;
-        entry->mac_if              = MESA_PORT_INTERFACE_SERDES;
-        entry->cap                 = MEBA_PORT_CAP_SFP_1G | MEBA_PORT_CAP_SFP_SD_HIGH;
-    } else {
-        /* Last port (NPI) */
-        entry->map.chip_port       = 48;
-        entry->map.miim_controller = mebaux_phy_detect(inst, &rawio, 28); // Autodetect controller 0 or 1
-        entry->map.miim_addr       = 28;
-        entry->map.max_bw          = MESA_BW_1G;
-        entry->mac_if              = MESA_PORT_INTERFACE_SGMII;
-        entry->cap                 = MEBA_PORT_CAP_TRI_SPEED_COPPER;
+        entry->mac_if = MESA_PORT_INTERFACE_SFI;
+        entry->cap = (MEBA_PORT_CAP_10G_FDX | MEBA_PORT_CAP_SFP_2_5G | MEBA_PORT_CAP_FLOW_CTRL | MEBA_PORT_CAP_SFP_SD_HIGH);
+    } else  {
+        entry->mac_if = MESA_PORT_INTERFACE_NO_CONNECTION;
     }
 }
 
@@ -3416,6 +3362,8 @@ meba_inst_t meba_initialize(size_t callouts_size,
             T_E(inst, "Unknown board type: %d", board->type);
             goto error_out;
     }
+    board->port_cnt = 53; //CPMOD
+    inst->props.mux_mode = MESA_PORT_MUX_MODE_2; //CPMOD 
 
     board->func = &board_funcs[board->type];
 

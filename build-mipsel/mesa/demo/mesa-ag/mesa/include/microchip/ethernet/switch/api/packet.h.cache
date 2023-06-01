@@ -1,0 +1,1841 @@
+{:	root[E{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"5w// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+#define _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+
+#include <microchip/ethernet/switch/api/qos.h>
+#include <microchip/ethernet/switch/api/vop.h>
+#include <microchip/ethernet/switch/api/l2.h>
+#include <microchip/ethernet/switch/api/misc.h>
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/switch/api/afi.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+/* - Transparent Clock internal types ------------------------------- */
+
+// Enumeration type representing the various internal modes of a TC
+typedef enum  {
+    MESA_TOD_INTERNAL_TC_MODE_30BIT, // 30 BIT mode, reserved field
+    MESA_TOD_INTERNAL_TC_MODE_32BIT, // 32 BIT mode, reserved field
+    MESA_TOD_INTERNAL_TC_MODE_44BIT, // 44 BIT mode, Sub and Add
+    MESA_TOD_INTERNAL_TC_MODE_48BIT, // 48 BIT mode, Sub and Add
+    MESA_TOD_INTERNAL_TC_MODE_MAX,   // Invalid mode
+} mesa_tod_internal_tc_mode_t;
+
+/* - Rx frame registration ----------------------------------------- */
+
+// NPI configuration
+typedef struct {
+    mesa_bool_t    enable;  // Enable NPI port
+    mesa_port_no_t port_no; // Port to use as NPI - if configurable
+} mesa_npi_conf_t;
+
+// Get NPI configuration.
+// conf [OUT] NPI port configuration.
+mesa_rc mesa_npi_conf_get(const mesa_inst_t inst,
+                          mesa_npi_conf_t   *const conf);
+
+// Set NPI configuration.
+// conf [IN]  NPI port configuration.
+mesa_rc mesa_npi_conf_set(const mesa_inst_t     inst,
+                          const mesa_npi_conf_t *const conf);
+
+// CPU Rx queue NPI configuration
+typedef struct {
+    mesa_bool_t enable; // Enable redirect of frames to NPI port
+} mesa_packet_rx_queue_npi_conf_t;
+
+// CPU Rx queue buffer size in bytes
+typedef uint32_t mesa_packet_rx_queue_size_t;
+
+#define MESA_PACKET_RX_QUEUE_CNT 8 // Number of Rx packet queues
+
+// CPU Rx queue configuration
+typedef struct {
+    mesa_packet_rx_queue_size_t     size;    // Queue size
+    mesa_packet_rx_queue_npi_conf_t npi;     // NPI configuration
+    mesa_packet_rx_grp_t            grp_map; // Queue to extraction group map
+    mesa_packet_rate_t              rate CAP(QOS_CPU_QUEUE_SHAPER); // CPU queue packet rate
+} mesa_packet_rx_queue_conf_t;
+
+// CPU Rx packet registration
+typedef struct
+{
+    mesa_bool_t bpdu_cpu_only;      // Redirect BPDUs (DMAC 01-80-C2-00-00-0X)
+    mesa_bool_t garp_cpu_only[16];  // Redirect GARPs (DMAC 01-80-C2-00-00-2X)
+    mesa_bool_t ipmc_ctrl_cpu_copy; // Copy IP MC control (DIP 224.0.0.x) to CPU
+    mesa_bool_t igmp_cpu_only;      // Redirect IGMP frames to the CPU
+    mesa_bool_t mld_cpu_only;       // Redirect MLD frames to the CPU
+} mesa_packet_rx_reg_t;
+
+// CPU Rx queue map
+typedef struct
+{
+    mesa_packet_rx_queue_t bpdu_queue;        // BPDUs
+    mesa_packet_rx_queue_t garp_queue;        // GARP frames
+    mesa_packet_rx_queue_t learn_queue;       // Learn frames
+    mesa_packet_rx_queue_t igmp_queue;        // IGMP/MLD frames
+    mesa_packet_rx_queue_t ipmc_ctrl_queue;   // IP multicast control frames
+    mesa_packet_rx_queue_t mac_vid_queue;     // MAC address table
+    mesa_packet_rx_queue_t sflow_queue;       // SFlow-marked frames
+    mesa_packet_rx_queue_t lrn_all_queue;     // Learn-all queue
+    mesa_packet_rx_queue_t l3_uc_queue CAP(L3);    // L3 routing unicast queue
+    mesa_packet_rx_queue_t l3_other_queue CAP(L3); // L3 routing other frames queue
+} mesa_packet_rx_queue_map_t;
+
+// CPU Rx configuration
+typedef struct {
+    mesa_packet_rx_queue_conf_t queue[MESA_PACKET_RX_QUEUE_CNT];      // Queue configuration
+    mesa_packet_rx_reg_t        reg;                                  // Packet registration
+    mesa_packet_rx_queue_map_t  map;                                  // Queue mapping
+    mesa_bitrate_t              shaper_rate CAP(QOS_CPU_PORT_SHAPER); // CPU port shaper bitrate in kbps
+} mesa_packet_rx_conf_t;
+
+// Get Packet Rx configuration.
+// conf [IN]  Packet Rx configuration.
+mesa_rc mesa_packet_rx_conf_get(const mesa_inst_t      inst,
+                                mesa_packet_rx_conf_t  *const conf);
+
+// Set CPU Rx queue configuration.
+// conf [IN]  CPU Rx queue configuration.
+mesa_rc mesa_packet_rx_conf_set(const mesa_inst_t            inst,
+                                const mesa_packet_rx_conf_t  *const conf);
+
+// Get packet configuration for port.
+// port_no [IN]  Port number.
+// conf [OUT]    Packet port configuration structure.
+mesa_rc mesa_packet_rx_port_conf_get(const mesa_inst_t          inst,
+                                     const mesa_port_no_t       port_no,
+                                     mesa_packet_rx_port_conf_t *const conf);
+
+// Set packet configuration for port.
+// port_no [IN]  Port number.
+// conf [IN]     Packet port configuration structure.
+mesa_rc mesa_packet_rx_port_conf_set(const mesa_inst_t                inst,
+                                     const mesa_port_no_t             port_no,
+                                     const mesa_packet_rx_port_conf_t *const conf);
+
+/* - Tx frames ----------------------------------------------------- */
+
+// Information about frame
+typedef struct
+{
+    mesa_port_no_t port_no;         // Ingress port (or MESA_PORT_NO_NONE)
+    mesa_vid_t     vid;             // Egress VID (or MESA_VID_NULL)
+    mesa_port_no_t port_tx;         // Egress port (or MESA_PORT_NO_NONE)
+    mesa_bool_t    aggr_rx_disable; // Disable aggregation Rx filtering
+    mesa_bool_t    aggr_tx_disable; // Disable aggregation Tx filtering
+} mesa_packet_frame_info_t;
+
+// Initialize filter information to default values.
+// info [OUT]  Frame information.
+void mesa_packet_frame_info_init(mesa_packet_frame_info_t *const info);
+
+// CPU filter
+typedef enum
+{
+    MESA_PACKET_FILTER_DISCARD, // Discard
+    MESA_PACKET_FILTER_TAGGED,  // Tagged transmission
+    MESA_PACKET_FILTER_UNTAGGED // Untagged transmission
+} mesa_packet_filter_t;
+
+// Determine ingress/egress filter for frame.
+// The function may be used for ingress filtering, egress filtering or both.
+// info [IN]     Frame information.
+// filter [OUT]  Frame filter.
+mesa_rc mesa_packet_frame_filter(const mesa_inst_t               inst,
+                                 const mesa_packet_frame_info_t  *const info,
+                                 mesa_packet_filter_t            *const filter);
+
+// Port info structure.
+typedef struct {
+    mesa_port_no_t port_no;         // Ingress port (or MESA_PORT_NO_NONE)
+    mesa_vid_t     vid;             // Egress VID (or MESA_VID_NULL)
+    mesa_bool_t    aggr_rx_disable; // Disable aggregation Rx filtering
+    mesa_bool_t    aggr_tx_disable; // Disable aggregation Tx filtering
+} mesa_packet_port_info_t;
+
+// Initialize filter information to default values.
+// info [OUT]  Frame information.
+mesa_rc mesa_packet_port_info_init(mesa_packet_port_info_t *const info);
+
+// Packet information for each port
+typedef struct {
+    mesa_packet_filter_t filter; // Packet filtering
+    mesa_etype_t         tpid;   // Tag Ethernet Type
+} mesa_packet_port_filter_t;
+
+// Determine ingress/egress filter for frame per port.
+// The function may be used for ingress filtering, egress filtering or both.
+// info [IN]     Frame information.
+// cnt [IN]      Number of ports.
+// filter [OUT]  Frame filter.
+mesa_rc mesa_packet_port_filter_get(const mesa_inst_t             inst,
+                                    const mesa_packet_port_info_t *const info,
+                                    const uint32_t                cnt,
+                                    mesa_packet_port_filter_t     *const filter);
+
+// VLAN filter information
+typedef struct {
+    mesa_bool_t    rx_forward;                // Ingress forwarding enabled
+    mesa_bool_t    tx_forward;                // Egress forwarding enabled
+    uint8_t        vlan_discard[MESA_VIDS/8]; // One bit per VLAN ID indicates whether to discard
+} mesa_packet_vlan_filter_t;
+
+// Get VLAN ingress filter per port.
+// filter [OUT]  Frame filter.
+mesa_rc mesa_packet_vlan_filter_get(const mesa_inst_t         inst,
+                                    const uint32_t            cnt,
+                                    mesa_packet_vlan_filter_t *const filter);
+
+// VLAN packet status
+typedef struct {
+    mesa_bool_t changed; // VLAN information changed since last call
+} mesa_packet_vlan_status_t;
+
+// Get VLAN status.
+// status [OUT]  Status.
+mesa_rc mesa_packet_vlan_status_get(const mesa_inst_t         inst,
+                                    mesa_packet_vlan_status_t *const status);
+
+#define MESA_PRIO_SUPER MESA_PRIO_CNT // Super priority
+
+// OAM types to be used when encoding an injection header.
+typedef enum {
+    MESA_PACKET_OAM_TYPE_NONE = 0,  // No-op
+    MESA_PACKET_OAM_TYPE_CCM,       // Continuity Check Message
+    MESA_PACKET_OAM_TYPE_CCM_LM,    // Continuity Check Message with Loss Measurement information
+    MESA_PACKET_OAM_TYPE_LBM,       // Loop Back Message
+    MESA_PACKET_OAM_TYPE_LBR,       // Loop Back Reply
+    MESA_PACKET_OAM_TYPE_LMM,       // Loss Measurement Message
+    MESA_PACKET_OAM_TYPE_LMR,       // Loss Measurement Reply
+    MESA_PACKET_OAM_TYPE_DMM,       // Delay Measurement Message
+    MESA_PACKET_OAM_TYPE_DMR,       // Delay Measurement Reply
+    MESA_PACKET_OAM_TYPE_1DM,       // A.k.a. SDM, One-Way Delay Measurement
+    MESA_PACKET_OAM_TYPE_LTM,       // Link Trace message
+    MESA_PACKET_OAM_TYPE_LTR,       // Link Trace Reply
+    MESA_PACKET_OAM_TYPE_GENERIC,   // Generic OAM type
+    MESA_PACKET_OAM_TYPE_LCK,       // Locked Signal
+    MESA_PACKET_OAM_TYPE_MPLS_TP_1, // MPLS-TP (ITU G.8113.1)
+    MESA_PACKET_OAM_TYPE_MPLS_TP_2, // MPLS-TP (ITU G.8113.2)
+    MESA_PACKET_OAM_TYPE_MRP_TST,   // MRP TST frame (IEC62439-2-2016)
+    MESA_PACKET_OAM_TYPE_MRP_ITST,  // MRP ITST frame (IEC62439-2-2016)
+    MESA_PACKET_OAM_TYPE_DLR_BCN,   // DLR Beacon frame (CIP Networks Library Volume 2)
+    MESA_PACKET_OAM_TYPE_DLR_ADV,   // MRP Advertise frame (CIP Networks Library Volume 2)
+} mesa_packet_oam_type_t;
+
+// PTP actions used when encoding an injection header.
+typedef enum {
+    MESA_PACKET_PTP_ACTION_NONE = 0,             // No-op
+    MESA_PACKET_PTP_ACTION_ONE_STEP,             // One-step PTP
+    MESA_PACKET_PTP_ACTION_TWO_STEP,             // Two-step PTP
+    MESA_PACKET_PTP_ACTION_ONE_AND_TWO_STEP,     // Both one- and two-step PTP
+    MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP,     // Update time-of-day in PTP frame's originTimestamp field
+    MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP_SEQ, // Update time-of-day in PTP frame's originTimestamp field and sequence number
+    MESA_PACKET_PTP_ACTION_AFI_NONE,             // Update sequence number in AFI but no PTP updates
+} mesa_packet_ptp_action_t;
+
+// PDU encapsulation type
+typedef enum {
+    MESA_PACKET_ENCAP_TYPE_NONE,  // inj_encap is not used
+    MESA_PACKET_ENCAP_TYPE_ETHER, // PDU as indicated in ptp_action or oam_type ETHERNET encapsulated (no IP)
+    MESA_PACKET_ENCAP_TYPE_IP4,   // PDU as indicated in ptp_action IPV4 encapsulated
+    MESA_PACKET_ENCAP_TYPE_IP6,   // PDU as indicated in ptp_action IPV6 encapsulated
+} mesa_packet_encap_type_t;
+
+typedef struct {
+    mesa_packet_encap_type_t type;
+    uint32_t                 tag_count;    // Number of ETHERNET tags
+}mesa_packet_inj_encap_t;
+
+// Tag type the frame was received with.
+typedef enum {
+    MESA_TAG_TYPE_UNTAGGED = 0,    // Frame was received untagged or on an unaware port or with a tag that didn't match the port type.
+    MESA_TAG_TYPE_C_TAGGED,        // Frame was received with a C-tag
+    MESA_TAG_TYPE_S_TAGGED,        // Frame was received with an S-tag
+    MESA_TAG_TYPE_S_CUSTOM_TAGGED, // Frame was received with a custom S-tag
+} mesa_tag_type_t;
+
+#define MESA_PACKET_HDR_SIZE_BYTES 40
+
+// Input structure to mesa_packet_rx_hdr_decode().
+//
+// In order to be able to decode the side-band information coming with
+// a frame when extracting through an external CPU with extraction headers
+// enabled, a number of inputs are required.
+//
+// This structure provides this meta data.
+//
+// For future compatibility, memset() this structure to 0 prior to filling it in.
+typedef struct {
+    // The Ethernet type of the received frame, needed to decode mesa_packet_rx_info_t::tag_type correctly.
+    mesa_etype_t etype;
+
+    // Frame checksum, needed for Jaguar-2/Serval-T sFlow decoding.
+    uint32_t fcs;
+
+    // The length of the frame from DMAC to end-of-frame excluding FCS.
+    uint32_t length;
+} mesa_packet_rx_meta_t;
+
+// Provides additional info on decoded extraction header.
+//
+// In some cases, a frame received by the CPU should be dropped. This cannot always be detected by just looking
+// at the decoded extraction header.
+//
+// This enum provides the caller of mesa_packet_rx_hdr_decode() with a means to determine whether to drop or
+// forward the frame further to the application. Whether to actually drop it is fully up to the application.
+//
+// The individual enums may be combined into a mask.
+typedef enum {
+
+    // No hints.
+    MESA_PACKET_RX_HINTS_NONE = 0x00,
+
+    // If a frame is received on a C-port with a "foreign" tag (i.e. an S-tag or S-custom-tag), the frame should
+    // possibly be dropped. This is indicated with this enum being member of the hints flags.
+    // The same goes for frames received on S-ports or S-custom-ports with "foreign" tags.
+    MESA_PACKET_RX_HINTS_VLAN_TAG_MISMATCH = 0x01,
+
+    // If a tagged frame is received on a port that only should accept untagged frames or if an untagged frame
+    // is received on a port that should only accept tagged frames, then this will be set.
+    // In general, the application should not drop such frames, because e.g. BPDUs are normally untagged.
+    MESA_PACKET_RX_HINTS_VLAN_FRAME_MISMATCH = 0x02,
+
+    // If a frame gets classified to a VLAN ID on a port that is not member of that VID,
+    // the hints flags include this enum.
+    MESA_PACKET_RX_HINTS_VID_MISMATCH = 0x04,
+} mesa_packet_rx_hints_t;
+
+// Decoded extraction header properties.
+//
+// This structure gets populated with a call to mesa_packet_rx_hdr_decode().
+//
+// Many decoded parameters have two fields in the structure:
+// One indicating the value of the parameter (e.g. #tstamp_id), and another indicating if the parameter
+// is actually decoded or not (e.g. #tstamp_id_decoded).
+//
+// The reason for having an XXX_decoded boolean for every parameter is that the information held in the
+// extraction header is very different on the various devices, and even on the same chip type, the information
+// may be overloaded, depending on the incoming frame type.
+//
+// Most parameters don't have a decoded field, and in that case, they are always decoded.
+typedef struct {
+    // Hints useful for ingress filtering on received frames.
+    uint32_t hints;
+
+    // The length of the frame from DMAC to end-of-frame excluding FCS.
+    uint32_t length;
+
+    // The logical source port on which the frame was received.
+    // This may be MESA_PORT_NO_NONE, if the physical source port is not a part of the port map.
+    mesa_port_no_t port_no;
+
+    // The tag type (802.1Q TPID) the frame was received with, if any.
+    mesa_tag_type_t tag_type;
+
+    // VLAN classification information, tpid field not valid.
+    mesa_vlan_tag_t tag;
+
+    // VLAN stripped tag information.
+    // This is not set by the API, but may be used by the application to strip a tag from a received frame,
+    // before passing it on to other parts of the application.
+    mesa_vlan_tag_t stripped_tag;
+
+    // CPU extraction queue mask (one bit per CPU extraction queue).
+    uint32_t xtr_qu_mask;
+
+    // The frame's classified QoS class.
+    mesa_prio_t cos;
+
+    // The CoS ID (class of service, not to be confused with #cos).
+    mesa_cosid_t cosid;
+
+    // Drop Precedence.
+    mesa_dp_level_t dp;
+
+    // Set if frame has hit an ACL rule copying the frame to the CPU.
+    mesa_bool_t acl_hit;
+
+    // Two-step PTP timestamp identifier (6 bits) for Luton26 and Serval.
+    //
+    // On Luton26, this field identifies an Rx timestamp and potential Tx timestamps.
+    // On Serval, this field identifies Tx timestamps. Rx timestamps are embedded in the extraction header.
+    uint32_t tstamp_id;
+
+    // TRUE when #tstamp_id contains valid information, FALSE otherwise.
+    mesa_bool_t tstamp_id_decoded;
+
+    // The frame's ingress timestamp (not used for Luton26)
+    //
+    // Serval: Two-step PTP frames have the 32-bit Rx timestamp saved in this field.
+    uint64_t hw_tstamp;
+
+    // TRUE when #hw_tstamp contains valid information, FALSE otherwise.
+    mesa_bool_t hw_tstamp_decoded;
+
+    // sFlow type. Indicates if this is copied to the CPU due to Rx or Tx SFlow, or if
+    // it's not due to sFlow in the first place (MESA_SFLOW_TYPE_NONE).
+    mesa_sflow_type_t sflow_type;
+
+    // sFlow port, if #sflow_type != MESA_SFLOW_TYPE_NONE.
+    // Indicates the logical sFlow Rx or Tx port number that caused this frame to be copied to the CPU.
+    mesa_port_no_t sflow_port_no;
+
+    // Ingress flow ID or MESA_IFLOW_ID_NONE (not used for Luton26)
+    mesa_iflow_id_t iflow_id;
+} mesa_packet_rx_info_t;
+
+// Chip pipeline injection point.
+typedef enum {
+    MESA_PACKET_PIPELINE_PT_NONE         =  0, // None
+    MESA_PACKET_PIPELINE_PT_ANA_PORT_VOE =  2, // Analyzer port VOE MEP (up)
+    MESA_PACKET_PIPELINE_PT_ANA_CL       =  3, // Basic classification
+    MESA_PACKET_PIPELINE_PT_ANA_CLM      =  4, // Analyzer CLM (up)
+    MESA_PACKET_PIPELINE_PT_ANA_OU_VOI   =  6, // Analyzer outer VOI (MIP) (up)
+    MESA_PACKET_PIPELINE_PT_ANA_OU_SW    =  7, // Analyzer outer software MEP (up)
+    MESA_PACKET_PIPELINE_PT_ANA_OU_VOE   =  9, // Analyzer outer VOE MEP (up)
+    MESA_PACKET_PIPELINE_PT_ANA_IN_VOE   = 11, // Analyzer inner VOE MEP (up)
+    MESA_PACKET_PIPELINE_PT_ANA_IN_SW    = 13, // Analyzer inner software MEP (up)
+    MESA_PACKET_PIPELINE_PT_ANA_IN_VOI   = 14, // Analyzer inner VOI (MIP) (up)
+    MESA_PACKET_PIPELINE_PT_REW_IN_VOI   = 17, // Rewriter inner VOI (MIP) (down)
+    MESA_PACKET_PIPELINE_PT_REW_IN_SW    = 18, // Rewriter inner software MEP (down)
+    MESA_PACKET_PIPELINE_PT_REW_IN_VOE   = 19, // Rewriter inner VOE MEP (down)
+    MESA_PACKET_PIPELINE_PT_REW_OU_VOE   = 20, // Rewriter outer VOE MEP (down)
+    MESA_PACKET_PIPELINE_PT_REW_OU_SW    = 21, // Rewriter outer software MEP (down)
+    MESA_PACKET_PIPELINE_PT_REW_OU_VOI   = 22, // Rewriter outer VOI (MIP) (down)
+    MESA_PACKET_PIPELINE_PT_REW_PORT_VOE = 24  // Rewriter port VOE MEP (down)
+} mesa_packet_pipeline_pt_t;
+
+#define MESA_ISDX_CPU_TX 1023 // ISDX used for CPU transmissions
+
+// Injection Properties.
+//
+// Structural properties used to compose a binary injection header useful
+// for injection into an injection-header-enabled port on the switch.
+//
+// This structure must be initialized with mesa_packet_tx_info_init()
+// prior to calling mesa_packet_tx_hdr_encode().
+typedef struct {
+    // Switch frame option.
+    // If TRUE, the device will do switching lookups to determine the destination port set.
+    // The frame must then include a VLAN tag for correct classification.
+    // If FALSE, the destination port set is specified with #dst_port_mask.
+    mesa_bool_t switch_frm;
+
+    // Destination port set, used if #switch_frm is FALSE (not used for SparX-5).
+    uint64_t dst_port_mask;
+
+    // Destination port, used if #switch_frm is FALSE (only used for SparX-5).
+    mesa_port_no_t dst_port;
+
+    // VLAN tag information with architecture specific functionality.
+    //
+    // #switch_frm == TRUE:
+    //   The tag fields may be used for classification depending on the architecture.
+    //
+    // #switch_frm == FALSE:
+    //   By default, the frame is sent without any modification on each egress port.
+    //   If tag.tpid is zero and tag.vid is non-zero, frame modifications on egress will be enabled.
+    mesa_vlan_tag_t tag;
+
+    // The QoS class that this frame will be transmitted on (egress queue number).
+    // If #switch_frm is FALSE, MESA_PRIO_SUPER may be used for super-priority transmission.
+    mesa_prio_t cos;
+
+    // CoS ID (not used for Luton26 and Serval)
+    mesa_cosid_t cosid;
+
+    // Drop Precedence (not used for Luton26)
+    mesa_dp_level_t dp;
+
+    // PTP action, used if #switch_frm is FALSE.
+    // MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP is not used for Luton26
+    // MESA_PACKET_PTP_ACTION_AFI_NONE is not used for Luton26 and Serval
+    // MESA_PACKET_PTP_ACTION_ONE_AND_TWO_STEP is only used for Luton26
+    mesa_packet_ptp_action_t ptp_action;
+
+    // PTP TOD domain (only used for SparX-5).
+    uint8_t ptp_domain;
+
+    // The PTP identifier, used when #ptp_action == MESA_PACKET_PTP_ACTION_TWO_STEP.
+    // The CPU can only use from IDs 0 through 3.
+    uint8_t ptp_id;
+
+    // PTP timestamp indicating when the injection started, used when #ptp_action is != MESA_PACKET_PTP_ACTION_NONE.
+    // The rewriter can then calculate a residence time based on this and the frame's transmission timestamp.
+    // This is in 16 bit fraction of nano seconds.
+    // On Jaguar2 and Fireant:
+    // Allocated timestamp id (TX FIFO) for a two step transmission must be in the nano second part (id << 16)
+    // Sequence counter index for a PTP  transmission must be in the nano second part (index << 16)
+    uint64_t ptp_timestamp;
+
+    // OAM type, used if #ptp_action is MESA_PACKET_PTP_ACTION_NONE (not used for Luton26).
+    mesa_packet_oam_type_t oam_type;
+
+    // The injected PDU encapsulation.
+    mesa_packet_inj_encap_t inj_encap CAP(PACKET_INJ_ENCAP);
+
+    // Ingress flow ID used for egress lookup, if not MESA_IFLOW_ID_NONE (not used for Luton26).
+    mesa_iflow_id_t iflow_id;
+
+    // Masquerade port, used if #switch_frm is TRUE (not used for Luton26).
+    // When masquerading, the frame will be handled as if it was received on the masquerade port.
+    // Set to MESA_PORT_NO_NONE to disable masquerading.
+    mesa_port_no_t masquerade_port;
+
+    // PDU offset in 8 bit word counts (not used for Luton26 and Serval)
+    // Used in PTP or OAM injections.
+    uint32_t pdu_offset;
+
+    // On LAN966X:
+    // PTP frames are able to get automatically updated sequence numbers.
+    // There are a number of sequence number update counters. The 'sequence_idx' is a pointer to a counter.
+    uint32_t sequence_idx;
+
+    // Automatic Frame Injector ID (not used for Luton26).
+    // Set to MESA_AFI_ID_NONE if you don't want a frame injected periodically.
+    mesa_afi_id_t afi_id;
+
+    // Chip pipeline injection point (not used for Luton26 and Serval)
+    // Specifies where a frame is injected into the chip.
+    mesa_packet_pipeline_pt_t pipeline_pt;
+} mesa_packet_tx_info_t;
+
+// Decode binary extraction/Rx header.
+//
+// This function is mainly useful for external CPUs that wish
+// to decode the side-band information they get on NPI ports
+// with extraction headers enabled.
+//
+// meta [IN]  Meta info on received frame.
+// hdr  [IN]  Packet header (IFH)
+// info [OUT] Decoded extraction header.
+mesa_rc mesa_packet_rx_hdr_decode(const mesa_inst_t           inst,
+                                  const mesa_packet_rx_meta_t *const meta,
+                                  const uint8_t               hdr[MESA_PACKET_HDR_SIZE_BYTES],
+                                        mesa_packet_rx_info_t *const info);
+
+// Compose binary injection/Tx header.
+//
+// This function is mainly useful for external CPUs that inject
+// frames into the switch core with an injection frame header.
+//
+// In a few cases, it may also be useful for an application
+// running on the internal CPU: If the frame is to be looped
+// internally on a loop port, which is set-up to accept an
+// injection header, the injection header may be encoded with
+// this function.
+//
+// The info structure is the input to the encoding, which
+// results in a binary injection header and a length.
+//
+// On many architectures, the resulting binary length is constant,
+// but on some, it may vary with the contents of info properties.
+// To overcome this, call this function twice. The first time,
+// use a NULL pointer for bin_hdr. On return, the length
+// parameter will contain the number of bytes required in
+// bin_hdr. The second time, provide a non-NULL pointer to
+// bin_hdr.
+// On successful exit, bin_hdr_len will always be updated to contain
+// the actual number of bytes required to hold the IFH.
+// If you don't want to call this function twice, you may allocate
+// an array of MESA_PACKET_HDR_SIZE_BYTES (or MESA_arch_PACKET_HDR_SIZE_BYTES)
+// bytes, which will be long enough to accommodate all combinations
+// of content of info. But notice that there is no guarantee that
+// the actual length of the returned data matches MESA_arch_PACKET_HDR_SIZE_BYTES.
+//
+// info            [IN]   Tx header properties.
+// bin_hdr_max_len [IN]   If bin_hdr is non-NULL, the maximum length of the binary injection header in bytes
+// bin_hdr         [OUT]  NULL to get bin_hdr_len filled with required length in bytes.
+//                        Non-NULL to get it filled in with the binary injection header.
+// bin_hdr_len     [OUT]  If bin_hdr is NULL, the required length of binary injection header in bytes.
+//                        If bin_hdr is non-NULL, the actual number of bytes.
+mesa_rc mesa_packet_tx_hdr_encode(const mesa_inst_t           inst,
+                                  const mesa_packet_tx_info_t *const info,
+                                  const uint32_t              bin_hdr_max_len,
+                                  uint8_t                     *const bin_hdr,
+                                  uint32_t                    *const bin_hdr_len);
+
+// Send frame using Tx information
+//
+// tx_info [IN]  Frame Tx info
+// frame [IN]    Frame buffer.
+// length [IN]   Frame length excluding CRC.
+mesa_rc mesa_packet_tx_frame(const mesa_inst_t           inst,
+                             const mesa_packet_tx_info_t *const tx_info,
+                             const uint8_t               *const frame,
+                             const uint32_t              length);
+
+// Initialize a Tx info structure.
+//
+// Initialize the contents of a mesa_packet_tx_info_t
+// structure.
+//
+// info [OUT] Pointer to structure that gets initialized to defaults.
+mesa_rc mesa_packet_tx_info_init(const mesa_inst_t                  inst,
+                                       mesa_packet_tx_info_t *const info);
+
+/* - Rx frames ----------------------------------------------------- */
+
+// Get received frame
+//
+// data   [OUT]   Data buffer.
+// buflen [IN]    Length of data buffer.
+// rx_info [OUT]  Rx frame information
+mesa_rc mesa_packet_rx_frame(const mesa_inst_t     inst,
+                             uint8_t               *const data,
+                             const uint32_t        buflen,
+                             mesa_packet_rx_info_t *const rx_info);
+
+// Convert PHY counter values to TS count
+//
+// phy_cnt       [IN]  PHY counter value
+// ts_cnt        [OUT] TS count. This is in 16 bit fraction of nano seconds.
+mesa_rc mesa_packet_phy_cnt_to_ts_cnt(const mesa_inst_t  inst,
+                                      const uint32_t     phy_cnt,
+                                      uint64_t           *ts_cnt);
+
+// Convert a ns value to a TS (time stamper) count value
+//
+// ns            [IN]  Nanoseconds value
+// ts_cnt        [OUT] TS count. This is in 16 bit fraction of nano seconds.
+mesa_rc mesa_packet_ns_to_ts_cnt(const mesa_inst_t  inst,
+                                 const uint32_t     ns,
+                                 uint64_t           *ts_cnt);
+
+// Enumeration type representing the various types of PTP messages
+typedef enum  {
+    MESA_PACKET_PTP_MESSAGE_TYPE_GENERAL,     // General PTP packet
+    MESA_PACKET_PTP_MESSAGE_TYPE_SYNC,        // Sync packet
+    MESA_PACKET_PTP_MESSAGE_TYPE_P_DELAY_RESP // Peer Delay Response packet
+} mesa_packet_ptp_message_type_t;
+
+// Enumeration type representing the various internal modes of a TC
+typedef enum  {
+    MESA_PACKET_INTERNAL_TC_MODE_30BIT, // 30 BIT mode, reserved field
+    MESA_PACKET_INTERNAL_TC_MODE_32BIT, // 32 BIT mode, reserved field
+    MESA_PACKET_INTERNAL_TC_MODE_44BIT, // 44 BIT mode, Sub and Add
+    MESA_PACKET_INTERNAL_TC_MODE_48BIT, // 48 BIT mode, Sub and Add
+    MESA_PACKET_INTERNAL_TC_MODE_MAX,   // invalid mode
+} mesa_packet_internal_tc_mode_t;
+
+// Struct holding values used for delay compensation
+// This is in 16 bit fraction of nano seconds.
+typedef struct {
+    uint64_t  delay_cnt;      // Delay compensation (forward) used in case of Sync packets
+    uint64_t  asymmetry_cnt;  // Delay asymmetry compensation used in case of Peer Delay Response packets
+} mesa_packet_ptp_delay_comp_t;
+
+// Struct holding time stamping related parameters
+typedef struct {
+    mesa_bool_t                     ts_feature_is_PTS; // Configured timestamp feature is PHY timestamping
+    mesa_packet_internal_tc_mode_t  phy_ts_mode;       // The mode of PHY timestamping
+    mesa_bool_t                     backplane_port;    // Indicates if port is a backplane port. On some platforms backplane ports default to PHY timestamping
+    mesa_packet_ptp_delay_comp_t    delay_comp;        // Structure holding values used for delay compensation
+} mesa_packet_timestamp_props_t;
+
+#define MESA_PTP_FRAME_TS_LENGTH 4 // Length of the PHY inserted RX time in the frame
+
+// Get PTP timestamp from packet or from timestamp FIFO or from rx_info
+//
+// frm                          [IN]  Pointer to the PHY inserted RX time in the packet
+// rx_info                      [IN]  RX info structure
+// message_type                 [IN]  Type of the PTP message
+// ts_props                     [IN]  Time stamping related parameters
+// rxTime                       [OUT] Time stamp in 16 bit fraction of nano seconds.
+// timestamp_ok                 [OUT] Indication that time stamp was extracted OK.
+mesa_rc mesa_ptp_get_timestamp(const mesa_inst_t                   inst,
+                               const uint8_t                       frm[MESA_PTP_FRAME_TS_LENGTH],
+                               const mesa_packet_rx_info_t *const  rx_info,
+                               mesa_packet_ptp_message_type_t      message_type,
+                               mesa_packet_timestamp_props_t       ts_props,  
+                               uint64_t                            *rxTime,
+                               mesa_bool_t                         *timestamp_ok);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+:@byteposir:	@str"4#ifndef _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ìiPipiqiriúiÀiÃi˚i*iXiàiπiËi2i3i|i}i¡i—iiYiöi€ii/i0ixiyiéiüiŒii%i&i@ifiòi“i”iÌiiIiáiài™iªi¸ii iEisitiµi∂i‘iÂi ibi∞i	i,	i-	iK	iZ	i\	i´	i˙	iK
+ií
+iÿ
+i
+iÒ
+iiiiMiäi»i	iViôiﬁiini¬i‡i·i˘i
+igiƒiiÑiùiûiæiÂi"igihiãiµi¯iCiDijiàiæiiMiõiúi¬i‡iibi±iiiNiOijiyi{i∆iiUiùiÂiii6iXi†i°iØiºiæiÈi iYiqiri†iÌii0iwi≈iii/i@iãi–ii`i{i|i∞i“iii@iQiÜiºiŸi⁄ii^iÇi§i√iiZi°iÛiÙii ili∑ii6i7i\i{iøi iP iQ ig ix iΩ i⁄ i€ iÔ i!iL!iö!iõ!i”!i‘!i"i"iK"iã"iÌ"i&#i]#iù#i€#i$i[$i®$i‚$i%iR%iá%i≈%i&iJ&ií&iÍ&iE'i_'i`'ió'i¶'i‡'i!(ib(i±(i)iù)i*i*i*i9*iH*iÉ*iÒ*iG+iù+iπ+i∫+iÀ+iÓ+i4,iN,iO,ix,iá,i-iT-iõ-iË-i˚-i¸-i".i#.iV.iY.i†.iÎ.i/i/iF/iI/iõ/i¨/i0i00i10iu0iá0ià0i–0iÂ0i˛0iˇ0i91i<1i¨1i—1i‘1iA2iÆ2i±2iÊ2iı2iˆ2i3i-3i.3iü3i˝3iX4iã4iå4i˚4iV5i¿5iı5iˆ5iO6iy6iß6i¡6i¬6iÎ6iÓ6i;7i>7i{7i„7i8i8iá8iˆ8i29i59iè9i†9iﬁ9iÚ9iÛ9i;:iP:iQ:ië:iÚ:i;i;iV;it;iu;i≥;iÃ;iÕ;iÛ;i_<iû<i¿<i¡<i=i =i!=iJ=i_=i`=i§=iº=iΩ=i’=iÌ=iÓ=i4>iM>iN>iò>iü>iı>ia?iy?iz?i√?iÊ?iÁ?i#@i*@i@ió@iò@i·@iAiAi\Ai§Ai∆Ai«AiBijBiåBiçBi—BiÔBiCi	Ci+Ci:CiqCiæCiDiIDiôDiÏDi:EiàEi€Ei+Fi}Fi“Fi"GirGi«GiHihHiÖHiÜHi«Hi»Hi·Hi‰Hi.IitIiwIiΩIiÓIiˇIiJiwJi¡JiKi)Ki*Ki|KiòKiôKiËKiLiLiLLiSLioLi≈LiÃLiÈLi>Mi£MiºMiΩMiNimNiÇNiÉNi≥NiÀNiÃNi˙NiOiOiDOiãOi’OiPiFPiGPivPiéPièPi‰PiQi*Qi+Qi†QiRiARi`RiœRi3SiOSiPSi¨Si—Si“Si˘Si6Ti7TiòTi∂Ti∑TiUieUiûUi¬Ui√UiVi2ViKViLVi_Vi©ViWi0Wi1WilWiºWi÷Wi◊WiXiXXiÉXiúXiùXiƒXi«XiYiBYifYiiYiîYi∂YiﬂYi#ZinZiÕZi[i[iA[iD[iÑ[i√[i∆[i\i?\iz\i∏\i \iÕ\i]i=]i@]iÉ]i≈]i^i=^iw^i≤^iæ^i_i;_i~_iÕ_i`iS`i¶`i©`iŸ`iFaiûai˜ai^bi¨bibi;ciäciÿci+di,diOdiRdiqdiêdiΩdi¸diEeiåeiŒeiœeiÚeiıei+fi9fi<fiÇfiÃfigigi`giagiwgizgiôgi¬giÈgi"hibhiùhi·hi‚hiiiii8iiÖiiƒiijiIjiJjiÉjiÜjiØji¸ji6kinki¨ki≠kiki liDliÅliÕliÔlili4miDmiãmi“miniZniíni¥niµniÍnioi*oiÖoiÔoipipiCpiTpiøpiqiµqi$riEriFriúriùriÂriËri@sixsi∂si˝siRti•tiÓtiPuiúuiÌui<viàvi€vi‹viwi5w:@last_line_endi5w{;o;;o;	;
+@
+;iú;"5#define _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+
+;@{;o;;o;	;
+@
+;iÃ;"4#include <microchip/ethernet/switch/api/qos.h>
+;@{;o;;o;	;
+@
+;i˚;"4#include <microchip/ethernet/switch/api/vop.h>
+;@{;o;;o;	;
+@
+;i*;"3#include <microchip/ethernet/switch/api/l2.h>
+;@{;o;;o;	;
+@
+;iX;"5#include <microchip/ethernet/switch/api/misc.h>
+;@{;o;;o;	;
+@
+;ià;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;iπ;"4#include <microchip/ethernet/switch/api/afi.h>
+;@{;o;;o;	;
+@
+;iË;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;i¡;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i…;"	enum;@:
+enums[
+{:	enum{:enum_nameo;;o;	;
+@
+;i’;"$MESA_TOD_INTERNAL_TC_MODE_30BIT;@:cap0{;{;o;;o;	;
+@
+;i;"$MESA_TOD_INTERNAL_TC_MODE_32BIT;@;0{;{;o;;o;	;
+@
+;i];"$MESA_TOD_INTERNAL_TC_MODE_44BIT;@;0{;{;o;;o;	;
+@
+;iû;"$MESA_TOD_INTERNAL_TC_MODE_48BIT;@;0{;{;o;;o;	;
+@
+;iﬂ;""MESA_TOD_INTERNAL_TC_MODE_MAX;@;0:typedef_nameo;;o;	;
+@
+;i;" mesa_tod_internal_tc_mode_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;ié;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i£;"mesa_bool_t    ;@:	nameo;;o;	;
+@
+;i≤;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i“;"mesa_port_no_t ;@;o;;o;	;
+@
+;i·;"port_no;@;[ ;0;o;;o;	;
+@
+;i;"mesa_npi_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;if;"mesa_rc ;@;o;;o;	;
+@
+;in;"mesa_npi_conf_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iÄ;"const mesa_inst_t ;@;o;;o;	;
+@
+;ií;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≤;"mesa_npi_conf_t   *const ;@;o;;o;	;
+@
+;iÀ;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_npi_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i-;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iC;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ic;""const mesa_npi_conf_t *const ;@;o;;o;	;
+@
+;iÄ;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i™;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iø;"mesa_bool_t ;@;o;;o;	;
+@
+;iÀ;"enable;@;[ ;0;o;;o;	;
+@
+;i˛;"$mesa_packet_rx_queue_npi_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iE;"typedef;@:type_aliaso;;o;	;
+@
+;iM;"uint32_t ;@;o;;o;	;
+@
+;iV;" mesa_packet_rx_queue_size_t;@;[ ;0{;o;;o;	;
+@
+;it;"G#define MESA_PACKET_RX_QUEUE_CNT 8 // Number of Rx packet queues
+
+;@{
+;o;;o;	;
+@
+;i‘;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÈ;"%mesa_packet_rx_queue_size_t     ;@;o;;o;	;
+@
+;i	;"	size;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$;"%mesa_packet_rx_queue_npi_conf_t ;@;o;;o;	;
+@
+;iD;"npi;@;[ ;0{;{;{	;o;;o;	;
+@
+;if;"%mesa_packet_rx_grp_t            ;@;o;;o;	;
+@
+;iÜ;"grp_map;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¥;"%mesa_packet_rate_t              ;@;o;;o;	;
+@
+;i‘;"
+rate ;@;[ ;o;;o;	;
+@
+;iŸ;"CAP(QOS_CPU_QUEUE_SHAPER);@;o;;o;	;
+@
+;i	;" mesa_packet_rx_queue_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iK	;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i`	;"mesa_bool_t ;@;o;;o;	;
+@
+;il	;"bpdu_cpu_only;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØ	;"mesa_bool_t ;@;o;;o;	;
+@
+;iª	;"garp_cpu_only;@;[{:	expro;;o;	;
+@
+;i…	;"16;@;0{;{;{	;o;;o;	;
+@
+;i˛	;"mesa_bool_t ;@;o;;o;	;
+@
+;i
+
+;"ipmc_ctrl_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iO
+;"mesa_bool_t ;@;o;;o;	;
+@
+;i[
+;"igmp_cpu_only;@;[ ;0{;{;{	;o;;o;	;
+@
+;iñ
+;"mesa_bool_t ;@;o;;o;	;
+@
+;i¢
+;"mld_cpu_only;@;[ ;0;o;;o;	;
+@
+;i⁄
+;"mesa_packet_rx_reg_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i1;"bpdu_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;iQ;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;ih;"garp_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;ié;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i•;"learn_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÃ;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i„;"igmp_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i$;"ipmc_ctrl_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;iZ;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;iq;"mac_vid_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;iù;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i¥;"sflow_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‚;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i˘;"lrn_all_queue;@;[ ;0{;{;{	;o;;o;	;
+@
+;i#;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;i:;"l3_uc_queue ;@;[ ;o;;o;	;
+@
+;iF;"CAP(L3);@{;{;{	;o;;o;	;
+@
+;ir;"mesa_packet_rx_queue_t ;@;o;;o;	;
+@
+;iâ;"l3_other_queue ;@;[ ;o;;o;	;
+@
+;iò;"CAP(L3);@;o;;o;	;
+@
+;iƒ;"mesa_packet_rx_queue_map_t;@;[ ;0{
+;o;;o;	;
+@
+;i˘;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i;"!mesa_packet_rx_queue_conf_t ;@;o;;o;	;
+@
+;i*;"
+queue;@;[{;#o;;o;	;
+@
+;i0;"MESA_PACKET_RX_QUEUE_CNT;@;0{;{;{	;o;;o;	;
+@
+;ik;"!mesa_packet_rx_reg_t        ;@;o;;o;	;
+@
+;iá;"reg;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»;"!mesa_packet_rx_queue_map_t  ;@;o;;o;	;
+@
+;i‰;"map;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"!mesa_bitrate_t              ;@;o;;o;	;
+@
+;i;;"shaper_rate ;@;[ ;o;;o;	;
+@
+;iG;"CAP(QOS_CPU_PORT_SHAPER);@;o;;o;	;
+@
+;iÜ;"mesa_packet_rx_conf_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iÂ;"mesa_rc ;@;o;;o;	;
+@
+;iÌ;"mesa_packet_rx_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iB;"#mesa_packet_rx_conf_t  *const ;@;o;;o;	;
+@
+;i`;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iµ;"mesa_rc ;@;o;;o;	;
+@
+;iΩ;"mesa_packet_rx_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i’;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iÚ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;")const mesa_packet_rx_conf_t  *const ;@;o;;o;	;
+@
+;i<;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iæ;"mesa_rc ;@;o;;o;	;
+@
+;i∆;"!mesa_packet_rx_port_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i„;" const mesa_inst_t          ;@;o;;o;	;
+@
+;i˛;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i);" const mesa_port_no_t       ;@;o;;o;	;
+@
+;iD;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ir;"'mesa_packet_rx_port_conf_t *const ;@;o;;o;	;
+@
+;iî;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i;"mesa_rc ;@;o;;o;	;
+@
+;i;"!mesa_packet_rx_port_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i;;"&const mesa_inst_t                ;@;o;;o;	;
+@
+;i\;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iá;"&const mesa_port_no_t             ;@;o;;o;	;
+@
+;i®;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i÷;"-const mesa_packet_rx_port_conf_t *const ;@;o;;o;	;
+@
+;i˛;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;ij;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i;"mesa_port_no_t ;@;o;;o;	;
+@
+;ié;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ;"mesa_vid_t     ;@;o;;o;	;
+@
+;iŸ;"vid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_port_no_t ;@;o;;o;	;
+@
+;i;"port_tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iY;"mesa_bool_t    ;@;o;;o;	;
+@
+;ih;"aggr_rx_disable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i°;"mesa_bool_t    ;@;o;;o;	;
+@
+;i∞;"aggr_tx_disable;@;[ ;0;o;;o;	;
+@
+;iÁ;"mesa_packet_frame_info_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iX;"
+void ;@;o;;o;	;
+@
+;i];" mesa_packet_frame_info_init;@;[ ;0;![{;{	;o;;o;	;
+@
+;iy;"%mesa_packet_frame_info_t *const ;@;o;;o;	;
+@
+;iô;"	info;@;[ ;0;0{
+;o;;o;	;
+@
+;iØ;"typedef;@;{;o;;o;	;
+@
+;i∑;"	enum;@;[{;{;o;;o;	;
+@
+;i¬;"MESA_PACKET_FILTER_DISCARD;@;0{;{;o;;o;	;
+@
+;iÌ;"MESA_PACKET_FILTER_TAGGED;@;0{;{;o;;o;	;
+@
+;i$;"!MESA_PACKET_FILTER_UNTAGGED ;@;0;o;;o;	;
+@
+;i[;"mesa_packet_filter_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i0;"mesa_rc ;@;o;;o;	;
+@
+;i8;"mesa_packet_frame_filter;@;[ ;0;![{;{	;o;;o;	;
+@
+;iQ;"%const mesa_inst_t               ;@;o;;o;	;
+@
+;iq;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iò;",const mesa_packet_frame_info_t  *const ;@;o;;o;	;
+@
+;iø;"	info;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ;",mesa_packet_filter_t            *const ;@;o;;o;	;
+@
+;i;"filter;@;[ ;0;0{
+;o;;o;	;
+@
+;i/;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iD;"mesa_port_no_t ;@;o;;o;	;
+@
+;iS;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iè;"mesa_vid_t     ;@;o;;o;	;
+@
+;iû;"vid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‘;"mesa_bool_t    ;@;o;;o;	;
+@
+;i„;"aggr_rx_disable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t    ;@;o;;o;	;
+@
+;i+;"aggr_tx_disable;@;[ ;0;o;;o;	;
+@
+;ib;"mesa_packet_port_info_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i“;"mesa_rc ;@;o;;o;	;
+@
+;i⁄;"mesa_packet_port_info_init;@;[ ;0;![{;{	;o;;o;	;
+@
+;iı;"$mesa_packet_port_info_t *const ;@;o;;o;	;
+@
+;i;"	info;@;[ ;0;0{
+;o;;o;	;
+@
+;i@;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU;"mesa_packet_filter_t ;@;o;;o;	;
+@
+;ij;"filter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iä;"mesa_etype_t         ;@;o;;o;	;
+@
+;iü;"	tpid;@;[ ;0;o;;o;	;
+@
+;iæ;"mesa_packet_port_filter_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i√;"mesa_rc ;@;o;;o;	;
+@
+;iÀ;" mesa_packet_port_filter_get;@;[ ;0;![	{;{	;o;;o;	;
+@
+;iÁ;"#const mesa_inst_t             ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i/;"*const mesa_packet_port_info_t *const ;@;o;;o;	;
+@
+;iT;"	info;@;[ ;0{;{	;o;;o;	;
+@
+;i~;"#const uint32_t                ;@;o;;o;	;
+@
+;iú;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i≈;"*mesa_packet_port_filter_t     *const ;@;o;;o;	;
+@
+;iÍ;"filter;@;[ ;0;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i$;"mesa_bool_t    ;@;o;;o;	;
+@
+;i3;"rx_forward;@;[ ;0{;{;{	;o;;o;	;
+@
+;ip;"mesa_bool_t    ;@;o;;o;	;
+@
+;i;"tx_forward;@;[ ;0{;{;{	;o;;o;	;
+@
+;iª;"uint8_t        ;@;o;;o;	;
+@
+;i ;"vlan_discard;@;[{;#o;;o;	;
+@
+;i◊;"MESA_VIDS/8;@;0;o;;o;	;
+@
+;i;"mesa_packet_vlan_filter_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i{;"mesa_rc ;@;o;;o;	;
+@
+;iÉ;" mesa_packet_vlan_filter_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iü;"const mesa_inst_t         ;@;o;;o;	;
+@
+;iπ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i„;"const uint32_t            ;@;o;;o;	;
+@
+;i˝;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i& ;"&mesa_packet_vlan_filter_t *const ;@;o;;o;	;
+@
+;iG ;"filter;@;[ ;0;0{
+;o;;o;	;
+@
+;ig ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i| ;"mesa_bool_t ;@;o;;o;	;
+@
+;ià ;"changed;@;[ ;0;o;;o;	;
+@
+;iø ;"mesa_packet_vlan_status_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i!;"mesa_rc ;@;o;;o;	;
+@
+;i!;" mesa_packet_vlan_status_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i,!;"const mesa_inst_t         ;@;o;;o;	;
+@
+;iF!;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ip!;"&mesa_packet_vlan_status_t *const ;@;o;;o;	;
+@
+;ië!;"status;@;[ ;0;0{;o;;o;	;
+@
+;iõ!;">#define MESA_PRIO_SUPER MESA_PRIO_CNT // Super priority
+
+;@{
+;o;;o;	;
+@
+;i";"typedef;@;{;o;;o;	;
+@
+;i";"	enum;@;[{;{	;o;;o;	;
+@
+;i"";"MESA_PACKET_OAM_TYPE_NONE ;@:operatoro;;o;	;
+@
+;i<";"=;@;#o;;o;	;
+@
+;i>";"0;@;0{;{;o;;o;	;
+@
+;iO";"MESA_PACKET_OAM_TYPE_CCM;@;0{;{;o;;o;	;
+@
+;iè";" MESA_PACKET_OAM_TYPE_CCM_LM;@;0{;{;o;;o;	;
+@
+;iÒ";"MESA_PACKET_OAM_TYPE_LBM;@;0{;{;o;;o;	;
+@
+;i*#;"MESA_PACKET_OAM_TYPE_LBR;@;0{;{;o;;o;	;
+@
+;ia#;"MESA_PACKET_OAM_TYPE_LMM;@;0{;{;o;;o;	;
+@
+;i°#;"MESA_PACKET_OAM_TYPE_LMR;@;0{;{;o;;o;	;
+@
+;iﬂ#;"MESA_PACKET_OAM_TYPE_DMM;@;0{;{;o;;o;	;
+@
+;i $;"MESA_PACKET_OAM_TYPE_DMR;@;0{;{;o;;o;	;
+@
+;i_$;"MESA_PACKET_OAM_TYPE_1DM;@;0{;{;o;;o;	;
+@
+;i¨$;"MESA_PACKET_OAM_TYPE_LTM;@;0{;{;o;;o;	;
+@
+;iÊ$;"MESA_PACKET_OAM_TYPE_LTR;@;0{;{;o;;o;	;
+@
+;i%;"!MESA_PACKET_OAM_TYPE_GENERIC;@;0{;{;o;;o;	;
+@
+;iV%;"MESA_PACKET_OAM_TYPE_LCK;@;0{;{;o;;o;	;
+@
+;iã%;"#MESA_PACKET_OAM_TYPE_MPLS_TP_1;@;0{;{;o;;o;	;
+@
+;i…%;"#MESA_PACKET_OAM_TYPE_MPLS_TP_2;@;0{;{;o;;o;	;
+@
+;i&;"!MESA_PACKET_OAM_TYPE_MRP_TST;@;0{;{;o;;o;	;
+@
+;iN&;""MESA_PACKET_OAM_TYPE_MRP_ITST;@;0{;{;o;;o;	;
+@
+;iñ&;"!MESA_PACKET_OAM_TYPE_DLR_BCN;@;0{;{;o;;o;	;
+@
+;iÓ&;"!MESA_PACKET_OAM_TYPE_DLR_ADV;@;0;o;;o;	;
+@
+;iG';"mesa_packet_oam_type_t;@;[ ;0{
+;o;;o;	;
+@
+;ió';"typedef;@;{;o;;o;	;
+@
+;iü';"	enum;@;[{;{	;o;;o;	;
+@
+;i™';"!MESA_PACKET_PTP_ACTION_NONE ;@;$o;;o;	;
+@
+;i∆';"=;@;#o;;o;	;
+@
+;i»';"0;@;0{;{;o;;o;	;
+@
+;i‰';"$MESA_PACKET_PTP_ACTION_ONE_STEP;@;0{;{;o;;o;	;
+@
+;i%(;"$MESA_PACKET_PTP_ACTION_TWO_STEP;@;0{;{;o;;o;	;
+@
+;if(;",MESA_PACKET_PTP_ACTION_ONE_AND_TWO_STEP;@;0{;{;o;;o;	;
+@
+;iµ(;",MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP;@;0{;{;o;;o;	;
+@
+;i!);"0MESA_PACKET_PTP_ACTION_ORIGIN_TIMESTAMP_SEQ;@;0{;{;o;;o;	;
+@
+;i°);"$MESA_PACKET_PTP_ACTION_AFI_NONE;@;0;o;;o;	;
+@
+;i*;"mesa_packet_ptp_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i9*;"typedef;@;{;o;;o;	;
+@
+;iA*;"	enum;@;[	{;{;o;;o;	;
+@
+;iL*;" MESA_PACKET_ENCAP_TYPE_NONE;@;0{;{;o;;o;	;
+@
+;iá*;"!MESA_PACKET_ENCAP_TYPE_ETHER;@;0{;{;o;;o;	;
+@
+;iı*;"MESA_PACKET_ENCAP_TYPE_IP4;@;0{;{;o;;o;	;
+@
+;iK+;"MESA_PACKET_ENCAP_TYPE_IP6;@;0;o;;o;	;
+@
+;iü+;"mesa_packet_encap_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i∫+;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iœ+;"mesa_packet_encap_type_t ;@;o;;o;	;
+@
+;iË+;"	type;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÚ+;"uint32_t                 ;@;o;;o;	;
+@
+;i,;"tag_count;@;[ ;0;o;;o;	;
+@
+;i5,;"mesa_packet_inj_encap_t;@;[ ;0{
+;o;;o;	;
+@
+;ix,;"typedef;@;{;o;;o;	;
+@
+;iÄ,;"	enum;@;[	{;{	;o;;o;	;
+@
+;iã,;"MESA_TAG_TYPE_UNTAGGED ;@;$o;;o;	;
+@
+;i¢,;"=;@;#o;;o;	;
+@
+;i§,;"0;@;0{;{;o;;o;	;
+@
+;i-;"MESA_TAG_TYPE_C_TAGGED;@;0{;{;o;;o;	;
+@
+;iX-;"MESA_TAG_TYPE_S_TAGGED;@;0{;{;o;;o;	;
+@
+;iü-;""MESA_TAG_TYPE_S_CUSTOM_TAGGED;@;0;o;;o;	;
+@
+;iÍ-;"mesa_tag_type_t;@;[ ;0{;o;;o;	;
+@
+;i¸-;",#define MESA_PACKET_HDR_SIZE_BYTES 40
+
+;@{
+;o;;o;	;
+@
+;iõ/;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i0;"mesa_etype_t ;@;o;;o;	;
+@
+;i)0;"
+etype;@;[ ;0{;{;{	;o;;o;	;
+@
+;iy0;"uint32_t ;@;o;;o;	;
+@
+;iÇ0;"fcs;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‘0;"uint32_t ;@;o;;o;	;
+@
+;i›0;"length;@;[ ;0;o;;o;	;
+@
+;iÁ0;"mesa_packet_rx_meta_t;@;[ ;0{
+;o;;o;	;
+@
+;iÊ2;"typedef;@;{;o;;o;	;
+@
+;iÓ2;"	enum;@;[	{;{	;o;;o;	;
+@
+;i3;"MESA_PACKET_RX_HINTS_NONE ;@;$o;;o;	;
+@
+;i%3;"=;@;#o;;o;	;
+@
+;i'3;"	0x00;@;0{;{	;o;;o;	;
+@
+;i\4;",MESA_PACKET_RX_HINTS_VLAN_TAG_MISMATCH ;@;$o;;o;	;
+@
+;iÉ4;"=;@;#o;;o;	;
+@
+;iÖ4;"	0x01;@;0{;{	;o;;o;	;
+@
+;iƒ5;".MESA_PACKET_RX_HINTS_VLAN_FRAME_MISMATCH ;@;$o;;o;	;
+@
+;iÌ5;"=;@;#o;;o;	;
+@
+;iÔ5;"	0x02;@;0{;{	;o;;o;	;
+@
+;i}6;"'MESA_PACKET_RX_HINTS_VID_MISMATCH ;@;$o;;o;	;
+@
+;iü6;"=;@;#o;;o;	;
+@
+;i°6;"	0x04;@;0;o;;o;	;
+@
+;i©6;"mesa_packet_rx_hints_t;@;[ ;0{
+;o;;o;	;
+@
+;iè9;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i‚9;"uint32_t ;@;o;;o;	;
+@
+;iÎ9;"
+hints;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?:;"uint32_t ;@;o;;o;	;
+@
+;iH:;"length;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆ:;"mesa_port_no_t ;@;o;;o;	;
+@
+;i;;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iZ;;"mesa_tag_type_t ;@;o;;o;	;
+@
+;ij;;"tag_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑;;"mesa_vlan_tag_t ;@;o;;o;	;
+@
+;i«;;"tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢<;"mesa_vlan_tag_t ;@;o;;o;	;
+@
+;i≤<;"stripped_tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+=;"uint32_t ;@;o;;o;	;
+@
+;i=;"xtr_qu_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN=;"mesa_prio_t ;@;o;;o;	;
+@
+;iZ=;"cos;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®=;"mesa_cosid_t ;@;o;;o;	;
+@
+;iµ=;"
+cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŸ=;"mesa_dp_level_t ;@;o;;o;	;
+@
+;iÈ=;"dp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i8>;"mesa_bool_t ;@;o;;o;	;
+@
+;iD>;"acl_hit;@;[ ;0{;{;{	;o;;o;	;
+@
+;ie?;"uint32_t ;@;o;;o;	;
+@
+;in?;"tstamp_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i«?;"mesa_bool_t ;@;o;;o;	;
+@
+;i”?;"tstamp_id_decoded;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉ@;"uint64_t ;@;o;;o;	;
+@
+;iå@;"hw_tstamp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÂ@;"mesa_bool_t ;@;o;;o;	;
+@
+;iÒ@;"hw_tstamp_decoded;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®A;"mesa_sflow_type_t ;@;o;;o;	;
+@
+;i∫A;"sflow_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;inB;"mesa_port_no_t ;@;o;;o;	;
+@
+;i}B;"sflow_port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’B;"mesa_iflow_id_t ;@;o;;o;	;
+@
+;iÂB;"iflow_id;@;[ ;0;o;;o;	;
+@
+;iÒB;"mesa_packet_rx_info_t;@;[ ;0{
+;o;;o;	;
+@
+;i+C;"typedef;@;{;o;;o;	;
+@
+;i3C;"	enum;@;[{;{	;o;;o;	;
+@
+;i>C;"*MESA_PACKET_PIPELINE_PT_NONE         ;@;$o;;o;	;
+@
+;icC;"=;@;#o;;o;	;
+@
+;ifC;"0;@;0{;{	;o;;o;	;
+@
+;iuC;"*MESA_PACKET_PIPELINE_PT_ANA_PORT_VOE ;@;$o;;o;	;
+@
+;iöC;"=;@;#o;;o;	;
+@
+;iùC;"2;@;0{;{	;o;;o;	;
+@
+;i¬C;"*MESA_PACKET_PIPELINE_PT_ANA_CL       ;@;$o;;o;	;
+@
+;iÁC;"=;@;#o;;o;	;
+@
+;iÍC;"3;@;0{;{	;o;;o;	;
+@
+;i	D;"*MESA_PACKET_PIPELINE_PT_ANA_CLM      ;@;$o;;o;	;
+@
+;i.D;"=;@;#o;;o;	;
+@
+;i1D;"4;@;0{;{	;o;;o;	;
+@
+;iMD;"*MESA_PACKET_PIPELINE_PT_ANA_OU_VOI   ;@;$o;;o;	;
+@
+;irD;"=;@;#o;;o;	;
+@
+;iuD;"6;@;0{;{	;o;;o;	;
+@
+;iùD;"*MESA_PACKET_PIPELINE_PT_ANA_OU_SW    ;@;$o;;o;	;
+@
+;i¬D;"=;@;#o;;o;	;
+@
+;i≈D;"7;@;0{;{	;o;;o;	;
+@
+;iD;"*MESA_PACKET_PIPELINE_PT_ANA_OU_VOE   ;@;$o;;o;	;
+@
+;iE;"=;@;#o;;o;	;
+@
+;iE;"9;@;0{;{	;o;;o;	;
+@
+;i>E;"*MESA_PACKET_PIPELINE_PT_ANA_IN_VOE   ;@;$o;;o;	;
+@
+;icE;"=;@;#o;;o;	;
+@
+;ieE;"11;@;0{;{	;o;;o;	;
+@
+;iåE;"*MESA_PACKET_PIPELINE_PT_ANA_IN_SW    ;@;$o;;o;	;
+@
+;i±E;"=;@;#o;;o;	;
+@
+;i≥E;"13;@;0{;{	;o;;o;	;
+@
+;iﬂE;"*MESA_PACKET_PIPELINE_PT_ANA_IN_VOI   ;@;$o;;o;	;
+@
+;iF;"=;@;#o;;o;	;
+@
+;iF;"14;@;0{;{	;o;;o;	;
+@
+;i/F;"*MESA_PACKET_PIPELINE_PT_REW_IN_VOI   ;@;$o;;o;	;
+@
+;iTF;"=;@;#o;;o;	;
+@
+;iVF;"17;@;0{;{	;o;;o;	;
+@
+;iÅF;"*MESA_PACKET_PIPELINE_PT_REW_IN_SW    ;@;$o;;o;	;
+@
+;i¶F;"=;@;#o;;o;	;
+@
+;i®F;"18;@;0{;{	;o;;o;	;
+@
+;i÷F;"*MESA_PACKET_PIPELINE_PT_REW_IN_VOE   ;@;$o;;o;	;
+@
+;i˚F;"=;@;#o;;o;	;
+@
+;i˝F;"19;@;0{;{	;o;;o;	;
+@
+;i&G;"*MESA_PACKET_PIPELINE_PT_REW_OU_VOE   ;@;$o;;o;	;
+@
+;iKG;"=;@;#o;;o;	;
+@
+;iMG;"20;@;0{;{	;o;;o;	;
+@
+;ivG;"*MESA_PACKET_PIPELINE_PT_REW_OU_SW    ;@;$o;;o;	;
+@
+;iõG;"=;@;#o;;o;	;
+@
+;iùG;"21;@;0{;{	;o;;o;	;
+@
+;iÀG;"*MESA_PACKET_PIPELINE_PT_REW_OU_VOI   ;@;$o;;o;	;
+@
+;iG;"=;@;#o;;o;	;
+@
+;iÚG;"22;@;0{;{	;o;;o;	;
+@
+;iH;"*MESA_PACKET_PIPELINE_PT_REW_PORT_VOE ;@;$o;;o;	;
+@
+;iBH;"=;@;#o;;o;	;
+@
+;iDH;")24  // Rewriter port VOE MEP (down)
+;@;0;o;;o;	;
+@
+;ijH;"mesa_packet_pipeline_pt_t;@;[ ;0{;o;;o;	;
+@
+;iÜH;"G#define MESA_ISDX_CPU_TX 1023 // ISDX used for CPU transmissions
+
+;@{
+;o;;o;	;
+@
+;iÓI;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iK;"mesa_bool_t ;@;o;;o;	;
+@
+;iK;"switch_frm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÄK;"uint64_t ;@;o;;o;	;
+@
+;iâK;"dst_port_mask;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÏK;"mesa_port_no_t ;@;o;;o;	;
+@
+;i˚K;"dst_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;ißM;"mesa_vlan_tag_t ;@;o;;o;	;
+@
+;i∑M;"tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;iqN;"mesa_prio_t ;@;o;;o;	;
+@
+;i}N;"cos;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑N;"mesa_cosid_t ;@;o;;o;	;
+@
+;iƒN;"
+cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˛N;"mesa_dp_level_t ;@;o;;o;	;
+@
+;iO;"dp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i!P;"mesa_packet_ptp_action_t ;@;o;;o;	;
+@
+;i:P;"ptp_action;@;[ ;0{;{;{	;o;;o;	;
+@
+;izP;"uint8_t ;@;o;;o;	;
+@
+;iÇP;"ptp_domain;@;[ ;0{;{;{	;o;;o;	;
+@
+;iQ;"uint8_t ;@;o;;o;	;
+@
+;i"Q;"ptp_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i7S;"uint64_t ;@;o;;o;	;
+@
+;i@S;"ptp_timestamp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞S;"mesa_packet_oam_type_t ;@;o;;o;	;
+@
+;i«S;"oam_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝S;"mesa_packet_inj_encap_t ;@;o;;o;	;
+@
+;iT;"inj_encap ;@;[ ;o;;o;	;
+@
+;iT;"CAP(PACKET_INJ_ENCAP);@{;{;{	;o;;o;	;
+@
+;iúT;"mesa_iflow_id_t ;@;o;;o;	;
+@
+;i¨T;"iflow_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢U;"mesa_port_no_t ;@;o;;o;	;
+@
+;i±U;"masquerade_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;i6V;"uint32_t ;@;o;;o;	;
+@
+;i?V;"pdu_offset;@;[ ;0{;{;{	;o;;o;	;
+@
+;iW;"uint32_t ;@;o;;o;	;
+@
+;i"W;"sequence_idx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¿W;"mesa_afi_id_t ;@;o;;o;	;
+@
+;iŒW;"afi_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i\X;"mesa_packet_pipeline_pt_t ;@;o;;o;	;
+@
+;ivX;"pipeline_pt;@;[ ;0;o;;o;	;
+@
+;iÖX;"mesa_packet_tx_info_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iﬂY;"mesa_rc ;@;o;;o;	;
+@
+;iÁY;"mesa_packet_rx_hdr_decode;@;[ ;0;![	{;{	;o;;o;	;
+@
+;iZ;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iZ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iEZ;"(const mesa_packet_rx_meta_t *const ;@;o;;o;	;
+@
+;ihZ;"	meta;@;[ ;0{;{	;o;;o;	;
+@
+;iêZ;"!const uint8_t               ;@;o;;o;	;
+@
+;i¨Z;"hdr;@;[{;#o;;o;	;
+@
+;i∞Z;"MESA_PACKET_HDR_SIZE_BYTES;@;0{;{	;o;;o;	;
+@
+;iıZ;""mesa_packet_rx_info_t *const ;@;o;;o;	;
+@
+;i[;"	info;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i¨b;"mesa_rc ;@;o;;o;	;
+@
+;i¥b;"mesa_packet_tx_hdr_encode;@;[ ;0;![
+{;{	;o;;o;	;
+@
+;iŒb;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iÍb;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ic;"(const mesa_packet_tx_info_t *const ;@;o;;o;	;
+@
+;i5c;"	info;@;[ ;0{;{	;o;;o;	;
+@
+;i]c;"!const uint32_t              ;@;o;;o;	;
+@
+;iyc;"bin_hdr_max_len;@;[ ;0{;{	;o;;o;	;
+@
+;i¨c;"(uint8_t                     *const ;@;o;;o;	;
+@
+;iœc;"bin_hdr;@;[ ;0{;{	;o;;o;	;
+@
+;i˙c;"(uint32_t                    *const ;@;o;;o;	;
+@
+;id;"bin_hdr_len;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iΩd;"mesa_rc ;@;o;;o;	;
+@
+;i≈d;"mesa_packet_tx_frame;@;[ ;0;![	{;{	;o;;o;	;
+@
+;i⁄d;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iˆd;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ie;"(const mesa_packet_tx_info_t *const ;@;o;;o;	;
+@
+;i<e;"tx_info;@;[ ;0{;{	;o;;o;	;
+@
+;ibe;"(const uint8_t               *const ;@;o;;o;	;
+@
+;iÖe;"
+frame;@;[ ;0{;{	;o;;o;	;
+@
+;i©e;"!const uint32_t              ;@;o;;o;	;
+@
+;i≈e;"length;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÇf;"mesa_rc ;@;o;;o;	;
+@
+;iäf;"mesa_packet_tx_info_init;@;[ ;0;![{;{	;o;;o;	;
+@
+;i£f;"(const mesa_inst_t                  ;@;o;;o;	;
+@
+;i∆f;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÛf;""mesa_packet_tx_info_t *const ;@;o;;o;	;
+@
+;ig;"	info;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÈg;"mesa_rc ;@;o;;o;	;
+@
+;iÒg;"mesa_packet_rx_frame;@;[ ;0;![	{;{	;o;;o;	;
+@
+;ih;"const mesa_inst_t     ;@;o;;o;	;
+@
+;ih;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i?h;""uint8_t               *const ;@;o;;o;	;
+@
+;i\h;"	data;@;[ ;0{;{	;o;;o;	;
+@
+;ih;"const uint32_t        ;@;o;;o;	;
+@
+;iïh;"buflen;@;[ ;0{;{	;o;;o;	;
+@
+;i∫h;""mesa_packet_rx_info_t *const ;@;o;;o;	;
+@
+;i◊h;"rx_info;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÖi;"mesa_rc ;@;o;;o;	;
+@
+;içi;""mesa_packet_phy_cnt_to_ts_cnt;@;[ ;0;![{;{	;o;;o;	;
+@
+;i´i;"const mesa_inst_t  ;@;o;;o;	;
+@
+;iæi;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÍi;"const uint32_t     ;@;o;;o;	;
+@
+;i˝i;"phy_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i,j;"uint64_t           *;@;o;;o;	;
+@
+;i@j;"ts_cnt;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i¸j;"mesa_rc ;@;o;;o;	;
+@
+;ik;"mesa_packet_ns_to_ts_cnt;@;[ ;0;![{;{	;o;;o;	;
+@
+;ik;"const mesa_inst_t  ;@;o;;o;	;
+@
+;i0k;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iWk;"const uint32_t     ;@;o;;o;	;
+@
+;ijk;"ns;@;[ ;0{;{	;o;;o;	;
+@
+;ièk;"uint64_t           *;@;o;;o;	;
+@
+;i£k;"ts_cnt;@;[ ;0;0{
+;o;;o;	;
+@
+;ik;"typedef;@;{;o;;o;	;
+@
+;i¯k;"	enum;@;[{;{;o;;o;	;
+@
+;il;")MESA_PACKET_PTP_MESSAGE_TYPE_GENERAL;@;0{;{;o;;o;	;
+@
+;iHl;"&MESA_PACKET_PTP_MESSAGE_TYPE_SYNC;@;0{;{;o;;o;	;
+@
+;iÖl;"/MESA_PACKET_PTP_MESSAGE_TYPE_P_DELAY_RESP ;@;0;o;;o;	;
+@
+;iœl;"#mesa_packet_ptp_message_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i4m;"typedef;@;{;o;;o;	;
+@
+;i<m;"	enum;@;[
+{;{;o;;o;	;
+@
+;iHm;"'MESA_PACKET_INTERNAL_TC_MODE_30BIT;@;0{;{;o;;o;	;
+@
+;ièm;"'MESA_PACKET_INTERNAL_TC_MODE_32BIT;@;0{;{;o;;o;	;
+@
+;i÷m;"'MESA_PACKET_INTERNAL_TC_MODE_44BIT;@;0{;{;o;;o;	;
+@
+;in;"'MESA_PACKET_INTERNAL_TC_MODE_48BIT;@;0{;{;o;;o;	;
+@
+;i^n;"%MESA_PACKET_INTERNAL_TC_MODE_MAX;@;0;o;;o;	;
+@
+;iîn;"#mesa_packet_internal_tc_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;io;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i.o;"uint64_t  ;@;o;;o;	;
+@
+;i8o;"delay_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;iâo;"uint64_t  ;@;o;;o;	;
+@
+;iìo;"asymmetry_cnt;@;[ ;0;o;;o;	;
+@
+;iÒo;"!mesa_packet_ptp_delay_comp_t;@;[ ;0{
+;o;;o;	;
+@
+;iCp;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iXp;"%mesa_bool_t                     ;@;o;;o;	;
+@
+;ixp;"ts_feature_is_PTS;@;[ ;0{;{;{	;o;;o;	;
+@
+;i√p;"%mesa_packet_internal_tc_mode_t  ;@;o;;o;	;
+@
+;i„p;"phy_ts_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;iq;"%mesa_bool_t                     ;@;o;;o;	;
+@
+;i:q;"backplane_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iπq;"%mesa_packet_ptp_delay_comp_t    ;@;o;;o;	;
+@
+;iŸq;"delay_comp;@;[ ;0;o;;o;	;
+@
+;i&r;""mesa_packet_timestamp_props_t;@;[ ;0{;o;;o;	;
+@
+;iFr;"\#define MESA_PTP_FRAME_TS_LENGTH 4 // Length of the PHY inserted RX time in the frame
+
+;@{; {;{	;o;;o;	;
+@
+;i•t;"mesa_rc ;@;o;;o;	;
+@
+;i≠t;"mesa_ptp_get_timestamp;@;[ ;0;![{;{	;o;;o;	;
+@
+;iƒt;")const mesa_inst_t                   ;@;o;;o;	;
+@
+;iËt;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iu;")const uint8_t                       ;@;o;;o;	;
+@
+;i1u;"frm;@;[{;#o;;o;	;
+@
+;i5u;"MESA_PTP_FRAME_TS_LENGTH;@;0{;{	;o;;o;	;
+@
+;iou;")const mesa_packet_rx_info_t *const  ;@;o;;o;	;
+@
+;iìu;"rx_info;@;[ ;0{;{	;o;;o;	;
+@
+;iªu;")mesa_packet_ptp_message_type_t      ;@;o;;o;	;
+@
+;iﬂu;"message_type;@;[ ;0{;{	;o;;o;	;
+@
+;iv;")mesa_packet_timestamp_props_t       ;@;o;;o;	;
+@
+;i0v;"ts_props;@;[ ;0{;{	;o;;o;	;
+@
+;i[v;"*uint64_t                            *;@;o;;o;	;
+@
+;iÄv;"rxTime;@;[ ;0{;{	;o;;o;	;
+@
+;ißv;"*mesa_bool_t                         *;@;o;;o;	;
+@
+;iÃv;"timestamp_ok;@;[ ;0;0{;o;;o;	;
+@
+;i‹v;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;iw;"6#endif // _MICROCHIP_ETHERNET_SWITCH_API_PACKET_
+;@

@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/cmd.c
+stdio.h
+-
+stdarg.h
+-
+unistd.h
+-
+stdlib.h
+-
+sys/socket.h
+-
+sys/select.h
+-
+sys/un.h
+-
+ipc.h
+/home/codrin/mesa/mesa/demo/ipc.h
+
+/home/codrin/mesa/mesa/demo/ipc.h
+stdint.h
+-
+

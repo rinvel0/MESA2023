@@ -256,7 +256,6 @@ mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mepa/include/microchip/e
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/phy_macsec.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/phy_ts.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/types.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/demo/json_rpc.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/include/microchip/ethernet/switch/api.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/afi.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/capability.h
@@ -281,7 +280,6 @@ mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/demo/json_rpc.c
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/demo/main.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/demo/port.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: ../mesa/demo/trace.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/json_rpc.c.o: mesa/demo/mesa-ag/mesa-rpc.h
 
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/kr.c.o: ../me/include/microchip/ethernet/common.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/kr.c.o: ../me/include/microchip/ethernet/hdr_end.h
@@ -376,50 +374,6 @@ mesa/demo/CMakeFiles/mesa_demo_lib.dir/mac.c.o: ../mesa/demo/mac.c
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/mac.c.o: ../mesa/demo/main.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/mac.c.o: ../mesa/demo/trace.h
 
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../me/include/microchip/ethernet/common.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../me/include/microchip/ethernet/hdr_end.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../me/include/microchip/ethernet/hdr_start.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/base.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/cpu_port.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/hdr_end.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/hdr_start.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/phy.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/phy_macsec.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/phy_ts.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/poe.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/poe_ctrl.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/sfp_driver.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/synce.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/tod.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../meba/include/microchip/ethernet/board/api/types.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mepa/include/microchip/ethernet/phy/api.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/phy.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/phy_macsec.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/phy_ts.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mepa/include/microchip/ethernet/phy/api/types.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/demo/json_rpc.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/afi.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/capability.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/clock.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/init.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/l2.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/l3.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/misc.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/mrp.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/packet.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/port.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/port_list.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/qos.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/security.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/synce.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/ts.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/tsn.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/types.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: ../mesa/include/microchip/ethernet/switch/api/vop.h
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: mesa/demo/mesa-ag/mesa-rpc.c
-mesa/demo/CMakeFiles/mesa_demo_lib.dir/mesa-ag/mesa-rpc.c.o: mesa/demo/mesa-ag/mesa-rpc.h
 
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/packet.c.o: ../me/include/microchip/ethernet/common.h
 mesa/demo/CMakeFiles/mesa_demo_lib.dir/packet.c.o: ../me/include/microchip/ethernet/hdr_end.h

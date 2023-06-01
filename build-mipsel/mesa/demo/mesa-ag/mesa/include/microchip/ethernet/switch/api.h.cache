@@ -1,0 +1,99 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"”// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_H_
+#define _MICROCHIP_ETHERNET_SWITCH_API_H_
+
+#include <stdint.h>
+#include <microchip/ethernet/common.h>
+#include <microchip/ethernet/switch/api/port_list.h>
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/switch/api/capability.h>
+#include <microchip/ethernet/switch/api/init.h>
+#include <microchip/ethernet/switch/api/misc.h>
+#include <microchip/ethernet/switch/api/port.h>
+#include <microchip/ethernet/switch/api/tsn.h>
+#include <microchip/ethernet/switch/api/qos.h>
+#include <microchip/ethernet/switch/api/vop.h>
+#include <microchip/ethernet/switch/api/mrp.h>
+#include <microchip/ethernet/switch/api/l2.h>
+#include <microchip/ethernet/switch/api/afi.h>
+#include <microchip/ethernet/switch/api/packet.h>
+#include <microchip/ethernet/switch/api/security.h>
+#include <microchip/ethernet/switch/api/l3.h>
+#include <microchip/ethernet/switch/api/clock.h>
+#include <microchip/ethernet/switch/api/synce.h>
+#include <microchip/ethernet/switch/api/ts.h>
+
+#endif  // _MICROCHIP_ETHERNET_SWITCH_API_H_
+:@byteposir:	@str"/#ifndef _MICROCHIP_ETHERNET_SWITCH_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch["iPipiqiri—iÁiÂiÖiýi2ici™iÉiùi)iXi‡i¶iåiiBiti¨iÖii8ifigi”:@last_line_endi”{;o;;o;	;
+@
+;i—;"0#define _MICROCHIP_ETHERNET_SWITCH_API_H_
+
+;@{;o;;o;	;
+@
+;iÂ;"#include <stdint.h>
+;@{;o;;o;	;
+@
+;iÖ;",#include <microchip/ethernet/common.h>
+;@{;o;;o;	;
+@
+;iý;":#include <microchip/ethernet/switch/api/port_list.h>
+;@{;o;;o;	;
+@
+;i2;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;ic;";#include <microchip/ethernet/switch/api/capability.h>
+;@{;o;;o;	;
+@
+;i™;"5#include <microchip/ethernet/switch/api/init.h>
+;@{;o;;o;	;
+@
+;iÉ;"5#include <microchip/ethernet/switch/api/misc.h>
+;@{;o;;o;	;
+@
+;iù;"5#include <microchip/ethernet/switch/api/port.h>
+;@{;o;;o;	;
+@
+;i);"4#include <microchip/ethernet/switch/api/tsn.h>
+;@{;o;;o;	;
+@
+;iX;"4#include <microchip/ethernet/switch/api/qos.h>
+;@{;o;;o;	;
+@
+;i‡;"4#include <microchip/ethernet/switch/api/vop.h>
+;@{;o;;o;	;
+@
+;i¶;"4#include <microchip/ethernet/switch/api/mrp.h>
+;@{;o;;o;	;
+@
+;iå;"3#include <microchip/ethernet/switch/api/l2.h>
+;@{;o;;o;	;
+@
+;i;"4#include <microchip/ethernet/switch/api/afi.h>
+;@{;o;;o;	;
+@
+;iB;"7#include <microchip/ethernet/switch/api/packet.h>
+;@{;o;;o;	;
+@
+;it;"9#include <microchip/ethernet/switch/api/security.h>
+;@{;o;;o;	;
+@
+;i¨;"3#include <microchip/ethernet/switch/api/l3.h>
+;@{;o;;o;	;
+@
+;iÖ;"6#include <microchip/ethernet/switch/api/clock.h>
+;@{;o;;o;	;
+@
+;i;"6#include <microchip/ethernet/switch/api/synce.h>
+;@{;o;;o;	;
+@
+;i8;"4#include <microchip/ethernet/switch/api/ts.h>
+
+;@{;o;;o;	;
+@
+;ig;"2#endif  // _MICROCHIP_ETHERNET_SWITCH_API_H_
+;@

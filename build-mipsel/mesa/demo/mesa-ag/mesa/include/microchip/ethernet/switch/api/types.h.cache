@@ -1,0 +1,2022 @@
+{:	root[â{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"ÙL// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+#define _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+
+#include <microchip/ethernet/common.h>
+
+#include <microchip/ethernet/switch/api/capability.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// Policer packet rate in PPS
+typedef uint32_t mesa_packet_rate_t;
+
+#define MESA_PACKET_RATE_DISABLED 0xffffffff // Special value for disabling packet policer
+
+// Physical port number
+typedef uint32_t mesa_phys_port_no_t;
+
+// VOE index
+typedef uint32_t mesa_voe_idx_t;
+
+#define MESA_VOE_IDX_NONE 0xFFFFFFFF // Special value meaning no VOE
+
+// VOI (MIP) index
+typedef uint32_t mesa_voi_idx_t;
+
+#define MESA_VOI_IDX_NONE 0xFFFFFFFF // Special value meaning no VOI (MIP)
+
+// MRP index
+typedef uint32_t mesa_mrp_idx_t;
+
+#define MESA_MRP_IDX_NONE 0xFFFFFFFF // Special value meaning no MRP
+
+/****************************************************************************
+ * QoS types
+ ****************************************************************************/
+
+// Priority number
+typedef uint32_t mesa_prio_t;
+#define MESA_PRIO_CNT        8
+#define MESA_PRIO_ARRAY_SIZE MESA_PRIO_CNT
+
+// Queue number
+typedef uint32_t mesa_queue_t;
+#define MESA_QUEUE_CNT        8
+#define MESA_QUEUE_ARRAY_SIZE MESA_QUEUE_CNT
+
+// Tag Priority or Priority Code Point (PCP)
+typedef uint32_t mesa_tagprio_t;
+
+// Priority Code Point (PCP)
+typedef uint8_t mesa_pcp_t;
+#define MESA_PCP_CNT        8
+#define MESA_PCP_ARRAY_SIZE MESA_PCP_CNT
+
+// Drop Eligible Indicator (DEI)
+typedef mesa_bool_t mesa_dei_t;
+#define MESA_DEI_CNT        2
+#define MESA_DEI_ARRAY_SIZE MESA_DEI_CNT
+
+#define MESA_DSCP_CNT       64
+
+// Drop Precedence Level (DPL)
+typedef uint8_t mesa_dp_level_t;
+
+// Drop Precedence Level (DPL)
+typedef mesa_dp_level_t mesa_dpl_t;
+
+// Class of Service. Same as QoS class
+typedef uint8_t mesa_cos_t;
+
+// Percentage, 0-100
+typedef uint8_t mesa_pct_t;
+
+// Policer/Shaper bit rate in kbps (1000 bits per second).
+// The rate will be rounded to the nearest value supported by the chip
+typedef uint32_t mesa_bitrate_t;
+#define MESA_BITRATE_DISABLED 0xffffffff // Bitrate disabled
+
+// Policer/shaper burst level in bytes.
+// The level will be rounded to the nearest value supported by the chip
+typedef uint32_t mesa_burst_level_t;
+
+// Storm policer mode configuration
+typedef enum
+{
+    MESA_STORM_POLICER_MODE_PORTS_AND_CPU, // Police both CPU and front port destinations
+    MESA_STORM_POLICER_MODE_PORTS_ONLY,    // Police front port destinations only
+    MESA_STORM_POLICER_MODE_CPU_ONLY       // Police CPU destination only
+} mesa_storm_policer_mode_t;
+
+// DSCP value (0-63)
+typedef uint8_t mesa_dscp_t;
+
+// QoS Control Entry ID
+typedef uint32_t mesa_qce_id_t;
+
+// Dual leaky buckets policer configuration
+typedef enum
+{
+    MESA_POLICER_TYPE_MEF,    // MEF bandwidth profile
+    MESA_POLICER_TYPE_SINGLE  // Single bucket policer (CIR/CBS)
+} mesa_policer_type_t;
+
+// EVC policer index
+typedef uint16_t mesa_evc_policer_id_t;
+
+// WRED group number
+typedef uint32_t mesa_wred_group_t;
+
+#define MESA_QOS_MAP_ID_NONE  0xfff // ID for unallocated/unused ingress or egress map
+
+// Ingress map ID
+typedef uint16_t mesa_qos_ingress_map_id_t;
+
+// Egress map ID
+typedef uint16_t mesa_qos_egress_map_id_t;
+
+// Enable and boolean value
+typedef struct {
+    mesa_bool_t enable; // Enable/disable value
+    mesa_bool_t value;  // Value
+} mesa_opt_bool_t;
+
+// Enable and priority value
+typedef struct {
+    mesa_bool_t enable; // Enable/disable value
+    mesa_prio_t value;  // Value
+} mesa_opt_prio_t;
+
+/****************************************************************************
+ * VLAN types
+ ****************************************************************************/
+
+#define MESA_VID_NULL     ((const mesa_vid_t)0)     // NULL VLAN ID
+#define MESA_VID_DEFAULT  ((const mesa_vid_t)1)     // Default VLAN ID
+#define MESA_VID_RESERVED ((const mesa_vid_t)0xFFF) // Reserved VLAN ID
+#define MESA_VIDS         ((const mesa_vid_t)4096)  // Number of VLAN IDs
+#define MESA_VID_ALL      ((const mesa_vid_t)0x1000)// Untagged VID: All VLAN IDs
+
+// VLAN acceptable frame type
+typedef enum
+{
+    MESA_VLAN_FRAME_ALL,      // Accept all frames
+    MESA_VLAN_FRAME_TAGGED,   // Accept tagged frames only
+    MESA_VLAN_FRAME_UNTAGGED  // Accept untagged frames only
+} mesa_vlan_frame_t;
+
+// VLAN tag with "arbitrary" TPID.
+typedef struct {
+    mesa_etype_t   tpid; // Tag Protocol Identifier
+    mesa_tagprio_t pcp;  // Priority Code Point
+    mesa_bool_t    dei;  // Drop Eligible Indicator
+    mesa_vid_t     vid;  // VLAN Identifier
+} mesa_vlan_tag_t;
+
+#define MESA_ETYPE_VTSS 0x8880 // Vitesse Ethernet Type
+
+// Number of bytes for representing MAC address (SMAC/DMAC) type
+#define MESA_MAC_ADDR_SZ_BYTES 6
+
+// MAC address (SMAC/DMAC)
+typedef uint8_t mesa_mac_addr_t[MESA_MAC_ADDR_SZ_BYTES];
+
+// MAC Address in specific VLAN
+typedef struct
+{
+    mesa_vid_t vid; // VLAN ID
+    mesa_mac_t mac; // MAC address
+} mesa_vid_mac_t;
+
+// Broadcast address used for addr in the mesa_mac_t struct
+#define MAC_ADDR_BROADCAST {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+typedef uint32_t mesa_isdx_t; // Ingress Service Index type
+#define MESA_ISDX_NONE (0)    // Ingress Service Index number none
+#define MESA_VSI_NONE  (0)    // Virtual Switching Instance number none
+
+// Ingress flow ID
+typedef uint16_t mesa_iflow_id_t;
+
+#define MESA_IFLOW_ID_NONE 0 // No flow ID allocated
+
+// Aggregation Number.
+typedef uint32_t mesa_aggr_no_t;
+
+// GLAG number
+typedef uint32_t mesa_glag_no_t;
+
+/****************************************************************************
+ * CPU queue types
+ ****************************************************************************/
+// CPU Rx queue number
+typedef uint32_t mesa_packet_rx_queue_t;
+
+// CPU Rx group number
+// This is a value in range [0; MESA_PACKET_RX_GRP_CNT[.
+typedef uint32_t mesa_packet_rx_grp_t;
+
+// CPU Tx group number
+// This is a value in range [0; MESA_PACKET_TX_GRP_CNT[.
+typedef uint32_t mesa_packet_tx_grp_t;
+
+// COSID number
+typedef uint8_t mesa_cosid_t;
+#define MESA_COSID_CNT 8 // Number of COSIDs
+
+// Packet registration type
+typedef enum {
+    MESA_PACKET_REG_NORMAL,   // Global registration configuration is used
+    MESA_PACKET_REG_FORWARD,  // Forward normally
+    MESA_PACKET_REG_DISCARD,  // Discard
+    MESA_PACKET_REG_CPU_COPY, // Copy to CPU
+    MESA_PACKET_REG_CPU_ONLY  // Redirect to CPU
+} mesa_packet_reg_type_t;
+
+// Registration per port and L2CP
+typedef struct {
+    mesa_bool_t  cosid_enable; // Enable COSID
+    mesa_cosid_t cosid;        // COSID
+} mesa_packet_rx_port_l2cp_conf_t CAP(PACKET_PORT_L2CP_REG);
+
+// Packet registration per port
+typedef struct {
+    // IP MC Control, NORMAL/FORWARD/CPU_COPY supported
+    mesa_packet_reg_type_t          ipmc_ctrl_reg CAP(PACKET_PORT_IPMC);
+
+    // IGMP, NORMAL/FORWARD/CPU_ONLY supported
+    mesa_packet_reg_type_t          igmp_reg CAP(PACKET_PORT_IPMC);
+
+    // MLD, NORMAL/FORWARD/CPU_ONLY supported
+    mesa_packet_reg_type_t          mld_reg CAP(PACKET_PORT_IPMC);
+
+    // BPDU range: 01-80-C2-00-00-0X
+    mesa_packet_reg_type_t          bpdu_reg[16];
+
+    // GARP range: 01-80-C2-00-00-2X
+    mesa_packet_reg_type_t          garp_reg[16];
+
+    // BPDU range: 01-80-C2-00-00-0X
+    mesa_packet_rx_port_l2cp_conf_t bpdu[16] CAP(PACKET_PORT_L2CP_REG);
+
+    // GARP range: 01-80-C2-00-00-2X
+    mesa_packet_rx_port_l2cp_conf_t garp[16] CAP(PACKET_PORT_L2CP_REG);
+} mesa_packet_rx_port_conf_t;
+
+/****************************************************************************
+ * L3 types
+ ****************************************************************************/
+// UDP/TCP port number
+typedef uint16_t mesa_udp_tcp_t;
+
+// IPv4 address/mask
+typedef uint32_t mesa_ip_t;
+
+// IPv4 address/mask
+typedef mesa_ip_t mesa_ipv4_t;
+
+// Prefix size
+typedef uint32_t mesa_prefix_size_t;
+
+// IPv6 address/mask
+typedef struct
+{
+    uint8_t addr[16]; // Address
+} mesa_ipv6_t;
+
+// Router leg ID
+typedef uint32_t mesa_l3_rleg_id_t;
+
+// IP address type
+// This type may be used directly in SNMP InetAddressType types.
+typedef enum {
+    MESA_IP_TYPE_NONE = 0, // Matches "InetAddressType_unknown"
+    MESA_IP_TYPE_IPV4 = 1, // Matches "InetAddressType_ipv4"
+    MESA_IP_TYPE_IPV6 = 2, // Matches "InetAddressType_ipv6"
+} mesa_ip_type_t;
+
+// Either an IPv4 or IPv6 address
+typedef struct {
+    mesa_ip_type_t  type; // Union type
+    union {
+        mesa_ipv4_t ipv4; // IPv4 address
+        mesa_ipv6_t ipv6; // IPv6 address
+    } addr;               // IP address
+} mesa_ip_addr_t;
+
+// IPv4 network
+typedef struct
+{
+    mesa_ipv4_t        address;     // Network address
+    mesa_prefix_size_t prefix_size; // Prefix size
+} mesa_ipv4_network_t;
+
+// IPv6 network
+typedef struct
+{
+    mesa_ipv6_t        address;     // Network address
+    mesa_prefix_size_t prefix_size; // Prefix size
+} mesa_ipv6_network_t;
+
+// IPv6 network
+typedef struct
+{
+    mesa_ip_addr_t     address;     // Network address
+    mesa_prefix_size_t prefix_size; // Prefix size
+} mesa_ip_network_t;
+
+// Routing entry type
+typedef enum
+{
+    MESA_ROUTING_ENTRY_TYPE_INVALID = 0,
+    MESA_ROUTING_ENTRY_TYPE_IPV6_UC = 1,
+    MESA_ROUTING_ENTRY_TYPE_IPV4_MC = 2, // obsolete
+    MESA_ROUTING_ENTRY_TYPE_IPV4_UC = 3,
+} mesa_routing_entry_type_t;
+
+// IPv4 unicast routing entry
+typedef struct
+{
+    // Network to route
+    mesa_ipv4_network_t network;
+
+    // IP address of next-hop router (zero if local route, all-ones if discard route)
+    mesa_ipv4_t         destination;
+} mesa_ipv4_uc_t;
+
+// IPv6 routing entry
+typedef struct
+{
+    // Network to route
+    mesa_ipv6_network_t network;
+
+    // IP address of next-hop router (zero if local route, all-ones if discard route)
+    mesa_ipv6_t         destination;
+} mesa_ipv6_uc_t;
+
+// IPv4 multicast routing entry
+typedef struct
+{
+    // Multicast Group address
+    mesa_ipv4_t group;
+
+    // SIP address. All zero address enables source independent MC groups [*.G]
+    mesa_ipv4_t source;
+} mesa_ipv4_mc_t;
+
+// IPv6 multicast routing entry
+typedef struct
+{
+    // Multicast Group address
+    mesa_ipv6_t group;
+
+    // SIP address. All zero address enables source independent MC groups [*.G]
+    mesa_ipv6_t source;
+} mesa_ipv6_mc_t;
+
+// Unicast Routing entry
+typedef struct
+{
+   // Type of unicast route
+   mesa_routing_entry_type_t type;
+
+   union {
+       // IPv4 unicast route
+       mesa_ipv4_uc_t ipv4_uc;
+
+       // IPv6 unicast route
+       mesa_ipv6_uc_t ipv6_uc;
+   } route; // Route
+
+   // Link-local addresses needs to specify a egress vlan.
+   mesa_vid_t vlan;
+
+} mesa_routing_entry_t;
+
+#define MESA_RT_TYPE_IPV4_MC 0
+#define MESA_RT_TYPE_IPV6_MC 1
+
+// Multicast Routing entry
+typedef struct
+{
+    // Type of multicast route: MESA_RT_TYPE_IPV4_MC or MESA_RT_TYPE_IPV6_MC
+    mesa_bool_t type;
+
+    union {
+        // IPv4 multicast route
+        mesa_ipv4_mc_t ipv4_mc;
+
+        // IPv6 multicast route
+        mesa_ipv6_mc_t ipv6_mc;
+    } route; // MC Route
+
+    // Optional: Multicast Reverse Path Forwarding, use MESA_VID_NULL to ignore
+    mesa_vid_t source_rleg;
+} mesa_routing_mc_entry_t;
+
+
+// Routing interface statics counter
+typedef struct {
+    uint64_t ipv4uc_received_octets;    // IPv4UC octets received and hardware forwarded
+    uint64_t ipv4uc_received_frames;    // IPv4UC frames received and hardware forwarded
+    uint64_t ipv6uc_received_octets;    // IPv6UC octets received and hardware forwarded
+    uint64_t ipv6uc_received_frames;    // IPv6UC frames received and hardware forwarded
+
+    uint64_t ipv4uc_transmitted_octets; // IPv4UC octets transmitted
+    uint64_t ipv4uc_transmitted_frames; // IPv4UC frames transmitted
+    uint64_t ipv6uc_transmitted_octets; // IPv6UC octets transmitted
+    uint64_t ipv6uc_transmitted_frames; // IPv6UC frames transmitted
+
+    uint64_t ipv4mc_received_octets;    // IPv4MC octets received and hardware forwarded
+    uint64_t ipv4mc_received_frames;    // IPv4MC frames received and hardware forwarded
+    uint64_t ipv6mc_received_octets;    // IPv6MC octets received and hardware forwarded
+    uint64_t ipv6mc_received_frames;    // IPv6MC frames received and hardware forwarded
+
+    uint64_t ipv4mc_transmitted_octets; // IPv4MC octets transmitted
+    uint64_t ipv4mc_transmitted_frames; // IPv4MC frames transmitted
+    uint64_t ipv6mc_transmitted_octets; // IPv6MC octets transmitted
+    uint64_t ipv6mc_transmitted_frames; // IPv6MC frames transmitted
+} mesa_l3_counters_t;
+
+/****************************************************************************
+ * VCAP types
+ ****************************************************************************/
+// VCAP 1 bit
+typedef enum
+{
+    MESA_VCAP_BIT_ANY, // Value 0 or 1
+    MESA_VCAP_BIT_0,   // Value 0
+    MESA_VCAP_BIT_1    // Value 1
+} mesa_vcap_bit_t;
+
+// VCAP 8 bit value and mask
+typedef struct
+{
+    uint8_t value;   // Value
+    uint8_t mask;    // Mask, cleared bits are wildcards
+} mesa_vcap_u8_t;
+
+// VCAP 16 bit value and mask
+typedef struct
+{
+    uint8_t value[2];   // Value
+    uint8_t mask[2];    // Mask, cleared bits are wildcards
+} mesa_vcap_u16_t;
+
+// VCAP 24 bit value and mask
+typedef struct
+{
+    uint8_t value[3];   // Value
+    uint8_t mask[3];    // Mask, cleared bits are wildcards
+} mesa_vcap_u24_t;
+
+// VCAP 32 bit value and mask
+typedef struct
+{
+    uint8_t value[4];   // Value
+    uint8_t mask[4];    // Mask, cleared bits are wildcards
+} mesa_vcap_u32_t;
+
+// VCAP 40 bit value and mask
+typedef struct
+{
+    uint8_t value[5];   // Value
+    uint8_t mask[5];    // Mask, cleared bits are wildcards
+} mesa_vcap_u40_t;
+
+// VCAP 48 bit value and mask
+typedef struct
+{
+    uint8_t value[6];   // Value
+    uint8_t mask[6];    // Mask, cleared bits are wildcards
+} mesa_vcap_u48_t;
+
+// VCAP 128 bit value and mask
+typedef struct
+{
+    uint8_t value[16];   // Value
+    uint8_t mask[16];    // Mask, cleared bits are wildcards
+} mesa_vcap_u128_t;
+
+// VCAP VLAN ID value and mask
+typedef struct
+{
+    uint16_t value;   // Value
+    uint16_t mask;    // Mask, cleared bits are wildcards
+} mesa_vcap_vid_t;
+
+// VCAP IPv4 address value and mask
+typedef struct
+{
+    mesa_ip_t value;   // Value
+    mesa_ip_t mask;    // Mask, cleared bits are wildcards
+} mesa_vcap_ip_t;
+
+// VCAP UDP/TCP port range
+typedef struct
+{
+    mesa_bool_t    in_range;   // Port in range match
+    mesa_udp_tcp_t low;        // Port low value
+    mesa_udp_tcp_t high;       // Port high value
+} mesa_vcap_udp_tcp_t;
+
+// Value/Range type
+typedef enum
+{
+    MESA_VCAP_VR_TYPE_VALUE_MASK,      // Used as value/mask
+    MESA_VCAP_VR_TYPE_RANGE_INCLUSIVE, // Used as inclusive range: low <= range <= high
+    MESA_VCAP_VR_TYPE_RANGE_EXCLUSIVE  // Used as exclusive range: range < low or range > high
+} mesa_vcap_vr_type_t;
+
+// VCAP universal value or range type
+typedef uint16_t mesa_vcap_vr_value_t;
+
+// VCAP value/mask
+typedef struct
+{
+    mesa_vcap_vr_value_t value; // Value
+    mesa_vcap_vr_value_t mask;  // Mask, cleared bits are wildcards
+} mesa_vcap_vr_v_t;
+
+// VCAP range
+typedef struct
+{
+    mesa_vcap_vr_value_t low;  // Low value
+    mesa_vcap_vr_value_t high; // High value
+} mesa_vcap_vr_r_t;
+
+// VCAP universal value or range
+typedef struct
+{
+    mesa_vcap_vr_type_t type; // Type
+    union
+    {
+        mesa_vcap_vr_v_t v; // type == MESA_VCAP_VR_TYPE_VALUE_MASK
+        mesa_vcap_vr_r_t r; // type == MESA_VCAP_VR_TYPE_RANGE_XXXXXX
+    } vr; // Value or range
+} mesa_vcap_vr_t;
+
+// VCAP key type
+typedef enum {
+    MESA_VCAP_KEY_TYPE_NORMAL,     // Half key, SIP only
+    MESA_VCAP_KEY_TYPE_DOUBLE_TAG, // Quarter key, two tags
+    MESA_VCAP_KEY_TYPE_IP_ADDR,    // Half key, SIP and DIP
+    MESA_VCAP_KEY_TYPE_MAC_IP_ADDR // Full key, MAC and IP addresses
+} mesa_vcap_key_type_t;
+
+/****************************************************************************
+ * ACL types
+ ****************************************************************************/
+// ACL policer number
+typedef uint32_t mesa_acl_policer_no_t;
+
+#define MESA_ACL_POLICY_NO_NONE  0xffffffff // ACLs disabled on port
+
+// ACL policy number
+typedef uint32_t mesa_acl_policy_no_t;
+
+// Counter
+typedef uint64_t mesa_counter_t;
+
+// Counter pair
+typedef struct {
+    mesa_counter_t frames; // Number of frames
+    mesa_counter_t bytes;  // Number of bytes
+} mesa_counter_pair_t;
+
+// EVC/ECE counters
+typedef struct {
+    mesa_counter_pair_t rx_green;   // Rx green frames/bytes
+    mesa_counter_pair_t rx_yellow;  // Rx yellow frames/bytes
+    mesa_counter_pair_t rx_red;     // Rx red frames/bytes
+    mesa_counter_pair_t rx_discard; // Rx discarded frames/bytes
+    mesa_counter_pair_t tx_discard; // Tx discarded frames/bytes
+    mesa_counter_pair_t tx_green;   // Tx green frames/bytes
+    mesa_counter_pair_t tx_yellow;  // Tx yellow frames/bytes
+} mesa_evc_counters_t;
+
+// MPLS TC bits
+typedef uint8_t mesa_mpls_tc_t;
+
+/****************************************************************************
+ * 1588 types
+ ****************************************************************************/
+
+// Clock adjustment rate in parts per billion (ppb) * 1<<16.
+// Range is +-2**47 ppb
+// For example, 8.25 ppb is expressed as 0x0000.0000.0008.4000
+typedef int64_t mesa_clk_adj_rate_t;
+
+#define MESA_ONE_MIA 1000000000 // One billion
+#define MESA_ONE_MILL   1000000 // One million
+#define MESA_MAX_TIMEINTERVAL 0x7fffffffffffffffLL // Maximum time interval
+
+#define MESA_INTERVAL_SEC(t) ((int32_t)MESA_DIV64((t)>>16, MESA_ONE_MIA)) // One Second time interval
+#define MESA_INTERVAL_MS(t)  ((int32_t)MESA_DIV64((t)>>16, MESA_ONE_MILL)) // One millisecond time interval
+#define MESA_INTERVAL_US(t)  ((int32_t)MESA_DIV64((t)>>16, 1000)) // One microsecond time interval
+#define MESA_INTERVAL_NS(t)  ((int32_t)MESA_MOD64((t)>>16, MESA_ONE_MIA)) // This returns the ns part of the interval, not the total number of ns
+#define MESA_INTERVAL_PS(t)  (((((int32_t)(t & 0xffff))*1000)+0x8000)/0x10000) // This returns the ps part of the interval, not the total number of ps
+#define MESA_SEC_NS_INTERVAL(s,n) (((mesa_timeinterval_t)(n)+(mesa_timeinterval_t)(s)*MESA_ONE_MIA)<<16)  // TBD
+
+// Time stamp in seconds and nanoseconds
+typedef struct {
+    uint16_t sec_msb;         // Seconds msb
+    uint32_t seconds;         // Seconds
+    uint32_t nanoseconds;     // nanoseconds
+    uint16_t nanosecondsfrac; // 16 bit fraction of nano seconds
+} mesa_timestamp_t;
+
+// Scaled nanosec as defined in 802.1AS clause 6.3.3.1:
+// The ScaledNs type represents signed values of time and time interval in units of 2**-16 ns.
+typedef struct {
+    int32_t  scaled_ns_high; // Seconds
+    uint64_t scaled_ns_low;  // nanoseconds
+} mesa_scaled_ns_t;
+
+// Unsigned Scaled nanosec as defined in 802.1AS clause 6.3.3.2:
+// The UScaledNs type represents unsigned values of time and time interval in units of 2**-16 ns.
+typedef struct {
+    uint32_t uscaled_ns_high; // Seconds
+    uint64_t uscaled_ns_low;  // nanoseconds
+} mesa_uscaled_ns_t;
+
+// MII management controller
+typedef enum
+{
+    MESA_MIIM_CONTROLLER_0    = 0,  // MIIM controller 0
+    MESA_MIIM_CONTROLLER_1    = 1,  // MIIM controller 1
+    MESA_MIIM_CONTROLLER_2    = 2,  // MIIM controller 2
+    MESA_MIIM_CONTROLLER_3    = 3,  // MIIM controller 3
+    MESA_MIIM_CONTROLLERS,          // Number of MIIM controllers
+    MESA_MIIM_CONTROLLER_NONE = -1  // Unassigned MIIM controller
+} mesa_miim_controller_t;
+
+#define MESA_CLOCK_IDENTITY_LENGTH 8 // Length of unique PTP identifier
+
+// PTP clock unique identifier
+typedef uint8_t mesa_clock_identity[MESA_CLOCK_IDENTITY_LENGTH];
+
+#include <microchip/ethernet/hdr_end.h>
+#include <microchip/ethernet/switch/api/port_list.h>
+
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+:@byteposir:	@str"3#ifndef _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ÖiPipiqiriõi…i iÒiÚi(irisiëi∂i∑iii+iQiRi_iÄiÅi∆i«i⁄i˚i¸iGiHiUiviwiºiΩiiigihi{iôi∏i„i‰iÙii3i`iaiéiØi∞iÕiÈii0i1iRiriêiπi∫iŸi⁄i˘iii:i^i_iÜi¢i£i∏i‘i’iiWixiµi∂iﬁi&	iK	iL	ip	i}	i	iŸ	i+
+iu
+ií
+iì
+i®
+i≈
+i∆
+iﬁ
+i˛
+iˇ
+i+i8i:iqi≤i…i iﬂiiiiAiBiôiöi¨iÿiŸiÍiii2iCisiîißi®i≈i÷ii'i:i;iâióiÊiÁi+iri∫iiViWiuiÇiÑi∑iÚi/iDiEihiyi≠i›ii=iPiQiâiäiÀiÏiÌiiAiBibiqisiíiµi«i»iiDiEiÅiƒiii iBiCixiyiêi±i≤i¡i‚i„i1iDiìi™i”i‘iÎi$iKiLiciúi√iƒi‘iÚii i<iKiñi»iÒiiOiiijiåiùiÃiÙi1i2iRiciõi‰iÂiiXiYiái iÀii"i#iHizi{i†iËiÈiiVitiui√iœii5iViWiliàiâiûiΩiæiÕiÚiÛiiii:iIiJi[iiÄiìi‘i„i# i` iù iØ i∞ i“ i„ i!i!iA!ik!iì!i•!i¶!i∂!i≈!i«!i˛!i1"iH"iI"iY"ih"ij"i°"i‘"iÎ"iÏ"i¸"i#i#iD#iw#iå#iç#i£#i∞#i≤#i€#i$i9$ib$i$iÄ$iû$i≠$iØ$i«$iË$iÈ$i?%id%iv%iw%iç%iú%iû%i∂%i◊%iÿ%i.&iS&ie&if&iÜ&iï&ió&i∂&iÕ&iŒ&i'i6'iH'iI'ii'ix'iz'iô'i∞'i±'i(i(i+(i,(iE(iT(iV(ir(iï(iñ(i°(iæ(i›(iﬁ(i˚(i)i/)i0)ik)i)iÄ)iò)iô)i∏)i◊)iÿ)iÛ)i*i*iQ*ig*ih*it*iî*i¥*iµ*i’*iı*i+i+i_+i{+iñ+ió+iò+iΩ+iŒ+i',iÄ,iŸ,i2-i3-ix-iΩ-i.iG.iH.i°.i˙.iS/i¨/i≠/iÚ/i70i|0i¡0i◊0iÿ0i&1i41iÉ1ië1iû1i†1i«1iÈ1i2i2i2i<2iK2iM2ik2i§2i∂2i∑2i’2i‰2iÊ2i3iC3iV3iW3iu3iÑ3iÜ3iß3i„3iˆ3i˜3i4i$4i&4iG4iÉ4iñ4ió4iµ4iƒ4i∆4iÁ4i#5i65i75iU5id5if5iá5i√5i÷5i◊5iˆ5i6i6i)6if6iz6i{6iö6i©6i´6i 6i7i7i7i<7iK7iM7im7i®7i∫7iª7i÷7iÂ7iÁ7i8iN8iÄ8ió8iò8i¨8iπ8iª8i¯8iP9iØ9i∆9i«9iÌ9i:i:i(:i7:i9:ib:i¶:i∫:iª:i…:iÿ:i⁄:i;i3;iG;iH;ii;ix;iz;i†;i™;i∞;iÙ;i:<iV<ih<ii<iz<iâ<i¬<i˛<i:=i=ió=iò=iÊ=iÛ=iB>iX>iÄ>iÅ>i∆>i«>i‹>i?i?i?i0?i1?iA?iR?iÅ?iØ?i∆?i«?i€?iÏ?i)@ig@i¢@i„@i$AiaAiüAi∂Ai∑Ai«AiÁAiËAi6BiDBiìBiîBi—BiÈBi(CiMCiNCi}Ci¨Ci¯Ci˘Ci_DiÀDi.Ei¿EiWFi»Fi…FiÚFiGi0GiYGiÜGi«Gi€Gi‹GiHisHiÑHi¨HiÿHiÏHiÌHi.IiêIi°Ii Ii˜IiJiJi*Ji7Ji9JirJi´Ji‰JiKi_Ki°KiªKiºKiLiLi$LieLifLiéLi√LiƒLiÙL:@last_line_endiÙL{;o;;o;	;
+@
+;iõ;"4#define _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+
+;@{;o;;o;	;
+@
+;i ;"-#include <microchip/ethernet/common.h>
+
+;@{;o;;o;	;
+@
+;iÚ;";#include <microchip/ethernet/switch/api/capability.h>
+;@{;o;;o;	;
+@
+;i(;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;ië;"typedef;@:type_aliaso;;o;	;
+@
+;iô;"uint32_t ;@:typedef_nameo;;o;	;
+@
+;i¢;"mesa_packet_rate_t;@:
+array[ :cap0{;o;;o;	;
+@
+;i∑;"a#define MESA_PACKET_RATE_DISABLED 0xffffffff // Special value for disabling packet policer
+
+;@{
+;o;;o;	;
+@
+;i+;"typedef;@;o;;o;	;
+@
+;i3;"uint32_t ;@;o;;o;	;
+@
+;i<;"mesa_phys_port_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i_;"typedef;@;o;;o;	;
+@
+;ig;"uint32_t ;@;o;;o;	;
+@
+;ip;"mesa_voe_idx_t;@;[ ;0{;o;;o;	;
+@
+;iÅ;"K#define MESA_VOE_IDX_NONE 0xFFFFFFFF // Special value meaning no VOE
+
+;@{
+;o;;o;	;
+@
+;i⁄;"typedef;@;o;;o;	;
+@
+;i‚;"uint32_t ;@;o;;o;	;
+@
+;iÎ;"mesa_voi_idx_t;@;[ ;0{;o;;o;	;
+@
+;i¸;"Q#define MESA_VOI_IDX_NONE 0xFFFFFFFF // Special value meaning no VOI (MIP)
+
+;@{
+;o;;o;	;
+@
+;iU;"typedef;@;o;;o;	;
+@
+;i];"uint32_t ;@;o;;o;	;
+@
+;if;"mesa_mrp_idx_t;@;[ ;0{;o;;o;	;
+@
+;iw;"K#define MESA_MRP_IDX_NONE 0xFFFFFFFF // Special value meaning no MRP
+
+;@{
+;o;;o;	;
+@
+;i{;"typedef;@;o;;o;	;
+@
+;iÉ;"uint32_t ;@;o;;o;	;
+@
+;iå;"mesa_prio_t;@;[ ;0{;o;;o;	;
+@
+;iô;"$#define MESA_PRIO_CNT        8
+;@{;o;;o;	;
+@
+;i∏;"1#define MESA_PRIO_ARRAY_SIZE MESA_PRIO_CNT
+
+;@{
+;o;;o;	;
+@
+;iÙ;"typedef;@;o;;o;	;
+@
+;i¸;"uint32_t ;@;o;;o;	;
+@
+;i;"mesa_queue_t;@;[ ;0{;o;;o;	;
+@
+;i;"%#define MESA_QUEUE_CNT        8
+;@{;o;;o;	;
+@
+;i3;"3#define MESA_QUEUE_ARRAY_SIZE MESA_QUEUE_CNT
+
+;@{
+;o;;o;	;
+@
+;ié;"typedef;@;o;;o;	;
+@
+;iñ;"uint32_t ;@;o;;o;	;
+@
+;iü;"mesa_tagprio_t;@;[ ;0{
+;o;;o;	;
+@
+;iÕ;"typedef;@;o;;o;	;
+@
+;i’;"uint8_t ;@;o;;o;	;
+@
+;i›;"mesa_pcp_t;@;[ ;0{;o;;o;	;
+@
+;iÈ;"##define MESA_PCP_CNT        8
+;@{;o;;o;	;
+@
+;i;"/#define MESA_PCP_ARRAY_SIZE MESA_PCP_CNT
+
+;@{
+;o;;o;	;
+@
+;iR;"typedef;@;o;;o;	;
+@
+;iZ;"mesa_bool_t ;@;o;;o;	;
+@
+;if;"mesa_dei_t;@;[ ;0{;o;;o;	;
+@
+;ir;"##define MESA_DEI_CNT        2
+;@{;o;;o;	;
+@
+;iê;"/#define MESA_DEI_ARRAY_SIZE MESA_DEI_CNT
+
+;@{;o;;o;	;
+@
+;i∫;"%#define MESA_DSCP_CNT       64
+
+;@{
+;o;;o;	;
+@
+;i˘;"typedef;@;o;;o;	;
+@
+;i;"uint8_t ;@;o;;o;	;
+@
+;i	;"mesa_dp_level_t;@;[ ;0{
+;o;;o;	;
+@
+;i:;"typedef;@;o;;o;	;
+@
+;iB;"mesa_dp_level_t ;@;o;;o;	;
+@
+;iR;"mesa_dpl_t;@;[ ;0{
+;o;;o;	;
+@
+;iÜ;"typedef;@;o;;o;	;
+@
+;ié;"uint8_t ;@;o;;o;	;
+@
+;iñ;"mesa_cos_t;@;[ ;0{
+;o;;o;	;
+@
+;i∏;"typedef;@;o;;o;	;
+@
+;i¿;"uint8_t ;@;o;;o;	;
+@
+;i»;"mesa_pct_t;@;[ ;0{
+;o;;o;	;
+@
+;iW;"typedef;@;o;;o;	;
+@
+;i_;"uint32_t ;@;o;;o;	;
+@
+;ih;"mesa_bitrate_t;@;[ ;0{;o;;o;	;
+@
+;ix;"C#define MESA_BITRATE_DISABLED 0xffffffff // Bitrate disabled
+
+;@{
+;o;;o;	;
+@
+;i&	;"typedef;@;o;;o;	;
+@
+;i.	;"uint32_t ;@;o;;o;	;
+@
+;i7	;"mesa_burst_level_t;@;[ ;0{
+;o;;o;	;
+@
+;ip	;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;ix	;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÉ	;"*MESA_STORM_POLICER_MODE_PORTS_AND_CPU;@;0{;{;o;;o;	;
+@
+;i›	;"'MESA_STORM_POLICER_MODE_PORTS_ONLY;@;0{;{;o;;o;	;
+@
+;i/
+;",MESA_STORM_POLICER_MODE_CPU_ONLY       ;@;0;o;;o;	;
+@
+;iw
+;"mesa_storm_policer_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i®
+;"typedef;@;o;;o;	;
+@
+;i∞
+;"uint8_t ;@;o;;o;	;
+@
+;i∏
+;"mesa_dscp_t;@;[ ;0{
+;o;;o;	;
+@
+;iﬁ
+;"typedef;@;o;;o;	;
+@
+;iÊ
+;"uint32_t ;@;o;;o;	;
+@
+;iÔ
+;"mesa_qce_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i+;"typedef;@;{;o;;o;	;
+@
+;i3;"	enum;@;[{;{;o;;o;	;
+@
+;i>;"MESA_POLICER_TYPE_MEF;@;0{;{;o;;o;	;
+@
+;iu;"MESA_POLICER_TYPE_SINGLE  ;@;0;o;;o;	;
+@
+;i¥;"mesa_policer_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iﬂ;"typedef;@;o;;o;	;
+@
+;iÁ;"uint16_t ;@;o;;o;	;
+@
+;i;"mesa_evc_policer_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;o;;o;	;
+@
+;i%;"uint32_t ;@;o;;o;	;
+@
+;i.;"mesa_wred_group_t;@;[ ;0{;o;;o;	;
+@
+;iB;"]#define MESA_QOS_MAP_ID_NONE  0xfff // ID for unallocated/unused ingress or egress map
+
+;@{
+;o;;o;	;
+@
+;i¨;"typedef;@;o;;o;	;
+@
+;i¥;"uint16_t ;@;o;;o;	;
+@
+;iΩ;"mesa_qos_ingress_map_id_t;@;[ ;0{
+;o;;o;	;
+@
+;iÍ;"typedef;@;o;;o;	;
+@
+;iÚ;"uint16_t ;@;o;;o;	;
+@
+;i˚;"mesa_qos_egress_map_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i2;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iG;"mesa_bool_t ;@:	nameo;;o;	;
+@
+;iS;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw;"mesa_bool_t ;@; o;;o;	;
+@
+;iÉ;"
+value;@;[ ;0;o;;o;	;
+@
+;iñ;"mesa_opt_bool_t;@;[ ;0{
+;o;;o;	;
+@
+;i≈;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i⁄;"mesa_bool_t ;@; o;;o;	;
+@
+;iÊ;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+;"mesa_prio_t ;@; o;;o;	;
+@
+;i;"
+value;@;[ ;0;o;;o;	;
+@
+;i);"mesa_opt_prio_t;@;[ ;0{;o;;o;	;
+@
+;iÁ;"I#define MESA_VID_NULL     ((const mesa_vid_t)0)     // NULL VLAN ID
+;@{;o;;o;	;
+@
+;i+;"L#define MESA_VID_DEFAULT  ((const mesa_vid_t)1)     // Default VLAN ID
+;@{;o;;o;	;
+@
+;ir;"M#define MESA_VID_RESERVED ((const mesa_vid_t)0xFFF) // Reserved VLAN ID
+;@{;o;;o;	;
+@
+;i∫;"O#define MESA_VIDS         ((const mesa_vid_t)4096)  // Number of VLAN IDs
+;@{;o;;o;	;
+@
+;i;"X#define MESA_VID_ALL      ((const mesa_vid_t)0x1000)// Untagged VID: All VLAN IDs
+
+;@{
+;o;;o;	;
+@
+;iu;"typedef;@;{;o;;o;	;
+@
+;i};"	enum;@;[{;{;o;;o;	;
+@
+;ià;"MESA_VLAN_FRAME_ALL;@;0{;{;o;;o;	;
+@
+;iª;"MESA_VLAN_FRAME_TAGGED;@;0{;{;o;;o;	;
+@
+;iˆ;"MESA_VLAN_FRAME_UNTAGGED  ;@;0;o;;o;	;
+@
+;i1;"mesa_vlan_frame_t;@;[ ;0{
+;o;;o;	;
+@
+;ih;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i};"mesa_etype_t   ;@; o;;o;	;
+@
+;iå;"	tpid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±;"mesa_tagprio_t ;@; o;;o;	;
+@
+;i¿;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i·;"mesa_bool_t    ;@; o;;o;	;
+@
+;i;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_vid_t     ;@; o;;o;	;
+@
+;i$;"vid;@;[ ;0;o;;o;	;
+@
+;i?;"mesa_vlan_tag_t;@;[ ;0{;o;;o;	;
+@
+;iQ;">#define MESA_ETYPE_VTSS 0x8880 // Vitesse Ethernet Type
+
+;@{;o;;o;	;
+@
+;iÀ;"'#define MESA_MAC_ADDR_SZ_BYTES 6
+
+;@{
+;o;;o;	;
+@
+;i;"typedef;@;o;;o;	;
+@
+;i;"uint8_t ;@;o;;o;	;
+@
+;i;"mesa_mac_addr_t;@;[{:	expro;;o;	;
+@
+;i(;"MESA_MAC_ADDR_SZ_BYTES;@;0{
+;o;;o;	;
+@
+;ib;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iw;"mesa_vid_t ;@; o;;o;	;
+@
+;iÇ;"vid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iñ;"mesa_mac_t ;@; o;;o;	;
+@
+;i°;"mac;@;[ ;0;o;;o;	;
+@
+;i∑;"mesa_vid_mac_t;@;[ ;0{;o;;o;	;
+@
+;i;"F#define MAC_ADDR_BROADCAST {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+
+;@{
+;o;;o;	;
+@
+;iE;"typedef;@;o;;o;	;
+@
+;iM;"uint32_t ;@;o;;o;	;
+@
+;iV;"mesa_isdx_t;@;[ ;0{;o;;o;	;
+@
+;iÅ;"H#define MESA_ISDX_NONE (0)    // Ingress Service Index number none
+;@{;o;;o;	;
+@
+;iƒ;"N#define MESA_VSI_NONE  (0)    // Virtual Switching Instance number none
+
+;@{
+;o;;o;	;
+@
+;i ;"typedef;@;o;;o;	;
+@
+;i(;"uint16_t ;@;o;;o;	;
+@
+;i1;"mesa_iflow_id_t;@;[ ;0{;o;;o;	;
+@
+;iC;";#define MESA_IFLOW_ID_NONE 0 // No flow ID allocated
+
+;@{
+;o;;o;	;
+@
+;iê;"typedef;@;o;;o;	;
+@
+;iò;"uint32_t ;@;o;;o;	;
+@
+;i°;"mesa_aggr_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i¡;"typedef;@;o;;o;	;
+@
+;i…;"uint32_t ;@;o;;o;	;
+@
+;i“;"mesa_glag_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i™;"typedef;@;o;;o;	;
+@
+;i≤;"uint32_t ;@;o;;o;	;
+@
+;iª;"mesa_packet_rx_queue_t;@;[ ;0{
+;o;;o;	;
+@
+;i$;"typedef;@;o;;o;	;
+@
+;i,;"uint32_t ;@;o;;o;	;
+@
+;i5;"mesa_packet_rx_grp_t;@;[ ;0{
+;o;;o;	;
+@
+;iú;"typedef;@;o;;o;	;
+@
+;i§;"uint32_t ;@;o;;o;	;
+@
+;i≠;"mesa_packet_tx_grp_t;@;[ ;0{
+;o;;o;	;
+@
+;i‘;"typedef;@;o;;o;	;
+@
+;i‹;"uint8_t ;@;o;;o;	;
+@
+;i‰;"mesa_cosid_t;@;[ ;0{;o;;o;	;
+@
+;iÚ;"3#define MESA_COSID_CNT 8 // Number of COSIDs
+
+;@{
+;o;;o;	;
+@
+;i<;"typedef;@;{;o;;o;	;
+@
+;iD;"	enum;@;[
+{;{;o;;o;	;
+@
+;iO;"MESA_PACKET_REG_NORMAL;@;0{;{;o;;o;	;
+@
+;iö;"MESA_PACKET_REG_FORWARD;@;0{;{;o;;o;	;
+@
+;iÃ;"MESA_PACKET_REG_DISCARD;@;0{;{;o;;o;	;
+@
+;iı;"MESA_PACKET_REG_CPU_COPY;@;0{;{;o;;o;	;
+@
+;i";"MESA_PACKET_REG_CPU_ONLY  ;@;0;o;;o;	;
+@
+;iQ;"mesa_packet_reg_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iå;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i°;"mesa_bool_t  ;@; o;;o;	;
+@
+;iÆ;"cosid_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i–;"mesa_cosid_t ;@; o;;o;	;
+@
+;i›;"
+cosid;@;[ ;0;o;;o;	;
+@
+;iˆ;"%mesa_packet_rx_port_l2cp_conf_t ;@;[ ;o;;o;	;
+@
+;i;"CAP(PACKET_PORT_L2CP_REG);@{
+;o;;o;	;
+@
+;iR;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iü;"%mesa_packet_reg_type_t          ;@; o;;o;	;
+@
+;iø;"ipmc_ctrl_reg ;@;[ ;o;;o;	;
+@
+;iÕ;"CAP(PACKET_PORT_IPMC);@{;{;{	;o;;o;	;
+@
+;i;"%mesa_packet_reg_type_t          ;@; o;;o;	;
+@
+;i8;"igmp_reg ;@;[ ;o;;o;	;
+@
+;iA;"CAP(PACKET_PORT_IPMC);@{;{;{	;o;;o;	;
+@
+;iã;"%mesa_packet_reg_type_t          ;@; o;;o;	;
+@
+;i´;"mld_reg ;@;[ ;o;;o;	;
+@
+;i≥;"CAP(PACKET_PORT_IPMC);@{;{;{	;o;;o;	;
+@
+;iÙ;"%mesa_packet_reg_type_t          ;@; o;;o;	;
+@
+;i;"bpdu_reg;@;[{;!o;;o;	;
+@
+;i;"16;@;0{;{;{	;o;;o;	;
+@
+;iL;"%mesa_packet_reg_type_t          ;@; o;;o;	;
+@
+;il;"garp_reg;@;[{;!o;;o;	;
+@
+;iu;"16;@;0{;{;{	;o;;o;	;
+@
+;i§;"%mesa_packet_rx_port_l2cp_conf_t ;@; o;;o;	;
+@
+;iƒ;"	bpdu;@;[{;!o;;o;	;
+@
+;i…;"16;@;o;;o;	;
+@
+;iÕ;"CAP(PACKET_PORT_L2CP_REG);@{;{;{	;o;;o;	;
+@
+;i;"%mesa_packet_rx_port_l2cp_conf_t ;@; o;;o;	;
+@
+;i2;"	garp;@;[{;!o;;o;	;
+@
+;i7;"16;@;o;;o;	;
+@
+;i;;"CAP(PACKET_PORT_L2CP_REG);@;o;;o;	;
+@
+;iX;"mesa_packet_rx_port_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i5;"typedef;@;o;;o;	;
+@
+;i=;"uint16_t ;@;o;;o;	;
+@
+;iF;"mesa_udp_tcp_t;@;[ ;0{
+;o;;o;	;
+@
+;il;"typedef;@;o;;o;	;
+@
+;it;"uint32_t ;@;o;;o;	;
+@
+;i};"mesa_ip_t;@;[ ;0{
+;o;;o;	;
+@
+;iû;"typedef;@;o;;o;	;
+@
+;i¶;"mesa_ip_t ;@;o;;o;	;
+@
+;i∞;"mesa_ipv4_t;@;[ ;0{
+;o;;o;	;
+@
+;iÕ;"typedef;@;o;;o;	;
+@
+;i’;"uint32_t ;@;o;;o;	;
+@
+;iﬁ;"mesa_prefix_size_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"uint8_t ;@; o;;o;	;
+@
+;i%;"	addr;@;[{;!o;;o;	;
+@
+;i*;"16;@;0;o;;o;	;
+@
+;i<;"mesa_ipv6_t;@;[ ;0{
+;o;;o;	;
+@
+;i[;"typedef;@;o;;o;	;
+@
+;ic;"uint32_t ;@;o;;o;	;
+@
+;il;"mesa_l3_rleg_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i‘;"typedef;@;{;o;;o;	;
+@
+;i‹;"	enum;@;[{;{	;o;;o;	;
+@
+;iÁ;"MESA_IP_TYPE_NONE ;@:operatoro;;o;	;
+@
+;i˘;"=;@;!o;;o;	;
+@
+;i˚;"0;@;0{;{	;o;;o;	;
+@
+;i' ;"MESA_IP_TYPE_IPV4 ;@;"o;;o;	;
+@
+;i9 ;"=;@;!o;;o;	;
+@
+;i; ;"1;@;0{;{	;o;;o;	;
+@
+;id ;"MESA_IP_TYPE_IPV6 ;@;"o;;o;	;
+@
+;iv ;"=;@;!o;;o;	;
+@
+;ix ;"2;@;0;o;;o;	;
+@
+;iü ;"mesa_ip_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i“ ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÁ ;"mesa_ip_type_t  ;@; o;;o;	;
+@
+;i˜ ;"	type;@;[ ;0{:member_union{:union_type_declare{;o;;o;	;
+@
+;i!;"
+union;@:union_members[{;{;{	;o;;o;	;
+@
+;i!;"mesa_ipv4_t ;@; o;;o;	;
+@
+;i+!;"	ipv4;@;[ ;0{;{;{	;o;;o;	;
+@
+;iI!;"mesa_ipv6_t ;@; o;;o;	;
+@
+;iU!;"	ipv6;@;[ ;0; o;;o;	;
+@
+;iq!;"	addr;@;[ ;o;;o;	;
+@
+;iï!;"mesa_ip_addr_t;@;[ ;0{
+;o;;o;	;
+@
+;i∂!;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÀ!;"mesa_ipv4_t        ;@; o;;o;	;
+@
+;iﬁ!;"address;@;[ ;0{;{;{	;o;;o;	;
+@
+;i";"mesa_prefix_size_t ;@; o;;o;	;
+@
+;i";"prefix_size;@;[ ;0;o;;o;	;
+@
+;i3";"mesa_ipv4_network_t;@;[ ;0{
+;o;;o;	;
+@
+;iY";"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;in";"mesa_ipv6_t        ;@; o;;o;	;
+@
+;iÅ";"address;@;[ ;0{;{;{	;o;;o;	;
+@
+;i•";"mesa_prefix_size_t ;@; o;;o;	;
+@
+;i∏";"prefix_size;@;[ ;0;o;;o;	;
+@
+;i÷";"mesa_ipv6_network_t;@;[ ;0{
+;o;;o;	;
+@
+;i¸";"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i#;"mesa_ip_addr_t     ;@; o;;o;	;
+@
+;i$#;"address;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH#;"mesa_prefix_size_t ;@; o;;o;	;
+@
+;i[#;"prefix_size;@;[ ;0;o;;o;	;
+@
+;iy#;"mesa_ip_network_t;@;[ ;0{
+;o;;o;	;
+@
+;i£#;"typedef;@;{;o;;o;	;
+@
+;i´#;"	enum;@;[	{;{	;o;;o;	;
+@
+;i∂#;"%MESA_ROUTING_ENTRY_TYPE_INVALID ;@;"o;;o;	;
+@
+;i÷#;"=;@;!o;;o;	;
+@
+;iÿ#;"0;@;0{;{	;o;;o;	;
+@
+;iﬂ#;"%MESA_ROUTING_ENTRY_TYPE_IPV6_UC ;@;"o;;o;	;
+@
+;iˇ#;"=;@;!o;;o;	;
+@
+;i$;"1;@;0{;{	;o;;o;	;
+@
+;i$;"%MESA_ROUTING_ENTRY_TYPE_IPV4_MC ;@;"o;;o;	;
+@
+;i($;"=;@;!o;;o;	;
+@
+;i*$;"2;@;0{;{	;o;;o;	;
+@
+;i=$;"%MESA_ROUTING_ENTRY_TYPE_IPV4_UC ;@;"o;;o;	;
+@
+;i]$;"=;@;!o;;o;	;
+@
+;i_$;"3;@;0;o;;o;	;
+@
+;id$;"mesa_routing_entry_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iû$;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÀ$;"mesa_ipv4_network_t ;@; o;;o;	;
+@
+;iﬂ$;"network;@;[ ;0{;{;{	;o;;o;	;
+@
+;iC%;"mesa_ipv4_t         ;@; o;;o;	;
+@
+;iW%;"destination;@;[ ;0;o;;o;	;
+@
+;if%;"mesa_ipv4_uc_t;@;[ ;0{
+;o;;o;	;
+@
+;iç%;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i∫%;"mesa_ipv6_network_t ;@; o;;o;	;
+@
+;iŒ%;"network;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2&;"mesa_ipv6_t         ;@; o;;o;	;
+@
+;iF&;"destination;@;[ ;0;o;;o;	;
+@
+;iU&;"mesa_ipv6_uc_t;@;[ ;0{
+;o;;o;	;
+@
+;iÜ&;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i∫&;"mesa_ipv4_t ;@; o;;o;	;
+@
+;i∆&;"
+group;@;[ ;0{;{;{	;o;;o;	;
+@
+;i"';"mesa_ipv4_t ;@; o;;o;	;
+@
+;i.';"source;@;[ ;0;o;;o;	;
+@
+;i8';"mesa_ipv4_mc_t;@;[ ;0{
+;o;;o;	;
+@
+;ii';"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iù';"mesa_ipv6_t ;@; o;;o;	;
+@
+;i©';"
+group;@;[ ;0{;{;{	;o;;o;	;
+@
+;i(;"mesa_ipv6_t ;@; o;;o;	;
+@
+;i(;"source;@;[ ;0;o;;o;	;
+@
+;i(;"mesa_ipv6_mc_t;@;[ ;0{
+;o;;o;	;
+@
+;iE(;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iu(;"mesa_routing_entry_type_t ;@; o;;o;	;
+@
+;iè(;"	type;@;[ ;0{;#{;${;o;;o;	;
+@
+;iô(;"
+union;@;%[{;{;{	;o;;o;	;
+@
+;i≈(;"mesa_ipv4_uc_t ;@; o;;o;	;
+@
+;i‘(;"ipv4_uc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i);"mesa_ipv6_uc_t ;@; o;;o;	;
+@
+;i);"ipv6_uc;@;[ ;0; o;;o;	;
+@
+;i);"
+route;@;[ {;{;{	;o;;o;	;
+@
+;in);"mesa_vid_t ;@; o;;o;	;
+@
+;iy);"	vlan;@;[ ;0;o;;o;	;
+@
+;iÇ);"mesa_routing_entry_t;@;[ ;0{;o;;o;	;
+@
+;iô);"$#define MESA_RT_TYPE_IPV4_MC 0
+;@{;o;;o;	;
+@
+;i∏);"%#define MESA_RT_TYPE_IPV6_MC 1
+
+;@{
+;o;;o;	;
+@
+;iÛ);"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU*;"mesa_bool_t ;@; o;;o;	;
+@
+;ia*;"	type;@;[ ;0{;#{;${;o;;o;	;
+@
+;il*;"
+union;@;%[{;{;{	;o;;o;	;
+@
+;iú*;"mesa_ipv4_mc_t ;@; o;;o;	;
+@
+;i´*;"ipv4_mc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i›*;"mesa_ipv6_mc_t ;@; o;;o;	;
+@
+;iÏ*;"ipv6_mc;@;[ ;0; o;;o;	;
+@
+;i˚*;"
+route;@;[ {;{;{	;o;;o;	;
+@
+;ic+;"mesa_vid_t ;@; o;;o;	;
+@
+;in+;"source_rleg;@;[ ;0;o;;o;	;
+@
+;i}+;"mesa_routing_mc_entry_t;@;[ ;0{
+;o;;o;	;
+@
+;iΩ+;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i“+;"uint64_t ;@; o;;o;	;
+@
+;i€+;"ipv4uc_received_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i+,;"uint64_t ;@; o;;o;	;
+@
+;i4,;"ipv4uc_received_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÑ,;"uint64_t ;@; o;;o;	;
+@
+;iç,;"ipv6uc_received_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i›,;"uint64_t ;@; o;;o;	;
+@
+;iÊ,;"ipv6uc_received_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i7-;"uint64_t ;@; o;;o;	;
+@
+;i@-;"ipv4uc_transmitted_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i|-;"uint64_t ;@; o;;o;	;
+@
+;iÖ-;"ipv4uc_transmitted_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¡-;"uint64_t ;@; o;;o;	;
+@
+;i -;"ipv6uc_transmitted_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i.;"uint64_t ;@; o;;o;	;
+@
+;i.;"ipv6uc_transmitted_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL.;"uint64_t ;@; o;;o;	;
+@
+;iU.;"ipv4mc_received_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i•.;"uint64_t ;@; o;;o;	;
+@
+;iÆ.;"ipv4mc_received_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˛.;"uint64_t ;@; o;;o;	;
+@
+;i/;"ipv6mc_received_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iW/;"uint64_t ;@; o;;o;	;
+@
+;i`/;"ipv6mc_received_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±/;"uint64_t ;@; o;;o;	;
+@
+;i∫/;"ipv4mc_transmitted_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆ/;"uint64_t ;@; o;;o;	;
+@
+;iˇ/;"ipv4mc_transmitted_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;0;"uint64_t ;@; o;;o;	;
+@
+;iD0;"ipv6mc_transmitted_octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÄ0;"uint64_t ;@; o;;o;	;
+@
+;iâ0;"ipv6mc_transmitted_frames;@;[ ;0;o;;o;	;
+@
+;i√0;"mesa_l3_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;ië1;"typedef;@;{;o;;o;	;
+@
+;iô1;"	enum;@;[{;{;o;;o;	;
+@
+;i§1;"MESA_VCAP_BIT_ANY;@;0{;{;o;;o;	;
+@
+;iÀ1;"MESA_VCAP_BIT_0;@;0{;{;o;;o;	;
+@
+;iÌ1;"MESA_VCAP_BIT_1    ;@;0;o;;o;	;
+@
+;i2;"mesa_vcap_bit_t;@;[ ;0{
+;o;;o;	;
+@
+;i<2;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iQ2;"uint8_t ;@; o;;o;	;
+@
+;iY2;"
+value;@;[ ;0{;{;{	;o;;o;	;
+@
+;io2;"uint8_t ;@; o;;o;	;
+@
+;iw2;"	mask;@;[ ;0;o;;o;	;
+@
+;i¶2;"mesa_vcap_u8_t;@;[ ;0{
+;o;;o;	;
+@
+;i’2;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÍ2;"uint8_t ;@; o;;o;	;
+@
+;iÚ2;"
+value;@;[{;!o;;o;	;
+@
+;i¯2;"2;@;0{;{;{	;o;;o;	;
+@
+;i3;"uint8_t ;@; o;;o;	;
+@
+;i3;"	mask;@;[{;!o;;o;	;
+@
+;i3;"2;@;0;o;;o;	;
+@
+;iE3;"mesa_vcap_u16_t;@;[ ;0{
+;o;;o;	;
+@
+;iu3;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iä3;"uint8_t ;@; o;;o;	;
+@
+;ií3;"
+value;@;[{;!o;;o;	;
+@
+;iò3;"3;@;0{;{;{	;o;;o;	;
+@
+;i´3;"uint8_t ;@; o;;o;	;
+@
+;i≥3;"	mask;@;[{;!o;;o;	;
+@
+;i∏3;"3;@;0;o;;o;	;
+@
+;iÂ3;"mesa_vcap_u24_t;@;[ ;0{
+;o;;o;	;
+@
+;i4;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i*4;"uint8_t ;@; o;;o;	;
+@
+;i24;"
+value;@;[{;!o;;o;	;
+@
+;i84;"4;@;0{;{;{	;o;;o;	;
+@
+;iK4;"uint8_t ;@; o;;o;	;
+@
+;iS4;"	mask;@;[{;!o;;o;	;
+@
+;iX4;"4;@;0;o;;o;	;
+@
+;iÖ4;"mesa_vcap_u32_t;@;[ ;0{
+;o;;o;	;
+@
+;iµ4;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i 4;"uint8_t ;@; o;;o;	;
+@
+;i“4;"
+value;@;[{;!o;;o;	;
+@
+;iÿ4;"5;@;0{;{;{	;o;;o;	;
+@
+;iÎ4;"uint8_t ;@; o;;o;	;
+@
+;iÛ4;"	mask;@;[{;!o;;o;	;
+@
+;i¯4;"5;@;0;o;;o;	;
+@
+;i%5;"mesa_vcap_u40_t;@;[ ;0{
+;o;;o;	;
+@
+;iU5;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ij5;"uint8_t ;@; o;;o;	;
+@
+;ir5;"
+value;@;[{;!o;;o;	;
+@
+;ix5;"6;@;0{;{;{	;o;;o;	;
+@
+;iã5;"uint8_t ;@; o;;o;	;
+@
+;iì5;"	mask;@;[{;!o;;o;	;
+@
+;iò5;"6;@;0;o;;o;	;
+@
+;i≈5;"mesa_vcap_u48_t;@;[ ;0{
+;o;;o;	;
+@
+;iˆ5;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i6;"uint8_t ;@; o;;o;	;
+@
+;i6;"
+value;@;[{;!o;;o;	;
+@
+;i6;"16;@;0{;{;{	;o;;o;	;
+@
+;i-6;"uint8_t ;@; o;;o;	;
+@
+;i56;"	mask;@;[{;!o;;o;	;
+@
+;i:6;"16;@;0;o;;o;	;
+@
+;ih6;"mesa_vcap_u128_t;@;[ ;0{
+;o;;o;	;
+@
+;iö6;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iØ6;"uint16_t ;@; o;;o;	;
+@
+;i∏6;"
+value;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒ6;"uint16_t ;@; o;;o;	;
+@
+;i◊6;"	mask;@;[ ;0;o;;o;	;
+@
+;i7;"mesa_vcap_vid_t;@;[ ;0{
+;o;;o;	;
+@
+;i<7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iQ7;"mesa_ip_t ;@; o;;o;	;
+@
+;i[7;"
+value;@;[ ;0{;{;{	;o;;o;	;
+@
+;iq7;"mesa_ip_t ;@; o;;o;	;
+@
+;i{7;"	mask;@;[ ;0;o;;o;	;
+@
+;i™7;"mesa_vcap_ip_t;@;[ ;0{
+;o;;o;	;
+@
+;i÷7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÎ7;"mesa_bool_t    ;@; o;;o;	;
+@
+;i˙7;"in_range;@;[ ;0{;{;{	;o;;o;	;
+@
+;i!8;"mesa_udp_tcp_t ;@; o;;o;	;
+@
+;i08;"low;@;[ ;0{;{;{	;o;;o;	;
+@
+;iR8;"mesa_udp_tcp_t ;@; o;;o;	;
+@
+;ia8;"	high;@;[ ;0;o;;o;	;
+@
+;iÇ8;"mesa_vcap_udp_tcp_t;@;[ ;0{
+;o;;o;	;
+@
+;i¨8;"typedef;@;{;o;;o;	;
+@
+;i¥8;"	enum;@;[{;{;o;;o;	;
+@
+;iø8;"!MESA_VCAP_VR_TYPE_VALUE_MASK;@;0{;{;o;;o;	;
+@
+;i¸8;"&MESA_VCAP_VR_TYPE_RANGE_INCLUSIVE;@;0{;{;o;;o;	;
+@
+;iT9;"(MESA_VCAP_VR_TYPE_RANGE_EXCLUSIVE  ;@;0;o;;o;	;
+@
+;i±9;"mesa_vcap_vr_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iÌ9;"typedef;@;o;;o;	;
+@
+;iı9;"uint16_t ;@;o;;o;	;
+@
+;i˛9;"mesa_vcap_vr_value_t;@;[ ;0{
+;o;;o;	;
+@
+;i(:;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i=:;"mesa_vcap_vr_value_t ;@; o;;o;	;
+@
+;iR:;"
+value;@;[ ;0{;{;{	;o;;o;	;
+@
+;if:;"mesa_vcap_vr_value_t ;@; o;;o;	;
+@
+;i{:;"	mask;@;[ ;0;o;;o;	;
+@
+;i®:;"mesa_vcap_vr_v_t;@;[ ;0{
+;o;;o;	;
+@
+;i…:;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iﬁ:;"mesa_vcap_vr_value_t ;@; o;;o;	;
+@
+;iÛ:;"low;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+;;"mesa_vcap_vr_value_t ;@; o;;o;	;
+@
+;i;;"	high;@;[ ;0;o;;o;	;
+@
+;i5;;"mesa_vcap_vr_r_t;@;[ ;0{
+;o;;o;	;
+@
+;ii;;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i~;;"mesa_vcap_vr_type_t ;@; o;;o;	;
+@
+;ií;;"	type;@;[ ;0{;#{;${;o;;o;	;
+@
+;i§;;"
+union;@;%[{;{;{	;o;;o;	;
+@
+;i∏;;"mesa_vcap_vr_v_t ;@; o;;o;	;
+@
+;i…;;"v;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¸;;"mesa_vcap_vr_r_t ;@; o;;o;	;
+@
+;i<;"r;@;[ ;0; o;;o;	;
+@
+;i@<;"vr;@;[ ;o;;o;	;
+@
+;iX<;"mesa_vcap_vr_t;@;[ ;0{
+;o;;o;	;
+@
+;iz<;"typedef;@;{;o;;o;	;
+@
+;iÇ<;"	enum;@;[	{;{;o;;o;	;
+@
+;iç<;"MESA_VCAP_KEY_TYPE_NORMAL;@;0{;{;o;;o;	;
+@
+;i∆<;""MESA_VCAP_KEY_TYPE_DOUBLE_TAG;@;0{;{;o;;o;	;
+@
+;i=;"MESA_VCAP_KEY_TYPE_IP_ADDR;@;0{;{;o;;o;	;
+@
+;i>=;"$MESA_VCAP_KEY_TYPE_MAC_IP_ADDR ;@;0;o;;o;	;
+@
+;iÅ=;"mesa_vcap_key_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iX>;"typedef;@;o;;o;	;
+@
+;i`>;"uint32_t ;@;o;;o;	;
+@
+;ii>;"mesa_acl_policer_no_t;@;[ ;0{;o;;o;	;
+@
+;iÅ>;"K#define MESA_ACL_POLICY_NO_NONE  0xffffffff // ACLs disabled on port
+
+;@{
+;o;;o;	;
+@
+;i‹>;"typedef;@;o;;o;	;
+@
+;i‰>;"uint32_t ;@;o;;o;	;
+@
+;iÌ>;"mesa_acl_policy_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i?;"typedef;@;o;;o;	;
+@
+;i?;"uint64_t ;@;o;;o;	;
+@
+;i ?;"mesa_counter_t;@;[ ;0{
+;o;;o;	;
+@
+;iA?;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iV?;"mesa_counter_t ;@; o;;o;	;
+@
+;ie?;"frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÖ?;"mesa_counter_t ;@; o;;o;	;
+@
+;iî?;"
+bytes;@;[ ;0;o;;o;	;
+@
+;i±?;"mesa_counter_pair_t;@;[ ;0{
+;o;;o;	;
+@
+;i€?;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i?;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;i@;"rx_green;@;[ ;0{;{;{	;o;;o;	;
+@
+;i-@;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;iA@;"rx_yellow;@;[ ;0{;{;{	;o;;o;	;
+@
+;ik@;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;i@;"rx_red;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶@;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;i∫@;"rx_discard;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ@;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;i˚@;"tx_discard;@;[ ;0{;{;{	;o;;o;	;
+@
+;i(A;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;i<A;"tx_green;@;[ ;0{;{;{	;o;;o;	;
+@
+;ieA;"mesa_counter_pair_t ;@; o;;o;	;
+@
+;iyA;"tx_yellow;@;[ ;0;o;;o;	;
+@
+;i°A;"mesa_evc_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i«A;"typedef;@;o;;o;	;
+@
+;iœA;"uint8_t ;@;o;;o;	;
+@
+;i◊A;"mesa_mpls_tc_t;@;[ ;0{
+;o;;o;	;
+@
+;i(C;"typedef;@;o;;o;	;
+@
+;i0C;"int64_t ;@;o;;o;	;
+@
+;i8C;"mesa_clk_adj_rate_t;@;[ ;0{;o;;o;	;
+@
+;iNC;"4#define MESA_ONE_MIA 1000000000 // One billion
+;@{;o;;o;	;
+@
+;i}C;"4#define MESA_ONE_MILL   1000000 // One million
+;@{;o;;o;	;
+@
+;i¨C;"R#define MESA_MAX_TIMEINTERVAL 0x7fffffffffffffffLL // Maximum time interval
+
+;@{;o;;o;	;
+@
+;i˘C;"k#define MESA_INTERVAL_SEC(t) ((int32_t)MESA_DIV64((t)>>16, MESA_ONE_MIA)) // One Second time interval
+;@{;o;;o;	;
+@
+;i_D;"q#define MESA_INTERVAL_MS(t)  ((int32_t)MESA_DIV64((t)>>16, MESA_ONE_MILL)) // One millisecond time interval
+;@{;o;;o;	;
+@
+;iÀD;"h#define MESA_INTERVAL_US(t)  ((int32_t)MESA_DIV64((t)>>16, 1000)) // One microsecond time interval
+;@{;o;;o;	;
+@
+;i.E;"í#define MESA_INTERVAL_NS(t)  ((int32_t)MESA_MOD64((t)>>16, MESA_ONE_MIA)) // This returns the ns part of the interval, not the total number of ns
+;@{;o;;o;	;
+@
+;i¿E;"ó#define MESA_INTERVAL_PS(t)  (((((int32_t)(t & 0xffff))*1000)+0x8000)/0x10000) // This returns the ps part of the interval, not the total number of ps
+;@{;o;;o;	;
+@
+;iWF;"w#define MESA_SEC_NS_INTERVAL(s,n) (((mesa_timeinterval_t)(n)+(mesa_timeinterval_t)(s)*MESA_ONE_MIA)<<16)  // TBD
+
+;@{
+;o;;o;	;
+@
+;iÚF;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iG;"uint16_t ;@; o;;o;	;
+@
+;iG;"sec_msb;@;[ ;0{;{;{	;o;;o;	;
+@
+;i4G;"uint32_t ;@; o;;o;	;
+@
+;i=G;"seconds;@;[ ;0{;{;{	;o;;o;	;
+@
+;i]G;"uint32_t ;@; o;;o;	;
+@
+;ifG;"nanoseconds;@;[ ;0{;{;{	;o;;o;	;
+@
+;iäG;"uint16_t ;@; o;;o;	;
+@
+;iìG;"nanosecondsfrac;@;[ ;0;o;;o;	;
+@
+;i…G;"mesa_timestamp_t;@;[ ;0{
+;o;;o;	;
+@
+;isH;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iàH;"int32_t  ;@; o;;o;	;
+@
+;iëH;"scaled_ns_high;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞H;"uint64_t ;@; o;;o;	;
+@
+;iπH;"scaled_ns_low;@;[ ;0;o;;o;	;
+@
+;i⁄H;"mesa_scaled_ns_t;@;[ ;0{
+;o;;o;	;
+@
+;iêI;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i•I;"uint32_t ;@; o;;o;	;
+@
+;iÆI;"uscaled_ns_high;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒI;"uint64_t ;@; o;;o;	;
+@
+;i◊I;"uscaled_ns_low;@;[ ;0;o;;o;	;
+@
+;i˘I;"mesa_uscaled_ns_t;@;[ ;0{
+;o;;o;	;
+@
+;i*J;"typedef;@;{;o;;o;	;
+@
+;i2J;"	enum;@;[{;{	;o;;o;	;
+@
+;i=J;"MESA_MIIM_CONTROLLER_0    ;@;"o;;o;	;
+@
+;iWJ;"=;@;!o;;o;	;
+@
+;iYJ;"0;@;0{;{	;o;;o;	;
+@
+;ivJ;"MESA_MIIM_CONTROLLER_1    ;@;"o;;o;	;
+@
+;iêJ;"=;@;!o;;o;	;
+@
+;iíJ;"1;@;0{;{	;o;;o;	;
+@
+;iØJ;"MESA_MIIM_CONTROLLER_2    ;@;"o;;o;	;
+@
+;i…J;"=;@;!o;;o;	;
+@
+;iÀJ;"2;@;0{;{	;o;;o;	;
+@
+;iËJ;"MESA_MIIM_CONTROLLER_3    ;@;"o;;o;	;
+@
+;iK;"=;@;!o;;o;	;
+@
+;iK;"3;@;0{;{;o;;o;	;
+@
+;i!K;"MESA_MIIM_CONTROLLERS;@;0{;{	;o;;o;	;
+@
+;icK;"MESA_MIIM_CONTROLLER_NONE ;@;"o;;o;	;
+@
+;i}K;"=;@;!o;;o;	;
+@
+;iK;"'-1  // Unassigned MIIM controller
+;@;0;o;;o;	;
+@
+;i£K;"mesa_miim_controller_t;@;[ ;0{;o;;o;	;
+@
+;iºK;"N#define MESA_CLOCK_IDENTITY_LENGTH 8 // Length of unique PTP identifier
+
+;@{
+;o;;o;	;
+@
+;i$L;"typedef;@;o;;o;	;
+@
+;i,L;"uint8_t ;@;o;;o;	;
+@
+;i4L;"mesa_clock_identity;@;[{;!o;;o;	;
+@
+;iHL;"MESA_CLOCK_IDENTITY_LENGTH;@;0{;o;;o;	;
+@
+;ifL;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;iéL;";#include <microchip/ethernet/switch/api/port_list.h>
+
+;@{;o;;o;	;
+@
+;iƒL;"5#endif // _MICROCHIP_ETHERNET_SWITCH_API_TYPES_
+;@

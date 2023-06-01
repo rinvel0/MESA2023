@@ -11,6 +11,12 @@
 #ifndef _VTSS_OPTIONS_H_
 #define _VTSS_OPTIONS_H_
 
+//CPMOD below
+#if !defined(VTSS_CHIP_SPARX_IV_80)
+#define VTSS_CHIP_SPARX_IV_80 
+#endif
+
+
 /* ================================================================= *
  *  Features
  * ================================================================= */
@@ -110,7 +116,7 @@
 #endif
 
 #if defined(VTSS_CHIP_7546TSN) || defined(VTSS_CHIP_7549TSN) || defined(VTSS_CHIP_7552TSN) || \
-    defined(VTSS_CHIP_7556TSN) || defined(VTSS_CHIP_7558TSN)
+    defined(VTSS_CHIP_7556TSN) || defined(VTSS_CHIP_7558TSN) 
 #define VTSS_ARCH_SPARX5                         /**< Jaguar-3/SparX-V architecture */
 #define VTSS_ARCH_S5I                            /**< SparX-5i architecture */
 #endif

@@ -83,7 +83,7 @@ if( res_struct->lock[0] == 1 ) {
 
     }
     if( value <= 2 || value >= 0xa) {
-    VTSS_E("Failed to initialize LCPLL as the gain was not within limits");
+    VTSS_E("Failed to initialize LCPLL as the gain was not within limits from no c; value = %x", value);
     } 
 
 } 

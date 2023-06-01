@@ -1,0 +1,3405 @@
+{:	root[Ç{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"e•// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+#define _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/switch/api/misc.h> // For mesa_sgpio_group_t
+#include <microchip/ethernet/hdr_start.h>       // ALL INCLUDE ABOVE THIS LINE
+
+// The internal bandwidth allocated for the port
+typedef enum
+{
+    MESA_BW_DEFAULT,     // Default to max port speed
+    MESA_BW_1G,          // Max 1G
+    MESA_BW_2G5,         // Max 2.5G
+    MESA_BW_5G,          // Max 5G
+    MESA_BW_10G,         // Max 10G
+    MESA_BW_25G,         // Max 25G
+    MESA_BW_UNDEFINED,   // Undefined
+} mesa_internal_bw_t;
+
+// Enable/disable SD-to-SGPIO mapping
+typedef enum
+{
+    MESA_SD_SGPIO_MAP_IGNORE,   /**< No mapping as default */
+    MESA_SD_SGPIO_MAP_ENABLE,   /**< Enable and use mapping  */
+    MESA_SD_SGPIO_MAP_DISABLE,  /**< Disable mapping globally */
+} mesa_sd_sgpio_action_t;
+
+// Signal detect mapping to SGPIO group/port/bit
+typedef struct
+{
+    mesa_sd_sgpio_action_t action; // Enable mapping
+    mesa_sgpio_group_t     group;  // SGPIO group (0-2)
+    uint32_t               port;   // SGPIO port (0-31)
+    uint32_t               bit;    // SGPIO bit (0-3)
+} mesa_port_sgpio_map_t;
+
+// Signifies an unused chip port
+#define CHIP_PORT_UNUSED -1
+
+// Port map structure
+typedef struct
+{
+    int32_t                chip_port;             // Set to -1 if not used
+    mesa_chip_no_t         chip_no;               // Chip number, multi-chip targets
+    mesa_internal_bw_t     max_bw CAP(PORT_BW);   // Max internal bandwidth reserved for the port
+    mesa_miim_controller_t miim_controller;       // MII management controller
+    uint8_t                miim_addr;             // PHY address, ignored for MESA_MIIM_CONTROLLER_NONE
+    mesa_chip_no_t         miim_chip_no;          // MII management chip number, multi-chip targets
+    mesa_port_sgpio_map_t  sd_map CAP(SGPIO_MAP); // PCS signal detect to SGPIO bit map
+} mesa_port_map_t;
+
+// Set port map.
+// cnt [IN]       Number of entries in port_map. Must be equal to the configured port count.
+// port_map [IN]  Port map array.
+mesa_rc mesa_port_map_set(const mesa_inst_t     inst,
+                          uint32_t              cnt,
+                          const mesa_port_map_t *port_map);
+
+// Get port map.
+// cnt [IN]        Number of entries in port_map. Must be equal to the configured port count.
+// port_map [OUT]  Port map.
+mesa_rc mesa_port_map_get(const mesa_inst_t  inst,
+                          uint32_t           cnt,
+                          mesa_port_map_t    *port_map);
+
+/**
+ * Advertisement Word (Refer to IEEE 802.3 Clause 37):
+ *  MSB                                                                         LSB
+ *  D15  D14  D13  D12  D11  D10   D9   D8   D7   D6   D5   D4   D3   D2   D1   D0
+ * +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+ * | NP | Ack| RF2| RF1|rsvd|rsvd|rsvd| PS2| PS1| HD | FD |rsvd|rsvd|rsvd|rsvd|rsvd|
+ * +----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+ **/
+
+// Auto-negotiation remote fault type
+typedef enum                              // RF2      RF1
+{
+    MESA_PORT_CLAUSE_37_RF_LINK_OK       = ((0<<1) | (0<<0)), // Link OK
+    MESA_PORT_CLAUSE_37_RF_OFFLINE       = ((1<<1) | (0<<0)), // Off line
+    MESA_PORT_CLAUSE_37_RF_LINK_FAILURE  = ((0<<1) | (1<<0)), // Link failure
+    MESA_PORT_CLAUSE_37_RF_AUTONEG_ERROR = ((1<<1) | (1<<0))  // Autoneg error
+} mesa_port_clause_37_remote_fault_t;
+
+// Advertisement control data for Clause 37 aneg
+typedef struct
+{
+    mesa_bool_t                        fdx;              // (FD)
+    mesa_bool_t                        hdx;              // (HD)
+    mesa_bool_t                        symmetric_pause;  // (PS1)
+    mesa_bool_t                        asymmetric_pause; // (PS2)
+    mesa_port_clause_37_remote_fault_t remote_fault;     // (RF1) + (RF2)
+    mesa_bool_t                        acknowledge;      // (Ack)
+    mesa_bool_t                        next_page;        // (NP)
+} mesa_port_clause_37_adv_t;
+
+// Advertisement control data for SGMII aneg
+typedef struct
+{
+    mesa_bool_t link;          // LP link status
+    mesa_bool_t fdx;           // FD
+    mesa_bool_t hdx;           // HD
+    mesa_bool_t speed_10M;     // speed 10 advertised
+    mesa_bool_t speed_100M;    // speed 100 advertised
+    mesa_bool_t speed_1G;      // speed 1G advertised
+    mesa_bool_t aneg_complete; // Aneg process completed
+} mesa_port_sgmii_aneg_t;
+
+// Auto-negotiation control parameter struct
+typedef struct
+{
+    mesa_bool_t               enable;        // Enable of Autoneg
+    mesa_port_clause_37_adv_t advertisement; // Clause 37 Advertisement control data
+} mesa_port_clause_37_control_t;
+
+// Get clause 37 auto-negotiation Control word.
+// port_no [IN]   Port number.
+// control [OUT]  Control structure.
+mesa_rc mesa_port_clause_37_control_get(const mesa_inst_t              inst,
+                                        const mesa_port_no_t           port_no,
+                                        mesa_port_clause_37_control_t  *const control);
+
+// Set clause 37 auto-negotiation Control word.
+// port_no [IN]  Port number.
+// control [IN]  Control structure.
+mesa_rc mesa_port_clause_37_control_set(const mesa_inst_t                    inst,
+                                        const mesa_port_no_t                 port_no,
+                                        const mesa_port_clause_37_control_t  *const control);
+
+// Flow control setup
+typedef struct
+{
+    mesa_bool_t obey;     // TRUE if 802.3x PAUSE frames should be obeyed
+    mesa_bool_t generate; // TRUE if 802.3x PAUSE frames should generated
+    mesa_mac_t  smac;     // Port MAC address used as SMAC in PAUSE frames
+
+    // TRUE if 802.1Qbb Priority Flow Control should be generated and obeyed.
+    // Cannot be enabled together with 802.3x Flowcontrol
+    mesa_bool_t pfc[MESA_PRIO_ARRAY_SIZE];
+} mesa_port_flow_control_conf_t;
+
+// Inter frame gap structure
+typedef struct
+{
+    uint32_t hdx_gap_1; // Half duplex: First part of Rx to Tx gap
+    uint32_t hdx_gap_2; // Half duplex: Second part of Rx to Tx gap
+    uint32_t fdx_gap;   // Full duplex: Tx to Tx gap
+} mesa_port_frame_gaps_t;
+
+#define MESA_MAX_FRAME_LENGTH_STANDARD 1518  // IEEE 802.3 standard
+
+// VLAN awareness for frame length check
+typedef enum
+{
+    MESA_PORT_MAX_TAGS_NONE, // No extra tags allowed
+    MESA_PORT_MAX_TAGS_ONE,  // Single tag allowed
+    MESA_PORT_MAX_TAGS_TWO   // Single and double tag allowed
+} mesa_port_max_tags_t;
+
+// Port loop back configuration
+typedef enum
+{
+    MESA_PORT_LOOP_DISABLE,  // No port loop
+    MESA_PORT_LOOP_PCS_HOST, // PCS host port loop
+} mesa_port_loop_t;
+
+// SFI Serdes configuration
+typedef struct
+{
+    mesa_bool_t             sfp_dac;    // obsolete (use media_10g)
+    mesa_sd10g_media_type_t media_type; // The 10G Serdes media/cable type
+    mesa_bool_t             rx_invert;  // Invert the RX Serdes signal (1)
+    mesa_bool_t             tx_invert;  // Invert the TX Serdes signal (1)
+} mesa_port_serdes_conf_t;
+
+// 1G PCS specific configuration
+typedef enum
+{
+    MESA_PORT_PCS_NORMAL,  // Normal 1G PCS configuration
+    MESA_PORT_PCS_ENABLE,  // Only Enable 1G PCS and return
+    MESA_PORT_PCS_DISABLE, // Only Disable 1G PCS and return
+    MESA_PORT_PCS_IGNORE   // Skip any PCS settings
+} mesa_port_pcs_conf_t CAP(PORT_PCS_CONF);
+
+// Port configuration structure
+typedef struct
+{
+    // Note: If if_type field is set to MESA_PORT_INTERFACE_QSGMII, the ports are mapped together in groups of four.
+    // If one of the four ports is used, all four ports in the group must always be configured,
+    // but the four ports doesn't need to configured with the same configuration.
+    // This is needed in order to achieve correct comma alignment at the QSGMII interface.
+    // Which ports that are mapped together can be found in the chip data-sheet.
+    mesa_port_interface_t   if_type;           // Interface type
+
+    mesa_bool_t             sd_enable;         // Signal detect enable
+    mesa_bool_t             sd_active_high;    // External signal detect polarity
+    mesa_bool_t             sd_internal;       // Internal signal detect selection
+    mesa_port_frame_gaps_t  frame_gaps;        // Inter frame gaps
+    mesa_bool_t             power_down;        // Disable and power down the port
+    mesa_port_speed_t       speed;             // Port speed
+    mesa_bool_t             fdx;               // Full duplex mode
+    mesa_port_flow_control_conf_t flow_control; // Flow control setup
+    uint32_t                max_frame_length;  // Maximum frame length
+    mesa_bool_t             frame_length_chk;  // Enforce 802.3 frame length check (from ethertype field)
+    mesa_port_max_tags_t    max_tags;          // VLAN awareness for length check
+    mesa_bool_t             exc_col_cont;      // Excessive collision continuation
+    mesa_bool_t             xaui_rx_lane_flip; // Xaui Rx lane flip
+    mesa_bool_t             xaui_tx_lane_flip; // Xaui Tx lane flip
+    mesa_port_loop_t        loop;              // Enable/disable of port loop back
+    mesa_port_serdes_conf_t serdes;            // Serdes settings (for SFI interface)
+    mesa_port_pcs_conf_t    pcs CAP(PORT_PCS_CONF); // Special 1G PCS settings, only supported for L26
+} mesa_port_conf_t;
+
+// Set port configuration.
+// port_no [IN]  Port number.
+// conf [IN]     Port setup structure.
+mesa_rc mesa_port_conf_set(const mesa_inst_t       inst,
+                           const mesa_port_no_t    port_no,
+                           const mesa_port_conf_t  *const conf);
+
+// Get port configuration.
+// port_no [IN]  Port number.
+// conf [OUT]    Port configuration.
+mesa_rc mesa_port_conf_get(const mesa_inst_t     inst,
+                           const mesa_port_no_t  port_no,
+                           mesa_port_conf_t      *const conf);
+
+// Get port status.
+// port_no [IN]  Port number.
+// status [OUT]  Status structure.
+mesa_rc mesa_port_status_get(const mesa_inst_t     inst,
+                             const mesa_port_no_t  port_no,
+                             mesa_port_status_t    *const status);
+
+/******************************************************************************/
+/* Port Counters                                                              */
+/******************************************************************************/
+
+// Counter type
+typedef uint64_t mesa_port_counter_t;
+
+// RMON counter structure (RFC 2819)
+typedef struct {
+    mesa_port_counter_t rx_etherStatsDropEvents;           // Rx drop events
+    mesa_port_counter_t rx_etherStatsOctets;               // Rx octets
+    mesa_port_counter_t rx_etherStatsPkts;                 // Rx packets
+    mesa_port_counter_t rx_etherStatsBroadcastPkts;        // Rx broadcasts
+    mesa_port_counter_t rx_etherStatsMulticastPkts;        // Rx multicasts
+    mesa_port_counter_t rx_etherStatsCRCAlignErrors;       // Rx CRC/alignment errors
+    mesa_port_counter_t rx_etherStatsUndersizePkts;        // Rx undersize packets
+    mesa_port_counter_t rx_etherStatsOversizePkts;         // Rx oversize packets
+    mesa_port_counter_t rx_etherStatsFragments;            // Rx fragments
+    mesa_port_counter_t rx_etherStatsJabbers;              // Rx jabbers
+    mesa_port_counter_t rx_etherStatsPkts64Octets;         // Rx 64 byte packets
+    mesa_port_counter_t rx_etherStatsPkts65to127Octets;    // Rx 65-127 byte packets
+    mesa_port_counter_t rx_etherStatsPkts128to255Octets;   // Rx 128-255 byte packets
+    mesa_port_counter_t rx_etherStatsPkts256to511Octets;   // Rx 256-511 byte packets
+    mesa_port_counter_t rx_etherStatsPkts512to1023Octets;  // Rx 512-1023 byte packet
+    mesa_port_counter_t rx_etherStatsPkts1024to1518Octets; // Rx 1024-1518 byte packets
+    mesa_port_counter_t rx_etherStatsPkts1519toMaxOctets;  // Rx 1519- byte packets
+
+    mesa_port_counter_t tx_etherStatsDropEvents;           // Tx drop events
+    mesa_port_counter_t tx_etherStatsOctets;               // Tx octets
+    mesa_port_counter_t tx_etherStatsPkts;                 // Tx packets
+    mesa_port_counter_t tx_etherStatsBroadcastPkts;        // Tx broadcasts
+    mesa_port_counter_t tx_etherStatsMulticastPkts;        // Tx multicasts
+    mesa_port_counter_t tx_etherStatsCollisions;           // Tx collisions
+    mesa_port_counter_t tx_etherStatsPkts64Octets;         // Tx 64 byte packets
+    mesa_port_counter_t tx_etherStatsPkts65to127Octets;    // Tx 65-127 byte packets
+    mesa_port_counter_t tx_etherStatsPkts128to255Octets;   // Tx 128-255 byte packets
+    mesa_port_counter_t tx_etherStatsPkts256to511Octets;   // Tx 256-511 byte packets
+    mesa_port_counter_t tx_etherStatsPkts512to1023Octets;  // Tx 512-1023 byte packet
+    mesa_port_counter_t tx_etherStatsPkts1024to1518Octets; // Tx 1024-1518 byte packets
+    mesa_port_counter_t tx_etherStatsPkts1519toMaxOctets;  // Tx 1519- byte packets
+} mesa_port_rmon_counters_t;
+
+// Interfaces Group counter structure (RFC 2863)
+typedef struct {
+    mesa_port_counter_t ifInOctets;          // Rx octets
+    mesa_port_counter_t ifInUcastPkts;       // Rx unicasts
+    mesa_port_counter_t ifInMulticastPkts;   // Rx multicasts
+    mesa_port_counter_t ifInBroadcastPkts;   // Rx broadcasts
+    mesa_port_counter_t ifInNUcastPkts;      // Rx non-unicasts
+    mesa_port_counter_t ifInDiscards;        // Rx discards
+    mesa_port_counter_t ifInErrors;          // Rx errors
+
+    mesa_port_counter_t ifOutOctets;         // Tx octets
+    mesa_port_counter_t ifOutUcastPkts;      // Tx unicasts
+    mesa_port_counter_t ifOutMulticastPkts;  // Tx multicasts
+    mesa_port_counter_t ifOutBroadcastPkts;  // Tx broadcasts
+    mesa_port_counter_t ifOutNUcastPkts;     // Tx non-unicasts
+    mesa_port_counter_t ifOutDiscards;       // Tx discards
+    mesa_port_counter_t ifOutErrors;         // Tx errors
+} mesa_port_if_group_counters_t;
+
+// Ethernet-like Interface counter structure (RFC 3635)
+typedef struct {
+    mesa_port_counter_t dot3StatsAlignmentErrors          CAP(PORT_CNT_ETHER_LIKE); // Rx alignment errors
+    mesa_port_counter_t dot3StatsFCSErrors                CAP(PORT_CNT_ETHER_LIKE); // Rx FCS errors
+    mesa_port_counter_t dot3StatsFrameTooLongs            CAP(PORT_CNT_ETHER_LIKE); // Rx too long
+    mesa_port_counter_t dot3StatsSymbolErrors             CAP(PORT_CNT_ETHER_LIKE); // Rx symbol errors
+    mesa_port_counter_t dot3ControlInUnknownOpcodes       CAP(PORT_CNT_ETHER_LIKE); // Rx unknown opcodes
+    mesa_port_counter_t dot3InPauseFrames;                 // Rx pause
+
+    mesa_port_counter_t dot3StatsSingleCollisionFrames    CAP(PORT_CNT_ETHER_LIKE); // Tx single collisions
+    mesa_port_counter_t dot3StatsMultipleCollisionFrames  CAP(PORT_CNT_ETHER_LIKE); // Tx multiple collisions
+    mesa_port_counter_t dot3StatsDeferredTransmissions    CAP(PORT_CNT_ETHER_LIKE); // Tx deferred
+    mesa_port_counter_t dot3StatsLateCollisions           CAP(PORT_CNT_ETHER_LIKE); // Tx late collisions
+    mesa_port_counter_t dot3StatsExcessiveCollisions      CAP(PORT_CNT_ETHER_LIKE); // Tx excessive collisions
+    mesa_port_counter_t dot3StatsCarrierSenseErrors       CAP(PORT_CNT_ETHER_LIKE); // Tx carrier sense errors
+    mesa_port_counter_t dot3OutPauseFrames;                // Tx pause
+} mesa_port_ethernet_like_counters_t;
+
+// Port bridge counter structure (RFC 4188)
+typedef struct
+{
+    mesa_port_counter_t dot1dTpPortInDiscards; // Rx bridge discards
+} mesa_port_bridge_counters_t;
+
+// Port counters per (PORT, PRIO)
+typedef struct {
+    mesa_port_counter_t rx; // Rx frames
+    mesa_port_counter_t tx; // Tx frames
+    mesa_port_counter_t rx_green          CAP(PORT_CNT_EVC); // Rx green frames
+    mesa_port_counter_t rx_yellow         CAP(PORT_CNT_EVC); // Rx yellow frames
+    mesa_port_counter_t rx_red            CAP(PORT_CNT_EVC); // Rx red frames
+    mesa_port_counter_t rx_green_discard  CAP(PORT_CNT_EVC); // Rx green discarded frames
+    mesa_port_counter_t rx_yellow_discard CAP(PORT_CNT_EVC); // Rx yellow discarded frames
+    mesa_port_counter_t tx_green          CAP(PORT_CNT_EVC); // Tx green frames
+    mesa_port_counter_t tx_yellow         CAP(PORT_CNT_EVC); // Tx yellow frames
+} mesa_port_prio_counters_t;
+
+// Port 802.3br counter structure
+typedef struct
+{
+    mesa_port_counter_t aMACMergeFrameAssErrorCount; // Rx counter
+    mesa_port_counter_t aMACMergeFrameSmdErrorCount; // Rx counter
+    mesa_port_counter_t aMACMergeFrameAssOkCount;    // Rx counter
+    mesa_port_counter_t aMACMergeFragCountRx;        // Rx counter
+    mesa_port_counter_t aMACMergeFragCountTx;        // Tx counter
+    mesa_port_counter_t aMACMergeHoldCount;          // Tx counter
+} mesa_port_dot3br_counters_t;
+
+// Port counter structure
+typedef struct
+{
+    mesa_port_rmon_counters_t          rmon;                             // RMON counters
+    mesa_port_if_group_counters_t      if_group;                         // Interfaces Group counters
+    mesa_port_ethernet_like_counters_t ethernet_like;                    // Ethernet-like Interface counters
+    mesa_port_bridge_counters_t        bridge;                           // Bridge counters
+    mesa_port_prio_counters_t          prio[MESA_PRIO_ARRAY_SIZE];       // Priority counters
+    mesa_port_dot3br_counters_t        dot3br CAP(QOS_FRAME_PREEMPTION); // 802.3br counters
+} mesa_port_counters_t;
+
+// Update counters for port.
+// port_no [IN]  Port number.
+mesa_rc mesa_port_counters_update(const mesa_inst_t     inst,
+                                  const mesa_port_no_t  port_no);
+
+// Clear counters for port.
+// port_no [IN]  Port/aggregation number.
+mesa_rc mesa_port_counters_clear(const mesa_inst_t     inst,
+                                 const mesa_port_no_t  port_no);
+
+// Get counters for port.
+// port_no [IN]    Port/aggregation number.
+// counters [OUT]  Counter structure.
+mesa_rc mesa_port_counters_get(const mesa_inst_t     inst,
+                               const mesa_port_no_t  port_no,
+                               mesa_port_counters_t  *const counters);
+
+// Basic counters structure
+typedef struct
+{
+    uint32_t rx_frames; // Rx frames
+    uint32_t tx_frames; // Tx frames
+} mesa_basic_counters_t;
+
+// Get basic counters for port.
+// port_no [IN]    Port/aggregation number.
+// counters [OUT]  Counter structure.
+mesa_rc mesa_port_basic_counters_get(const mesa_inst_t     inst,
+                                     const mesa_port_no_t  port_no,
+                                     mesa_basic_counters_t *const counters);
+
+// Port forwarding state
+typedef enum
+{
+    MESA_PORT_FORWARD_ENABLED,   // Forward in both directions
+    MESA_PORT_FORWARD_DISABLED,  // Forwarding and learning disabled
+    MESA_PORT_FORWARD_INGRESS,   // Forward frames from port only
+    MESA_PORT_FORWARD_EGRESS     // Forward frames to port only (learning disabled)
+} mesa_port_forward_t;
+
+// Get port forwarding state.
+// port_no [IN]   Port number.
+// forward [OUT]  Forwarding state.
+mesa_rc mesa_port_forward_state_get(const mesa_inst_t     inst,
+                                    const mesa_port_no_t  port_no,
+                                    mesa_port_forward_t   *const forward);
+
+// Set port forwarding state.
+// port_no [IN]  Port number.
+// forward [IN]  Forwarding state.
+//               By default, forwarding is enabled in both directions.
+mesa_rc mesa_port_forward_state_set(const mesa_inst_t          inst,
+                                    const mesa_port_no_t       port_no,
+                                    const mesa_port_forward_t  forward);
+
+// Port Internal Frame Header structure
+typedef struct
+{
+    mesa_bool_t ena_inj_header CAP(PORT_INJ_HDR); // Enable injection header
+    mesa_bool_t ena_xtr_header CAP(PORT_XTR_HDR); // Enable extraction header
+    mesa_bool_t ena_ifh_header CAP(PORT_XTR_HDR); // Same as ena_xtr_header (JR1 compatibility)
+} mesa_port_ifh_t CAP(PORT_IFH);
+
+// Set port Internal Frame Header settings.
+// port_no [IN]  Port number.
+// conf [IN]     Port IFH structure.
+mesa_rc mesa_port_ifh_conf_set(const mesa_inst_t       inst,
+                               const mesa_port_no_t    port_no,
+                               const mesa_port_ifh_t  *const conf)
+    CAP(PORT_IFH);
+
+// Get port Internal Frame Header settings.
+// port_no [IN]  Port number.
+// conf [OUT]    Port IFH configuration.
+mesa_rc mesa_port_ifh_conf_get(const mesa_inst_t     inst,
+                               const mesa_port_no_t  port_no,
+                               mesa_port_ifh_t      *const conf)
+    CAP(PORT_IFH);
+
+// Read value from MIIM register.
+// port_no [IN]  Port number.
+// addr    [IN]  PHY register address.
+// value   [OUT] PHY register value.
+mesa_rc mesa_port_miim_read(const mesa_inst_t    inst,
+                            const mesa_port_no_t port_no,
+                            const uint8_t        addr,
+                            uint16_t             *const value);
+
+// Write value to MIIM register.
+// port_no [IN]  Port number.
+// addr    [IN]  PHY register address.
+// value   [IN]  PHY register value.
+mesa_rc mesa_port_miim_write(const mesa_inst_t    inst,
+                             const mesa_port_no_t port_no,
+                             const uint8_t        addr,
+                             const uint16_t       value);
+
+// Direct MIIM read (bypassing port map)
+// chip_no         [IN]  Chip number (if multi-chip instance).
+// miim_controller [IN]  MIIM Controller Instance
+// miim_addr       [IN]  MIIM Device Address
+// addr            [IN]  MIIM Register Address
+// value           [OUT] Register value read
+mesa_rc mesa_miim_read(const mesa_inst_t            inst,
+                       const mesa_chip_no_t         chip_no,
+                       const mesa_miim_controller_t miim_controller,
+                       const uint8_t                miim_addr,
+                       const uint8_t                addr,
+                       uint16_t                     *const value);
+
+// Direct MIIM write (bypassing port map)
+// chip_no         [IN]  Chip number (if multi-chip instance).
+// miim_controller [IN]  MIIM Controller Instance
+// miim_addr       [IN]  MIIM Device Address
+// addr            [IN]  MIIM Register Address
+// value           [IN]  Register value to write
+mesa_rc mesa_miim_write(const mesa_inst_t            inst,
+                        const mesa_chip_no_t         chip_no,
+                        const mesa_miim_controller_t miim_controller,
+                        const uint8_t                miim_addr,
+                        const uint8_t                addr,
+                        const uint16_t               value);
+
+// Read value from MMD register.
+// port_no [IN]  Port number connected to MMD.
+// mmd     [IN]  MMD number.
+// addr    [IN]  PHY register address.
+// value   [OUT] PHY register value.
+mesa_rc mesa_port_mmd_read(const mesa_inst_t     inst,
+                           const mesa_port_no_t  port_no,
+                           const uint8_t         mmd,
+                           const uint16_t        addr,
+                           uint16_t              *const value)
+    CAP(PORT_10G);
+
+// Read values (a number of 16 bit values) from MMD register.
+// port_no [IN]  Port number connected to MMD.
+// mmd     [IN]  MMD number.
+// addr    [IN]  PHY register address.
+// buf     [OUT] PHY register values.
+// count   [IN]  number of values to read.
+mesa_rc mesa_port_mmd_read_inc(const mesa_inst_t     inst,
+                               const mesa_port_no_t  port_no,
+                               const uint8_t         mmd,
+                               const uint16_t        addr,
+                               uint16_t              *const buf,
+                               uint8_t               count)
+    CAP(PORT_10G);
+
+// Write value to MMD register.
+// port_no [IN]  Port number connected to MMD.
+// mmd     [IN]  MMD number.
+// addr    [IN]  PHY register address.
+// value   [IN]  PHY register value.
+mesa_rc mesa_port_mmd_write(const mesa_inst_t     inst,
+                            const mesa_port_no_t  port_no,
+                            const uint8_t         mmd,
+                            const uint16_t        addr,
+                            const uint16_t        value)
+    CAP(PORT_10G);
+
+// Read, modify and write value to MMD register.
+// port_no  [IN]  Port number connected to MMD.
+// mmd      [IN]  MMD number.
+// addr     [IN]  PHY register address.
+// value    [IN]  PHY register value.
+// mask     [IN]  PHY register mask, only enabled bits are changed.
+mesa_rc mesa_port_mmd_masked_write(const mesa_inst_t     inst,
+                                   const mesa_port_no_t  port_no,
+                                   const uint8_t         mmd,
+                                   const uint16_t        addr,
+                                   const uint16_t        value,
+                                   const uint16_t        mask)
+    CAP(PORT_10G);
+
+// Direct MMD read (Clause 45, bypassing port map)
+// chip_no         [IN]  Chip number (if multi-chip instance).
+// miim_controller [IN]  MIIM Controller Instance
+// miim_addr       [IN]  MIIM Device Address
+// mmd             [IN]  MMD number.
+// addr            [IN]  MIIM Register Address
+// value           [OUT] Register value read
+mesa_rc mesa_mmd_read(const mesa_inst_t            inst,
+                      const mesa_chip_no_t         chip_no,
+                      const mesa_miim_controller_t miim_controller,
+                      const uint8_t                miim_addr,
+                      const uint8_t                mmd,
+                      const uint16_t               addr,
+                      uint16_t                     *const value)
+    CAP(PORT_10G);
+
+// Direct MMD write (Clause 45, bypassing port map)
+// chip_no         [IN]  Chip number (if multi-chip instance).
+// miim_controller [IN]  MIIM Controller Instance
+// miim_addr       [IN]  MIIM Device Address
+// mmd             [IN]  MMD number.
+// addr            [IN]  MIIM Register Address
+// value           [IN]  Register value to write
+mesa_rc mesa_mmd_write(const mesa_inst_t            inst,
+                       const mesa_chip_no_t         chip_no,
+                       const mesa_miim_controller_t miim_controller,
+                       const uint8_t                miim_addr,
+                       const uint8_t                mmd,
+                       const uint16_t               addr,
+                       const uint16_t               value)
+    CAP(PORT_10G);
+
+/******************************************************************************/
+/* 10G/25G KR Backplane Ethernet                                              */
+/******************************************************************************/
+
+// KR Aneg status
+typedef struct {
+    mesa_bool_t       complete;                       // Aneg completed successfully
+    mesa_bool_t       active;                         // Aneg is running
+    mesa_port_speed_t speed_req;                      // Speed negotiated (needs to be configured)
+    mesa_bool_t       request_fec_change;             // FEC state change is negotiated (needs to be configured)
+    mesa_bool_t       r_fec_enable;                   // Base-R-FEC (Clause 74) is negotiated
+    mesa_bool_t       rs_fec_enable CAP(PORT_KR_IRQ); // Base-RS-FEC (Clause 108) is negotiated
+    uint32_t          sm;                             // (debug) Aneg state machine
+    uint32_t          hist          CAP(PORT_KR_IRQ); // (debug) Aneg history
+    mesa_bool_t       lp_aneg_able;                   // (debug) LP aneg ability
+    mesa_bool_t       block_lock;                     // (debug) PCS block lock
+    uint16_t          lp_bp0        CAP(PORT_KR_IRQ); // (debug) LP Base page 0-15
+    uint16_t          lp_bp1        CAP(PORT_KR_IRQ); // (debug) LP Base page 16-31
+    uint16_t          lp_bp2        CAP(PORT_KR_IRQ); // (debug) LP Base page 32-47
+    uint16_t          lp_np0        CAP(PORT_KR_IRQ); // (debug) LP Next page 0-15
+    uint16_t          lp_np1        CAP(PORT_KR_IRQ); // (debug) LP Next page 16-31
+    uint16_t          lp_np2        CAP(PORT_KR_IRQ); // (debug) LP Next page 32-47
+} mesa_port_kr_status_aneg_t        CAP(PORT_KR);
+
+// KR Training status
+typedef struct {
+    mesa_bool_t complete;         // Training completed successfully, tap settings applied.
+    uint8_t     cm_ob_tap_result; // The minus 1 coefficient c(-1). 7-bit signed, range: -32..31
+    uint8_t     cp_ob_tap_result; // The 0 coefficient c(0).        7-bit signed, range: -32..31
+    uint8_t     c0_ob_tap_result; // The plus 1 coefficient c(1).   7-bit signed, range: -32..31
+    uint32_t    frame_sent       CAP(PORT_KR_IRQ); // Training frames sent
+    uint16_t    frame_errors     CAP(PORT_KR_IRQ); // Training frames errors
+} mesa_port_kr_status_train_t    CAP(PORT_KR);
+
+// KR FEC status
+typedef struct {
+    mesa_bool_t  r_fec_enable;                   // FEC enabled (Clause 74)
+    mesa_bool_t  rs_fec_enable CAP(PORT_KR_IRQ); // RS-FEC Enabled (Clause 108 / 25G)  */
+    uint32_t     corrected_block_cnt;            // Corrected block count
+    uint32_t     uncorrected_block_cnt;          // Un-corrected block count
+} mesa_port_kr_status_fec_t CAP(PORT_KR);
+
+// KR Aneg and Training structures
+typedef struct {
+    mesa_port_kr_status_aneg_t  aneg;  // Aneg structure
+    mesa_port_kr_status_train_t train; // Training structure
+    mesa_port_kr_status_fec_t   fec;   // FEC structure
+} mesa_port_kr_status_t CAP(PORT_KR);
+
+
+// KR Link Advertisement capability config
+typedef struct {
+    mesa_bool_t enable;                       // Autoneg enable
+    mesa_bool_t adv_25g     CAP(PORT_KR_IRQ); // Advertise 25G
+    mesa_bool_t adv_10g;                      // Advertise 10G
+    mesa_bool_t adv_5g      CAP(PORT_KR_IRQ); // Advertise 5G
+    mesa_bool_t adv_2g5     CAP(PORT_KR_IRQ); // Advertise 2G5
+    mesa_bool_t adv_1g      CAP(PORT_KR_IRQ); // Advertise 1G
+    mesa_bool_t r_fec_req;                    // Request R-FEC
+    mesa_bool_t rs_fec_req  CAP(PORT_KR_IRQ); // Request RS-FEC (25G)
+    mesa_bool_t next_page   CAP(PORT_KR_IRQ); // Use next page when advertise
+    mesa_bool_t no_pd;                        // Do not enable parallel detect
+} mesa_port_kr_aneg_t       CAP(PORT_KR);
+
+// KR Training config
+typedef struct {
+    mesa_bool_t enable;                        // Enable KR training, BER method used
+    mesa_bool_t no_remote   CAP(PORT_KR_IRQ);  // Do not train remote, only local
+    mesa_bool_t no_eq_apply CAP(PORT_KR_IRQ);  // Do not apply EQ settings to HW (debug only)
+    mesa_bool_t use_ber_cnt CAP(PORT_KR_IRQ);  // Use BER count instead of eye height
+    mesa_bool_t test_mode   CAP(PORT_KR_IRQ);  // Debug only
+    uint32_t test_repeat    CAP(PORT_KR_IRQ);  // Debug only
+} mesa_port_kr_train_t      CAP(PORT_KR);
+
+// KR configuration structures
+typedef struct {
+    mesa_port_kr_aneg_t  aneg;  // 10G-KR Aneg capability, 802.3ap Clause 73
+    mesa_port_kr_train_t train; // 10G-KR Training parameters, 802.3ap Clause 72
+} mesa_port_kr_conf_t CAP(PORT_KR);
+
+// Set KR configuration incl. aneg and training.
+// Aneg is started which starts the training process.
+// The results can be read through mesa_port_kr_status_get().
+// port_no [IN]  Port number.
+// conf [IN]  Configuration structure.
+mesa_rc mesa_port_kr_conf_set(const mesa_inst_t inst,
+                                  const mesa_port_no_t port_no,
+                                  const mesa_port_kr_conf_t *const conf)
+    CAP(PORT_KR);
+
+// Get KR configuration
+// port_no [IN]   Port number.
+// conf [OUT]  Configuration structure.
+mesa_rc mesa_port_kr_conf_get(const mesa_inst_t inst,
+                                  const mesa_port_no_t port_no,
+                                  mesa_port_kr_conf_t *const conf)
+    CAP(PORT_KR);
+
+// Get KR Aneg and training status
+// port_no [IN]  Port number.
+// status [OUT]  KR Aneg and Training status
+mesa_rc mesa_port_kr_status_get(const mesa_inst_t inst,
+                                    const mesa_port_no_t port_no,
+                                    mesa_port_kr_status_t *const status)
+    CAP(PORT_KR);
+
+#define MESA_KR_AN_RATE         (0xF)
+#define MESA_KR_ACTV            (1 << 29)
+#define MESA_KR_LPSVALID        (1 << 28)
+#define MESA_KR_LPCVALID        (1 << 27)
+#define MESA_KR_WT_DONE         (1 << 26)
+#define MESA_KR_MW_DONE         (1 << 25)
+#define MESA_KR_BER_BUSY_0      (1 << 24)
+#define MESA_KR_BER_BUSY_1      (1 << 23)
+#define MESA_KR_REM_RDY_0       (1 << 22)
+#define MESA_KR_REM_RDY_1       (1 << 21)
+#define MESA_KR_FRLOCK_0        (1 << 20)
+#define MESA_KR_FRLOCK_1        (1 << 19)
+#define MESA_KR_DME_VIOL_0      (1 << 18)
+#define MESA_KR_DME_VIOL_1      (1 << 17)
+#define MESA_KR_AN_XMIT_DISABLE (1 << 16)
+#define MESA_KR_TRAIN           (1 << 15)
+#define MESA_KR_RATE_DET        (1 << 14)
+#define MESA_KR_CMPL_ACK        (1 << 13)
+#define MESA_KR_AN_GOOD         (1 << 12)
+#define MESA_KR_LINK_FAIL       (1 << 11)
+#define MESA_KR_ABD_FAIL        (1 << 10)
+#define MESA_KR_ACK_FAIL        (1 << 9)
+#define MESA_KR_NP_FAIL         (1 << 8)
+#define MESA_KR_NP_RX           (1 << 7)
+#define MESA_KR_INCP_LINK       (1 << 6)
+#define MESA_KR_GEN0_DONE       (1 << 5)
+#define MESA_KR_GEN1_DONE       (1 << 4)
+#define MESA_KR_ANEG_RATE_25G    7
+#define MESA_KR_ANEG_RATE_25G_S  8
+#define MESA_KR_ANEG_RATE_10G    9
+#define MESA_KR_ANEG_RATE_5G     11
+#define MESA_KR_ANEG_RATE_2G5    12
+#define MESA_KR_ANEG_RATE_1G     13
+
+typedef enum {
+    MESA_TR_INITILIZE,
+    MESA_TR_SEND_TRAINING,
+    MESA_TR_TRAIN_LOCAL,
+    MESA_TR_TRAIN_REMOTE,
+    MESA_TR_SEND_DATA,
+    MESA_TR_TRAINING_FAILURE,
+    MESA_TR_LINK_READY
+} mesa_train_state_t CAP(PORT_KR_IRQ);
+
+typedef enum {
+    MESA_BER_GO_TO_MIN,
+    MESA_BER_CALCULATE_BER,
+    MESA_BER_MOVE_TO_MID_MARK,
+    MESA_BER_LOCAL_RX_TRAINED
+} mesa_ber_stage_t CAP(PORT_KR_IRQ);
+
+typedef enum {
+    MESA_TAP_CM1,
+    MESA_TAP_C0,
+    MESA_TAP_CP1,
+} mesa_kr_tap_t CAP(PORT_KR_IRQ);
+
+typedef struct {
+    uint16_t cm1;
+    uint16_t c0;
+    uint16_t cp1;
+    uint16_t coef;
+    uint16_t status;
+} mesa_kr_status_results_t CAP(PORT_KR_IRQ);
+
+typedef struct {
+    uint32_t vga;
+    uint32_t edc;
+    uint32_t eqr;
+} mesa_port_ctle_t;
+
+/** \brief KR state machine structures */
+typedef struct {
+    mesa_train_state_t       current_state;
+    mesa_ber_stage_t         ber_training_stage;
+    mesa_kr_tap_t            current_tap;
+    mesa_bool_t              signal_detect;
+    mesa_bool_t              training_started;
+    mesa_bool_t              remote_rx_ready;
+    mesa_bool_t              local_rx_ready;
+    mesa_bool_t              dme_viol_handled;
+    mesa_bool_t              dme_viol;
+    mesa_bool_t              ber_busy;
+    mesa_bool_t              tap_max_reached;
+    mesa_bool_t              receiver_ready_sent;
+    mesa_bool_t              kr_mw_done;
+    mesa_bool_t              ignore_fail;
+    mesa_port_speed_t        next_parallel_spd;
+    uint16_t                 lp_tap_max_cnt[3];
+    uint16_t                 lp_tap_end_cnt[3];
+    uint32_t                 tap_idx;
+    uint16_t                 ber_cnt[3][64];
+    uint16_t                 eye_height[3][64];
+    uint16_t                 decr_cnt;
+    uint16_t                 ber_coef_frm;
+    uint16_t                 ber_status_frm;
+    mesa_bool_t              test_mode;
+    mesa_bool_t              test_repeat;
+    mesa_kr_status_results_t tr_res;
+} mesa_port_kr_state_t CAP(PORT_KR_IRQ);
+
+mesa_rc mesa_port_kr_state_get(const mesa_inst_t inst,
+                               const mesa_port_no_t port_no,
+                               mesa_port_kr_state_t *const state)
+    CAP(PORT_KR_IRQ);
+
+
+// KR FEC structure */
+typedef struct {
+    mesa_bool_t r_fec;                   /**< Enable/Disable Clause 74 R-FEC              */
+    mesa_bool_t rs_fec CAP(PORT_KR_IRQ); /**< Enable/Disable Clause 108 RS-FEC (25G only) */
+} mesa_port_kr_fec_t CAP(PORT_KR);
+
+// KR eye info
+typedef struct {
+    uint32_t height;
+} mesa_port_kr_eye_dim_t CAP(PORT_KR_IRQ);
+
+// Get KR FEC
+// inst    [IN]  Target instance reference.
+// port_no [IN]  Port number.
+// conf    [IN]  Configuration structure.
+mesa_rc mesa_port_kr_fec_get(const mesa_inst_t inst,
+                             const mesa_port_no_t port_no,
+                             mesa_port_kr_fec_t *const conf)
+    CAP(PORT_KR);
+
+// Set KR FEC
+// inst    [IN]  Target instance reference.
+// port_no [IN]  Port number.
+// conf    [IN]  Configuration structure.
+mesa_rc mesa_port_kr_fec_set(const mesa_inst_t inst,
+                             const mesa_port_no_t port_no,
+                             const mesa_port_kr_fec_t *const conf)
+    CAP(PORT_KR);
+
+// Apply KR interrupts
+// port_no [IN]  Port number.
+// irq    [IN]  interrupt id.
+mesa_rc mesa_port_kr_irq_apply(const mesa_inst_t inst,
+                               const mesa_port_no_t port_no,
+                               const uint32_t *const irq_vec)
+    CAP(PORT_KR_IRQ);
+
+// Get and clear KR interrupts
+// port_no [IN]  Port number.
+// irq    [IN]  interrupt id.
+mesa_rc mesa_port_kr_irq_get(const mesa_inst_t inst,
+                             const mesa_port_no_t port_no,
+                             uint32_t *const irq_vec)
+    CAP(PORT_KR_IRQ);
+
+/**
+ * \brief Enable / Disable KR IRQs
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param enable  [OUT] enable/disable
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_port_kr_event_enable(const mesa_inst_t inst,
+                                  const mesa_port_no_t port_no,
+                                  mesa_bool_t enable)
+    CAP(PORT_KR_IRQ);
+
+// Get current KR interrupt status across all ports
+// mask    [OUT]  A mask with one bit for each port.
+
+mesa_rc mesa_port_kr_irq_activity(mesa_inst_t inst,
+                                  uint32_t *const mask)
+    CAP(PORT_KR_IRQ);
+
+/**
+ * \brief Get and clear KR interrupts
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param eye     [OUT] The height of the eye.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_port_kr_eye_get(mesa_inst_t inst,
+                             const mesa_port_no_t port_no,
+                             mesa_port_kr_eye_dim_t *const eye)
+    CAP(PORT_KR_IRQ);
+
+/**
+ * \brief Start CTLE adjustment
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_port_kr_ctle_adjust(mesa_inst_t inst,
+                                 const mesa_port_no_t port_no)
+    CAP(PORT_KR_IRQ);
+
+/**
+ * \brief Get CTLE config
+ *
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param ctle    [OUT] CTLE values.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_port_kr_ctle_get(mesa_inst_t inst,
+                              const mesa_port_no_t port_no, mesa_port_ctle_t *const ctle)
+    CAP(PORT_KR_IRQ);
+
+
+
+/******************************************************************************/
+/* 10G/25G KR Backplane Ethernet - End                                        */
+/******************************************************************************/
+
+// Port loopback
+typedef enum
+{
+    MESA_PORT_LB_DISABLED, // Loopback disabled
+    MESA_PORT_LB_NEAR_END, // Near-end loopback
+    MESA_PORT_LB_FAR_END,  // Far-end loopback
+    MESA_PORT_LB_FACILITY, // Facility loopback
+    MESA_PORT_LB_EQUIPMENT // Equipment loopback
+} mesa_port_lb_t;
+
+// Port test configuration structure
+typedef struct
+{
+    mesa_port_lb_t loopback; // Loopback type
+} mesa_port_test_conf_t;
+
+// Get port test configuration.
+// port_no [IN]  Port number.
+// conf [OUT]    Port test configuration.
+mesa_rc mesa_port_test_conf_get(const mesa_inst_t      inst,
+                                const mesa_port_no_t   port_no,
+                                mesa_port_test_conf_t  *const conf);
+
+// Set port test configuration.
+// port_no [IN]  Port number.
+// conf [IN]     Port test configuration.
+mesa_rc mesa_port_test_conf_set(const mesa_inst_t            inst,
+                                const mesa_port_no_t         port_no,
+                                const mesa_port_test_conf_t  *const conf);
+
+// Serdes Tx Equalizer taps
+typedef enum
+{
+    MESA_SERDES_PRE_CURSOR,
+    MESA_SERDES_MAIN_CURSOR,
+    MESA_SERDES_POST_CURSOR,
+} mesa_port_serdes_tap_enum_t;
+
+//  Function pointer for API callout.
+//  This function will typically be implemented in MEBA were the board specifics are known.
+//  The purpose is to get the tap value for a specific port/speed/tap.
+//  port_no [IN]    Port number.
+//  speed   [IN]    Port speed.
+//  tap     [IN]    Pre/main/post tap.
+//  value   [OUT]   The register value to be written.
+typedef mesa_rc (*mesa_port_serdes_tap_get_t)(const mesa_inst_t                 inst,
+                                              const mesa_port_no_t              port_no,
+                                              const mesa_port_speed_t           speed,
+                                              const mesa_port_serdes_tap_enum_t tap,
+                                              uint32_t                          *const value);
+
+/** \brief Serdes debug parameters */
+typedef enum
+{
+    MESA_SERDES_DFE_PRM,  /**< DFE prms. in this order : h1,h2,h3,h4,h5,dlev */
+    MESA_SERDES_CTLE_PRM, /**< CTLE prms. in this order: r,c,vga */
+    MESA_SERDES_TXEQ_PRM, /**< TxEQ prms. in this order: tap_dly, tap_adv, amplitude */
+} mesa_serdes_debug_type_t;
+
+/** \brief Serdes debug configuration structure */
+typedef struct
+{
+    mesa_serdes_debug_type_t debug_type;
+    uint32_t                 serdes_prm[10]; /**< Depends on debug_type */
+} mesa_port_serdes_debug_t;
+
+/**
+ * \brief Used for Serdes debugging.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [IN]     Serdes test configuration.
+ *
+ * \return Return code.
+ **/
+mesa_rc mesa_port_serdes_debug_set(const mesa_inst_t              inst,
+                                   const mesa_port_no_t           port_no,
+                                   const mesa_port_serdes_debug_t *const conf);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+:@byteposir:	@str"2#ifndef _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ÕiPipiqiriöi«i»i˘iCiíiìiƒi—i”i	i,iQitiòiºi‚i¯i˘ii,i.ili¨iÌiii9iHiJii∑iÔi%i>i?i`i|i}iìi¢i§iÔiDi¶iıi]i¡ii,i-i>iõiΩiÛi(	id	ie	iv	i‘	iÒ	i$
+iV
+iè
+iê
+iî
+iÀ
+iiri«iiqiviwiùi◊iŸi"ili∫i	i/i0iaipiri≥iÙi6ixi¬iiEibiciêiüi°i“i˜iiRiâiøi¯iii@iOiQiìiËi	i
+i:iYi~iÀiisiti§i¬iÊi9ièiÌiÓiiii_i©iÙiıiCi}i®i…i iÁiˆi¯i;ii¥iŒiœiii=iJiLiÇiµiÛiii,i9i;ihiõiØi∞iÃi€i›i!ili∑iiii?iLiNiàiƒii5i`iaiÅiêiíiigiπiiei¶ißiÓi@ iì i÷ i(!ie!i®!iÓ!i5"iü"iÒ"iD#ià#iÃ#i$iu$i‹$i$iÒ$i%i*%iQ%iä%i∆%i&i&i#&iA&if&iù&i◊&i'i'i+'iI'il'i•'i·'i$(i%(iv(i«(i)i)i))iO)iP)iu)iÜ)i”)i*id*i∞*i¸*iR+i•+i˜+iB,iã,i‹,i1-iá-i›-i3.iã.iﬂ.i‡.i-/iu/iæ/i
+0iV0i¢0iÛ0iH1iû1iÙ1iJ2i¢2iˆ2i3i3iE3iV3iê3iÃ3i
+4iH4ià4iƒ4i˛4iˇ4i95iu5i≥5iÒ5i16im6iß6i»6i…6i7i7i}7i‚7iE8i≠8i9i^9i_9iÀ9i9:iú:i;iu;i‰;i+<iQ<iR<i~<iç<iè<i‘<iÛ<iÙ<i=i'=iP=iy=i…=i>ih>i¬>i?im?iæ?i€?i‹?i˛?i@i@iR@iï@iÿ@iAi^Ai°Ai¿Ai¡Ai€AiÍAiÏAiFBi¨BiCiuCi”Ci0DiHDiIDifDiÑDi¬DiEiEi!EiKEiàEi…Ei Ei‰EiFi6FiqFiØFiˆFi˜FiGi"Gi$GiIGinGiáGiàGi®Gi‘Gi˙Gi;HiHiÃHiÕHiÊHiÛHiıHi4IiyIiªIiJi&Ji'JiEJidJiàJi»JiKiVKiWKiuKiìKi∂Ki˝KiBLiäLi”Li‘Li¸LiMiMiZMi®MiNi)Ni*NiVNitNiôNi÷NiOiYOilOimOiôOi∑Oi‡OiPiYPiöPi≠PiÆPi–PiÓPiQi:QiqQi´Qi‚Qi"Ri#RiDRibRiâRiÆRiÊRi!SiYSiìSiîSiΩSi¸Si.Ti[TiäTi∑TiÒTi.UisUi≤UiÏUi/Vi0ViZViôViÀVi¯Vi'WiXWiìWi—WiXiWXiíXiœXi–XiÒXi Yi=YidYiâYi¿Yi˙Yi0ZigZi¶ZiπZi∫Zi¯Zi'[iD[ik[ië[iº[i˜[i5\io\i™\iÎ\i']i:]i;]i[]iä]iß]iŒ]iÛ]i+^if^iù^i’^i_i!_i"_iS_iÉ_i°_i…_iÔ_i3`ir`i¥`iÚ`i1aiqai∞ai√aiƒai˜ai6bihbiïbi∫biÈbiciOciãciœcidiEdi~diødi“di”dieiFeixei•ei ei˘ei*fidfi°fiÊfi%gi^giògi”giÊgiÁgi8hiâhi⁄hi€hiÌhi˛hiSiiúiiˇiipjiŒji.kiÇki–ki!liqliƒlimilmiøminigniôniöni∞ni¡nioi~oiﬂoi@piãpiÿpiqiqiqi*qivqi–qirigriëriíriµri∆riˇri<sitsiösiõsiúsi«siÿsitiWtiñti‘tiuiQuiêui÷ui$visviùviûvi¥vi≈viwimwiÀwi!xi^xiõxi≈xi∆xiÂxiˆxiCyiîyi∏yiπyiÍyi zi^zi|zi£ziŸzi{ib{it{iu{iç{i¨{i‘{i
+|iJ|iç|iü|i†|i√|i·|i}iF}ià}i—}i„}i‰}i
+~i4~i^~ià~i≤~i‹~ii0iZiÑiÆiÿiÄi,ÄiVÄiÄÄi™Äi‘Äi˛Äi(ÅiRÅi{Åi§ÅiÕÅiˆÅiÇiHÇikÇiéÇi±Çi’Çi˘ÇiÉiÉi-ÉiDÉi_ÉixÉiíÉi©Éi«ÉiﬁÉiÑiÑiÑi-ÑiIÑihÑiÜÑi´Ñi¨ÑiªÑiÕÑiﬁÑiÑiÖiÖi$Öi6ÖiGÖiYÖilÖiÅÖiÆÖiØÖi¿Öi“Öi‰ÖiˆÖi
+ÜiÜi5ÜiFÜirÜi£ÜiÕÜi˘Üi(áiVáiÉái≤áiŸái ài.ài`àiâài≥ài„àiâiCâiiâiñâi∆âiÌâiäiEäimäióäiºäiÂäiÊäiãiZãiúãi≤ãi≥ãi¥ãiÀãi‹ãi9åiñåiπåi∫åi…åi⁄åiÔåiçiçi)çiUçisçiùçi“çiéiJéi\éi]éikéióéiµéiﬂéièiOèiíèi§èi•èiºèi⁄èi¯èi/êilêi™êi¿êi¡êi‡êi˛êiëiQëiåëi¬ëiÿëiŸëi›ëi íiíiíi9íi^íiÖíiàíi†íi•íiﬂíiìiUìikìilìi†ìi’ìi÷ìi
+îiBîiXîiYîi]îiÉîiÜîiâîiºîi·îiïiïi+ïi0ïi_ïiöïi⁄ïiïiÒïiıïiñiñiñiNñisñivñiéñiìñi∆ñióióiói ói:ói=ói@óisóiòóiΩói¿óiÿói›óiòigòi}òi~òiòiÄòi—òi"ôisôitôiÖôiíôiîôiƒôiÙôi#öiSöiÑöiñöióöiºöiÀöiÕöi˚öiõiõi5õiSõi}õi∫õi˙õi?úi@úi`úi~úi®úiÎúi1ùi|ùi}ùiôùi¶ùi®ùiƒùi·ùi˛ùiûiûiDûi†ûiÁûiüi(üiOüiÖüi€üi4†iã†i‡†i?°i@°if°is°iu°i≈°i	¢ia¢i}¢i~¢i±¢i¿¢i¬¢iÎ¢i6£iR£iS£iW£i|£i£i≤£i◊£i
+§i§i%§i*§ir§iΩ§i•i•i6•ie•:@last_line_endie•{;o;;o;	;
+@
+;iö;"3#define _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+
+;@{;o;;o;	;
+@
+;i»;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˘;"O#include <microchip/ethernet/switch/api/misc.h> // For mesa_sgpio_group_t
+;@{;o;;o;	;
+@
+;iC;"U#include <microchip/ethernet/hdr_start.h>       // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;iƒ;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iÃ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i◊;"MESA_BW_DEFAULT;@:cap0{;{;o;;o;	;
+@
+;i;"MESA_BW_1G;@;0{;{;o;;o;	;
+@
+;i0;"MESA_BW_2G5;@;0{;{;o;;o;	;
+@
+;iU;"MESA_BW_5G;@;0{;{;o;;o;	;
+@
+;ix;"MESA_BW_10G;@;0{;{;o;;o;	;
+@
+;iú;"MESA_BW_25G;@;0{;{;o;;o;	;
+@
+;i¿;"MESA_BW_UNDEFINED;@;0:typedef_nameo;;o;	;
+@
+;i‰;"mesa_internal_bw_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;o;;o;	;
+@
+;i';"	enum;@;[{;{;o;;o;	;
+@
+;i2;"MESA_SD_SGPIO_MAP_IGNORE;@;0{;{;o;;o;	;
+@
+;ip;"MESA_SD_SGPIO_MAP_ENABLE;@;0{;{;o;;o;	;
+@
+;i∞;"MESA_SD_SGPIO_MAP_DISABLE;@;0;o;;o;	;
+@
+;iÔ;"mesa_sd_sgpio_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i9;"typedef;@:struct_type_declare{:struct_members[	{:member{:normal{	:	typeo;;o;	;
+@
+;iN;"mesa_sd_sgpio_action_t ;@:	nameo;;o;	;
+@
+;ie;"action;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉ;"mesa_sgpio_group_t     ;@;o;;o;	;
+@
+;iö;"
+group;@;[ ;0{;{;{	;o;;o;	;
+@
+;iª;"uint32_t               ;@;o;;o;	;
+@
+;i“;"	port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ;"uint32_t               ;@;o;;o;	;
+@
+;i
+;"bit;@;[ ;0;o;;o;	;
+@
+;i';"mesa_port_sgpio_map_t;@;[ ;0{;o;;o;	;
+@
+;i`;""#define CHIP_PORT_UNUSED -1
+
+;@{
+;o;;o;	;
+@
+;iì;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i®;"int32_t                ;@;o;;o;	;
+@
+;iø;"chip_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ;"mesa_chip_no_t         ;@;o;;o;	;
+@
+;i
+;"chip_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH;"mesa_internal_bw_t     ;@;o;;o;	;
+@
+;i_;"max_bw ;@;[ ;o;;o;	;
+@
+;if;"CAP(PORT_BW);@{;{;{	;o;;o;	;
+@
+;i™;"mesa_miim_controller_t ;@;o;;o;	;
+@
+;i¡;"miim_controller;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˘;"uint8_t                ;@;o;;o;	;
+@
+;i;"miim_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;ia;"mesa_chip_no_t         ;@;o;;o;	;
+@
+;ix;"miim_chip_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≈;"mesa_port_sgpio_map_t  ;@;o;;o;	;
+@
+;i‹;"sd_map ;@;[ ;o;;o;	;
+@
+;i„;"CAP(SGPIO_MAP);@;o;;o;	;
+@
+;i;"mesa_port_map_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;iΩ;"mesa_rc ;@;o;;o;	;
+@
+;i≈;"mesa_port_map_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i◊;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iÌ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i	;"uint32_t              ;@;o;;o;	;
+@
+;i#	;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iB	;"const mesa_port_map_t *;@;o;;o;	;
+@
+;iY	;"port_map;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÒ	;"mesa_rc ;@;o;;o;	;
+@
+;i˘	;"mesa_port_map_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i
+;"const mesa_inst_t  ;@;o;;o;	;
+@
+;i
+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i>
+;"uint32_t           ;@;o;;o;	;
+@
+;iQ
+;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ip
+;"mesa_port_map_t    *;@;o;;o;	;
+@
+;iÑ
+;"port_map;@;[ ;0;0{
+;o;;o;	;
+@
+;iù;"typedef;@;{;o;;o;	;
+@
+;i•;"	enum;@;[	{;{	;o;;o;	;
+@
+;i›;"*MESA_PORT_CLAUSE_37_RF_LINK_OK       ;@:operatoro;;o;	;
+@
+;i;"=;@:	expro;;o;	;
+@
+;i;"((0<<1) | (0<<0));@;0{;{	;o;;o;	;
+@
+;i&;"*MESA_PORT_CLAUSE_37_RF_OFFLINE       ;@;"o;;o;	;
+@
+;iK;"=;@;#o;;o;	;
+@
+;iM;"((1<<1) | (0<<0));@;0{;{	;o;;o;	;
+@
+;ip;"*MESA_PORT_CLAUSE_37_RF_LINK_FAILURE  ;@;"o;;o;	;
+@
+;iï;"=;@;#o;;o;	;
+@
+;ió;"((0<<1) | (1<<0));@;0{;{	;o;;o;	;
+@
+;iæ;"*MESA_PORT_CLAUSE_37_RF_AUTONEG_ERROR ;@;"o;;o;	;
+@
+;i„;"=;@;#o;;o;	;
+@
+;iÂ;")((1<<1) | (1<<0))  // Autoneg error
+;@;0;o;;o;	;
+@
+;i;"'mesa_port_clause_37_remote_fault_t;@;[ ;0{
+;o;;o;	;
+@
+;ia;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iv;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;iô;"fdx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;i⁄;"hdx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¯;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;i;"symmetric_pause;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;i];"asymmetric_pause;@;[ ;0{;{;{	;o;;o;	;
+@
+;i|;"(mesa_port_clause_37_remote_fault_t ;@;o;;o;	;
+@
+;iü;"remote_fault;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∆;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;iÈ;"acknowledge;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"(mesa_bool_t                        ;@;o;;o;	;
+@
+;i+;"next_page;@;[ ;0;o;;o;	;
+@
+;iG;"mesa_port_clause_37_adv_t;@;[ ;0{
+;o;;o;	;
+@
+;iê;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i•;"mesa_bool_t ;@;o;;o;	;
+@
+;i±;"	link;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷;"mesa_bool_t ;@;o;;o;	;
+@
+;i‚;"fdx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˚;"mesa_bool_t ;@;o;;o;	;
+@
+;i;"hdx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ;"mesa_bool_t ;@;o;;o;	;
+@
+;i,;"speed_10M;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV;"mesa_bool_t ;@;o;;o;	;
+@
+;ib;"speed_100M;@;[ ;0{;{;{	;o;;o;	;
+@
+;iç;"mesa_bool_t ;@;o;;o;	;
+@
+;iô;"speed_1G;@;[ ;0{;{;{	;o;;o;	;
+@
+;i√;"mesa_bool_t ;@;o;;o;	;
+@
+;iœ;"aneg_complete;@;[ ;0;o;;o;	;
+@
+;i˙;"mesa_port_sgmii_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;i@;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU;"mesa_bool_t               ;@;o;;o;	;
+@
+;io;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;ió;"mesa_port_clause_37_adv_t ;@;o;;o;	;
+@
+;i±;"advertisement;@;[ ;0;o;;o;	;
+@
+;iÍ;""mesa_port_clause_37_control_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i~;"mesa_rc ;@;o;;o;	;
+@
+;iÜ;"$mesa_port_clause_37_control_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¶;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;i≈;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÛ;"$const mesa_port_no_t           ;@;o;;o;	;
+@
+;i;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iC;"+mesa_port_clause_37_control_t  *const ;@;o;;o;	;
+@
+;ii;"control;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÊ;"mesa_rc ;@;o;;o;	;
+@
+;iÓ;"$mesa_port_clause_37_control_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i;"*const mesa_inst_t                    ;@;o;;o;	;
+@
+;i3;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ia;"*const mesa_port_no_t                 ;@;o;;o;	;
+@
+;iÜ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i∑;"1const mesa_port_clause_37_control_t  *const ;@;o;;o;	;
+@
+;i„;"control;@;[ ;0;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@;o;;o;	;
+@
+;i%;"	obey;@;[ ;0{;{;{	;o;;o;	;
+@
+;ic;"mesa_bool_t ;@;o;;o;	;
+@
+;io;"generate;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≠;"mesa_mac_t  ;@;o;;o;	;
+@
+;iπ;"	smac;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÅ;"mesa_bool_t ;@;o;;o;	;
+@
+;iç;"pfc;@;[{;#o;;o;	;
+@
+;ië;"MESA_PRIO_ARRAY_SIZE;@;0;o;;o;	;
+@
+;i™;""mesa_port_flow_control_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iÁ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¸;"uint32_t ;@;o;;o;	;
+@
+;i;"hdx_gap_1;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?;"uint32_t ;@;o;;o;	;
+@
+;iH;"hdx_gap_2;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉ;"uint32_t ;@;o;;o;	;
+@
+;iå;"fdx_gap;@;[ ;0;o;;o;	;
+@
+;i∂;"mesa_port_frame_gaps_t;@;[ ;0{;o;;o;	;
+@
+;iœ;"J#define MESA_MAX_FRAME_LENGTH_STANDARD 1518  // IEEE 802.3 standard
+
+;@{
+;o;;o;	;
+@
+;i=;"typedef;@;{;o;;o;	;
+@
+;iE;"	enum;@;[{;{;o;;o;	;
+@
+;iP;"MESA_PORT_MAX_TAGS_NONE;@;0{;{;o;;o;	;
+@
+;iÜ;"MESA_PORT_MAX_TAGS_ONE;@;0{;{;o;;o;	;
+@
+;iπ;"MESA_PORT_MAX_TAGS_TWO   ;@;0;o;;o;	;
+@
+;iı;"mesa_port_max_tags_t;@;[ ;0{
+;o;;o;	;
+@
+;i,;"typedef;@;{;o;;o;	;
+@
+;i4;"	enum;@;[{;{;o;;o;	;
+@
+;i?;"MESA_PORT_LOOP_DISABLE;@;0{;{;o;;o;	;
+@
+;il;"MESA_PORT_LOOP_PCS_HOST;@;0;o;;o;	;
+@
+;iù;"mesa_port_loop_t;@;[ ;0{
+;o;;o;	;
+@
+;iÃ;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i·;"mesa_bool_t             ;@;o;;o;	;
+@
+;i˘;"sfp_dac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i%;"mesa_sd10g_media_type_t ;@;o;;o;	;
+@
+;i=;"media_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;ip;"mesa_bool_t             ;@;o;;o;	;
+@
+;ià;"rx_invert;@;[ ;0{;{;{	;o;;o;	;
+@
+;iª;"mesa_bool_t             ;@;o;;o;	;
+@
+;i”;"tx_invert;@;[ ;0;o;;o;	;
+@
+;i;"mesa_port_serdes_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i?;"typedef;@;{;o;;o;	;
+@
+;iG;"	enum;@;[	{;{;o;;o;	;
+@
+;iR;"MESA_PORT_PCS_NORMAL;@;0{;{;o;;o;	;
+@
+;iå;"MESA_PORT_PCS_ENABLE;@;0{;{;o;;o;	;
+@
+;i»;"MESA_PORT_PCS_DISABLE;@;0{;{;o;;o;	;
+@
+;i;"MESA_PORT_PCS_IGNORE   ;@;0;o;;o;	;
+@
+;i7;"mesa_port_pcs_conf_t ;@;[ ;o;;o;	;
+@
+;iL;"CAP(PORT_PCS_CONF);@{
+;o;;o;	;
+@
+;iÅ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ii;"mesa_port_interface_t   ;@;o;;o;	;
+@
+;iÅ;"if_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i´;"mesa_bool_t             ;@;o;;o;	;
+@
+;i√;"sd_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÚ;"mesa_bool_t             ;@;o;;o;	;
+@
+;i
+ ;"sd_active_high;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD ;"mesa_bool_t             ;@;o;;o;	;
+@
+;i\ ;"sd_internal;@;[ ;0{;{;{	;o;;o;	;
+@
+;ió ;"mesa_port_frame_gaps_t  ;@;o;;o;	;
+@
+;iØ ;"frame_gaps;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄ ;"mesa_bool_t             ;@;o;;o;	;
+@
+;iÚ ;"power_down;@;[ ;0{;{;{	;o;;o;	;
+@
+;i,!;"mesa_port_speed_t       ;@;o;;o;	;
+@
+;iD!;"
+speed;@;[ ;0{;{;{	;o;;o;	;
+@
+;ii!;"mesa_bool_t             ;@;o;;o;	;
+@
+;iÅ!;"fdx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¨!;"#mesa_port_flow_control_conf_t ;@;o;;o;	;
+@
+;i !;"flow_control;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÚ!;"uint32_t                ;@;o;;o;	;
+@
+;i
+";"max_frame_length;@;[ ;0{;{;{	;o;;o;	;
+@
+;i9";"mesa_bool_t             ;@;o;;o;	;
+@
+;iQ";"frame_length_chk;@;[ ;0{;{;{	;o;;o;	;
+@
+;i£";"mesa_port_max_tags_t    ;@;o;;o;	;
+@
+;iª";"max_tags;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı";"mesa_bool_t             ;@;o;;o;	;
+@
+;i#;"exc_col_cont;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH#;"mesa_bool_t             ;@;o;;o;	;
+@
+;i`#;"xaui_rx_lane_flip;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå#;"mesa_bool_t             ;@;o;;o;	;
+@
+;i§#;"xaui_tx_lane_flip;@;[ ;0{;{;{	;o;;o;	;
+@
+;i–#;"mesa_port_loop_t        ;@;o;;o;	;
+@
+;iË#;"	loop;@;[ ;0{;{;{	;o;;o;	;
+@
+;i#$;"mesa_port_serdes_conf_t ;@;o;;o;	;
+@
+;i;$;"serdes;@;[ ;0{;{;{	;o;;o;	;
+@
+;iy$;"mesa_port_pcs_conf_t    ;@;o;;o;	;
+@
+;ië$;"	pcs ;@;[ ;o;;o;	;
+@
+;iï$;"CAP(PORT_PCS_CONF);@;o;;o;	;
+@
+;iﬁ$;"mesa_port_conf_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iQ%;"mesa_rc ;@;o;;o;	;
+@
+;iY%;"mesa_port_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;il%;"const mesa_inst_t       ;@;o;;o;	;
+@
+;iÑ%;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i•%;"const mesa_port_no_t    ;@;o;;o;	;
+@
+;iΩ%;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i·%;"$const mesa_port_conf_t  *const ;@;o;;o;	;
+@
+;i &;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;if&;"mesa_rc ;@;o;;o;	;
+@
+;in&;"mesa_port_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÅ&;"const mesa_inst_t     ;@;o;;o;	;
+@
+;ió&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∏&;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iŒ&;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ&;""mesa_port_conf_t      *const ;@;o;;o;	;
+@
+;i';"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;il';"mesa_rc ;@;o;;o;	;
+@
+;it';"mesa_port_status_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iâ';"const mesa_inst_t     ;@;o;;o;	;
+@
+;iü';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¬';"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iÿ';"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˛';""mesa_port_status_t    *const ;@;o;;o;	;
+@
+;i(;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i));"typedef;@:type_aliaso;;o;	;
+@
+;i1);"uint64_t ;@;o;;o;	;
+@
+;i:);"mesa_port_counter_t;@;[ ;0{
+;o;;o;	;
+@
+;iu);"typedef;@;{;[#{;{;{	;o;;o;	;
+@
+;iä);"mesa_port_counter_t ;@;o;;o;	;
+@
+;iû);"rx_etherStatsDropEvents;@;[ ;0{;{;{	;o;;o;	;
+@
+;i◊);"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÎ);"rx_etherStatsOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i*;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i3*;"rx_etherStatsPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih*;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i|*;"rx_etherStatsBroadcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¥*;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i»*;"rx_etherStatsMulticastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i +;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i+;" rx_etherStatsCRCAlignErrors;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV+;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ij+;"rx_etherStatsUndersizePkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i©+;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iΩ+;"rx_etherStatsOversizePkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˚+;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i,;"rx_etherStatsFragments;@;[ ;0{;{;{	;o;;o;	;
+@
+;iF,;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iZ,;"rx_etherStatsJabbers;@;[ ;0{;{;{	;o;;o;	;
+@
+;iè,;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i£,;"rx_etherStatsPkts64Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‡,;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÙ,;"#rx_etherStatsPkts65to127Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5-;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iI-;"$rx_etherStatsPkts128to255Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iã-;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iü-;"$rx_etherStatsPkts256to511Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i·-;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iı-;"%rx_etherStatsPkts512to1023Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i7.;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iK.;"&rx_etherStatsPkts1024to1518Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iè.;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i£.;"%rx_etherStatsPkts1519toMaxOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‰.;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i¯.;"tx_etherStatsDropEvents;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1/;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iE/;"tx_etherStatsOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iy/;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iç/;"tx_etherStatsPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¬/;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i÷/;"tx_etherStatsBroadcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i0;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i"0;"tx_etherStatsMulticastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iZ0;"mesa_port_counter_t ;@;o;;o;	;
+@
+;in0;"tx_etherStatsCollisions;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶0;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i∫0;"tx_etherStatsPkts64Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˜0;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i1;"#tx_etherStatsPkts65to127Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL1;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i`1;"$tx_etherStatsPkts128to255Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢1;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i∂1;"$tx_etherStatsPkts256to511Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¯1;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i2;"%tx_etherStatsPkts512to1023Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN2;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ib2;"&tx_etherStatsPkts1024to1518Octets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶2;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i∫2;"%tx_etherStatsPkts1519toMaxOctets;@;[ ;0;o;;o;	;
+@
+;i¯2;"mesa_port_rmon_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;iE3;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iZ3;"mesa_port_counter_t ;@;o;;o;	;
+@
+;in3;"ifInOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iî3;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i®3;"ifInUcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i–3;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i‰3;"ifInMulticastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i4;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i"4;"ifInBroadcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL4;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i`4;"ifInNUcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iå4;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i†4;"ifInDiscards;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»4;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i‹4;"ifInErrors;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i5;"ifOutOctets;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=5;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iQ5;"ifOutUcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iy5;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iç5;"ifOutMulticastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑5;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÀ5;"ifOutBroadcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı5;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i	6;"ifOutNUcastPkts;@;[ ;0{;{;{	;o;;o;	;
+@
+;i56;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iI6;"ifOutDiscards;@;[ ;0{;{;{	;o;;o;	;
+@
+;iq6;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÖ6;"ifOutErrors;@;[ ;0;o;;o;	;
+@
+;i©6;""mesa_port_if_group_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i7;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i*7;"'dot3StatsAlignmentErrors          ;@;[ ;o;;o;	;
+@
+;iL7;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iÅ7;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iï7;"'dot3StatsFCSErrors                ;@;[ ;o;;o;	;
+@
+;i∑7;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iÊ7;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i˙7;"'dot3StatsFrameTooLongs            ;@;[ ;o;;o;	;
+@
+;i8;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iI8;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i]8;"'dot3StatsSymbolErrors             ;@;[ ;o;;o;	;
+@
+;i8;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;i±8;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i≈8;"'dot3ControlInUnknownOpcodes       ;@;[ ;o;;o;	;
+@
+;iÁ8;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;i9;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i/9;"dot3InPauseFrames;@;[ ;0{;{;{	;o;;o;	;
+@
+;ic9;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iw9;"'dot3StatsSingleCollisionFrames    ;@;[ ;o;;o;	;
+@
+;iô9;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iœ9;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i„9;"'dot3StatsMultipleCollisionFrames  ;@;[ ;o;;o;	;
+@
+;i:;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;i=:;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iQ:;"'dot3StatsDeferredTransmissions    ;@;[ ;o;;o;	;
+@
+;is:;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;i†:;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i¥:;"'dot3StatsLateCollisions           ;@;[ ;o;;o;	;
+@
+;i÷:;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;i
+;;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i;;"'dot3StatsExcessiveCollisions      ;@;[ ;o;;o;	;
+@
+;i@;;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iy;;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iç;;"'dot3StatsCarrierSenseErrors       ;@;[ ;o;;o;	;
+@
+;iØ;;"CAP(PORT_CNT_ETHER_LIKE);@{;{;{	;o;;o;	;
+@
+;iË;;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i¸;;"dot3OutPauseFrames;@;[ ;0;o;;o;	;
+@
+;i-<;"'mesa_port_ethernet_like_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i~<;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iì<;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iß<;"dot1dTpPortInDiscards;@;[ ;0;o;;o;	;
+@
+;i÷<;" mesa_port_bridge_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i=;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i+=;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i?=;"rx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iT=;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ih=;"tx;@;[ ;0{;{;{	;o;;o;	;
+@
+;i}=;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ië=;"rx_green          ;@;[ ;o;;o;	;
+@
+;i£=;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;iÕ=;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i·=;"rx_yellow         ;@;[ ;o;;o;	;
+@
+;iÛ=;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;i>;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i2>;"rx_red            ;@;[ ;o;;o;	;
+@
+;iD>;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;il>;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÄ>;"rx_green_discard  ;@;[ ;o;;o;	;
+@
+;ií>;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;i∆>;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i⁄>;"rx_yellow_discard ;@;[ ;o;;o;	;
+@
+;iÏ>;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;i!?;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i5?;"tx_green          ;@;[ ;o;;o;	;
+@
+;iG?;"CAP(PORT_CNT_EVC);@{;{;{	;o;;o;	;
+@
+;iq?;"mesa_port_counter_t ;@;o;;o;	;
+@
+;iÖ?;"tx_yellow         ;@;[ ;o;;o;	;
+@
+;ió?;"CAP(PORT_CNT_EVC);@;o;;o;	;
+@
+;i¿?;"mesa_port_prio_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i˛?;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i@;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i'@;" aMACMergeFrameAssErrorCount;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV@;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ij@;" aMACMergeFrameSmdErrorCount;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô@;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i≠@;"aMACMergeFrameAssOkCount;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‹@;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i@;"aMACMergeFragCountRx;@;[ ;0{;{;{	;o;;o;	;
+@
+;iA;"mesa_port_counter_t ;@;o;;o;	;
+@
+;i3A;"aMACMergeFragCountTx;@;[ ;0{;{;{	;o;;o;	;
+@
+;ibA;"mesa_port_counter_t ;@;o;;o;	;
+@
+;ivA;"aMACMergeHoldCount;@;[ ;0;o;;o;	;
+@
+;i£A;" mesa_port_dot3br_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i€A;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iA;"(mesa_port_rmon_counters_t          ;@;o;;o;	;
+@
+;iB;"	rmon;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJB;"(mesa_port_if_group_counters_t      ;@;o;;o;	;
+@
+;imB;"if_group;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞B;"(mesa_port_ethernet_like_counters_t ;@;o;;o;	;
+@
+;i”B;"ethernet_like;@;[ ;0{;{;{	;o;;o;	;
+@
+;iC;"(mesa_port_bridge_counters_t        ;@;o;;o;	;
+@
+;i@C;"bridge;@;[ ;0{;{;{	;o;;o;	;
+@
+;iyC;"(mesa_port_prio_counters_t          ;@;o;;o;	;
+@
+;iúC;"	prio;@;[{;#o;;o;	;
+@
+;i°C;"MESA_PRIO_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i◊C;"(mesa_port_dot3br_counters_t        ;@;o;;o;	;
+@
+;i˙C;"dot3br ;@;[ ;o;;o;	;
+@
+;iD;"CAP(QOS_FRAME_PREEMPTION);@;o;;o;	;
+@
+;i2D;"mesa_port_counters_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iÑD;"mesa_rc ;@;o;;o;	;
+@
+;iåD;"mesa_port_counters_update;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¶D;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iºD;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‰D;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i˙D;"port_no;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iKE;"mesa_rc ;@;o;;o;	;
+@
+;iSE;"mesa_port_counters_clear;@;[ ;0;![{;{	;o;;o;	;
+@
+;ilE;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iÇE;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i©E;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iøE;"port_no;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i6F;"mesa_rc ;@;o;;o;	;
+@
+;i>F;"mesa_port_counters_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iUF;"const mesa_inst_t     ;@;o;;o;	;
+@
+;ikF;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iêF;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i¶F;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iŒF;""mesa_port_counters_t  *const ;@;o;;o;	;
+@
+;iÎF;"counters;@;[ ;0;0{
+;o;;o;	;
+@
+;iG;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i(G;"uint32_t ;@;o;;o;	;
+@
+;i1G;"rx_frames;@;[ ;0{;{;{	;o;;o;	;
+@
+;iMG;"uint32_t ;@;o;;o;	;
+@
+;iVG;"tx_frames;@;[ ;0;o;;o;	;
+@
+;ipG;"mesa_basic_counters_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i˙G;"mesa_rc ;@;o;;o;	;
+@
+;iH;"!mesa_port_basic_counters_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iH;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i5H;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i`H;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;ivH;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i§H;""mesa_basic_counters_t *const ;@;o;;o;	;
+@
+;i¡H;"counters;@;[ ;0;0{
+;o;;o;	;
+@
+;iÊH;"typedef;@;{;o;;o;	;
+@
+;iÓH;"	enum;@;[	{;{;o;;o;	;
+@
+;i˘H;"MESA_PORT_FORWARD_ENABLED;@;0{;{;o;;o;	;
+@
+;i8I;"MESA_PORT_FORWARD_DISABLED;@;0{;{;o;;o;	;
+@
+;i}I;"MESA_PORT_FORWARD_INGRESS;@;0{;{;o;;o;	;
+@
+;iøI;""MESA_PORT_FORWARD_EGRESS     ;@;0;o;;o;	;
+@
+;iJ;"mesa_port_forward_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;iàJ;"mesa_rc ;@;o;;o;	;
+@
+;iêJ;" mesa_port_forward_state_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¨J;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i¬J;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÏJ;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iK;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i/K;""mesa_port_forward_t   *const ;@;o;;o;	;
+@
+;iLK;"forward;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i˝K;"mesa_rc ;@;o;;o;	;
+@
+;iL;" mesa_port_forward_state_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i!L;" const mesa_inst_t          ;@;o;;o;	;
+@
+;i<L;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ifL;" const mesa_port_no_t       ;@;o;;o;	;
+@
+;iÅL;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÆL;" const mesa_port_forward_t  ;@;o;;o;	;
+@
+;i…L;"forward;@;[ ;0;0{
+;o;;o;	;
+@
+;i¸L;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iM;"mesa_bool_t ;@;o;;o;	;
+@
+;iM;"ena_inj_header ;@;[ ;o;;o;	;
+@
+;i,M;"CAP(PORT_INJ_HDR);@{;{;{	;o;;o;	;
+@
+;i^M;"mesa_bool_t ;@;o;;o;	;
+@
+;ijM;"ena_xtr_header ;@;[ ;o;;o;	;
+@
+;iyM;"CAP(PORT_XTR_HDR);@{;{;{	;o;;o;	;
+@
+;i¨M;"mesa_bool_t ;@;o;;o;	;
+@
+;i∏M;"ena_ifh_header ;@;[ ;o;;o;	;
+@
+;i«M;"CAP(PORT_XTR_HDR);@;o;;o;	;
+@
+;i
+N;"mesa_port_ifh_t ;@;[ ;o;;o;	;
+@
+;iN;"CAP(PORT_IFH);@{; {;{	;o;;o;	;
+@
+;iôN;"mesa_rc ;@;o;;o;	;
+@
+;i°N;"mesa_port_ifh_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i∏N;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i–N;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iıN;"const mesa_port_no_t    ;@;o;;o;	;
+@
+;iO;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i5O;"#const mesa_port_ifh_t  *const ;@;o;;o;	;
+@
+;iSO;"	conf;@;[ ;0;o;;o;	;
+@
+;i]O;"CAP(PORT_IFH);@{; {;{	;o;;o;	;
+@
+;i‡O;"mesa_rc ;@;o;;o;	;
+@
+;iËO;"mesa_port_ifh_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iˇO;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iP;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i:P;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iPP;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ixP;"!mesa_port_ifh_t      *const ;@;o;;o;	;
+@
+;iîP;"	conf;@;[ ;0;o;;o;	;
+@
+;iûP;"CAP(PORT_IFH);@{; {;{	;o;;o;	;
+@
+;i:Q;"mesa_rc ;@;o;;o;	;
+@
+;iBQ;"mesa_port_miim_read;@;[ ;0;![	{;{	;o;;o;	;
+@
+;iVQ;"const mesa_inst_t    ;@;o;;o;	;
+@
+;ikQ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;içQ;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i¢Q;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i«Q;"const uint8_t        ;@;o;;o;	;
+@
+;i‹Q;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i˛Q;"!uint16_t             *const ;@;o;;o;	;
+@
+;iR;"
+value;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iÆR;"mesa_rc ;@;o;;o;	;
+@
+;i∂R;"mesa_port_miim_write;@;[ ;0;![	{;{	;o;;o;	;
+@
+;iÀR;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i‡R;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iS;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iS;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i>S;"const uint8_t        ;@;o;;o;	;
+@
+;iSS;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;ivS;"const uint16_t       ;@;o;;o;	;
+@
+;iãS;"
+value;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i∑T;"mesa_rc ;@;o;;o;	;
+@
+;iøT;"mesa_miim_read;@;[ ;0;![{;{	;o;;o;	;
+@
+;iŒT;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iÎT;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iU;""const mesa_chip_no_t         ;@;o;;o;	;
+@
+;i%U;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iEU;""const mesa_miim_controller_t ;@;o;;o;	;
+@
+;ibU;"miim_controller;@;[ ;0{;{	;o;;o;	;
+@
+;iäU;""const uint8_t                ;@;o;;o;	;
+@
+;ißU;"miim_addr;@;[ ;0{;{	;o;;o;	;
+@
+;i…U;""const uint8_t                ;@;o;;o;	;
+@
+;iÊU;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iV;")uint16_t                     *const ;@;o;;o;	;
+@
+;i'V;"
+value;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iXW;"mesa_rc ;@;o;;o;	;
+@
+;i`W;"mesa_miim_write;@;[ ;0;![{;{	;o;;o;	;
+@
+;ipW;""const mesa_inst_t            ;@;o;;o;	;
+@
+;içW;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i´W;""const mesa_chip_no_t         ;@;o;;o;	;
+@
+;i»W;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÈW;""const mesa_miim_controller_t ;@;o;;o;	;
+@
+;iX;"miim_controller;@;[ ;0{;{	;o;;o;	;
+@
+;i/X;""const uint8_t                ;@;o;;o;	;
+@
+;iLX;"miim_addr;@;[ ;0{;{	;o;;o;	;
+@
+;ioX;""const uint8_t                ;@;o;;o;	;
+@
+;iåX;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i™X;""const uint16_t               ;@;o;;o;	;
+@
+;i«X;"
+value;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;iâY;"mesa_rc ;@;o;;o;	;
+@
+;iëY;"mesa_port_mmd_read;@;[ ;0;![
+{;{	;o;;o;	;
+@
+;i§Y;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i∫Y;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i€Y;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;iÒY;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iZ;"const uint8_t         ;@;o;;o;	;
+@
+;i+Z;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;iKZ;"const uint16_t        ;@;o;;o;	;
+@
+;iaZ;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iÇZ;""uint16_t              *const ;@;o;;o;	;
+@
+;iüZ;"
+value;@;[ ;0;o;;o;	;
+@
+;i™Z;"CAP(PORT_10G);@{; {;{	;o;;o;	;
+@
+;iº[;"mesa_rc ;@;o;;o;	;
+@
+;iƒ[;"mesa_port_mmd_read_inc;@;[ ;0;![{;{	;o;;o;	;
+@
+;i€[;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iÒ[;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i\;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i,\;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iT\;"const uint8_t         ;@;o;;o;	;
+@
+;ij\;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;ié\;"const uint16_t        ;@;o;;o;	;
+@
+;i§\;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i…\;""uint16_t              *const ;@;o;;o;	;
+@
+;iÊ\;"buf;@;[ ;0{;{	;o;;o;	;
+@
+;i
+];"uint8_t               ;@;o;;o;	;
+@
+;i ];"
+count;@;[ ;0;o;;o;	;
+@
+;i+];"CAP(PORT_10G);@{; {;{	;o;;o;	;
+@
+;iÛ];"mesa_rc ;@;o;;o;	;
+@
+;i˚];"mesa_port_mmd_write;@;[ ;0;![
+{;{	;o;;o;	;
+@
+;i^;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i%^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iG^;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i]^;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÇ^;"const uint8_t         ;@;o;;o;	;
+@
+;iò^;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;iπ^;"const uint16_t        ;@;o;;o;	;
+@
+;iœ^;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iÒ^;"const uint16_t        ;@;o;;o;	;
+@
+;i_;"
+value;@;[ ;0;o;;o;	;
+@
+;i_;"CAP(PORT_10G);@{; {;{	;o;;o;	;
+@
+;i3`;"mesa_rc ;@;o;;o;	;
+@
+;i;`;"mesa_port_mmd_masked_write;@;[ ;0;![{;{	;o;;o;	;
+@
+;iV`;"const mesa_inst_t     ;@;o;;o;	;
+@
+;il`;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iï`;"const mesa_port_no_t  ;@;o;;o;	;
+@
+;i´`;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i◊`;"const uint8_t         ;@;o;;o;	;
+@
+;iÌ`;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;ia;"const uint16_t        ;@;o;;o;	;
+@
+;i+a;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iTa;"const uint16_t        ;@;o;;o;	;
+@
+;ija;"
+value;@;[ ;0{;{	;o;;o;	;
+@
+;iîa;"const uint16_t        ;@;o;;o;	;
+@
+;i™a;"	mask;@;[ ;0;o;;o;	;
+@
+;i¥a;"CAP(PORT_10G);@{; {;{	;o;;o;	;
+@
+;ic;"mesa_rc ;@;o;;o;	;
+@
+;ic;"mesa_mmd_read;@;[ ;0;![{;{	;o;;o;	;
+@
+;i,c;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iIc;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iec;""const mesa_chip_no_t         ;@;o;;o;	;
+@
+;iÇc;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i°c;""const mesa_miim_controller_t ;@;o;;o;	;
+@
+;iæc;"miim_controller;@;[ ;0{;{	;o;;o;	;
+@
+;iÂc;""const uint8_t                ;@;o;;o;	;
+@
+;id;"miim_addr;@;[ ;0{;{	;o;;o;	;
+@
+;i#d;""const uint8_t                ;@;o;;o;	;
+@
+;i@d;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;i[d;""const uint16_t               ;@;o;;o;	;
+@
+;ixd;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iîd;")uint16_t                     *const ;@;o;;o;	;
+@
+;i∏d;"
+value;@;[ ;0;o;;o;	;
+@
+;i√d;"CAP(PORT_10G);@{; {;{	;o;;o;	;
+@
+;i*f;"mesa_rc ;@;o;;o;	;
+@
+;i2f;"mesa_mmd_write;@;[ ;0;![{;{	;o;;o;	;
+@
+;iAf;""const mesa_inst_t            ;@;o;;o;	;
+@
+;i^f;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i{f;""const mesa_chip_no_t         ;@;o;;o;	;
+@
+;iòf;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i∏f;""const mesa_miim_controller_t ;@;o;;o;	;
+@
+;i’f;"miim_controller;@;[ ;0{;{	;o;;o;	;
+@
+;i˝f;""const uint8_t                ;@;o;;o;	;
+@
+;ig;"miim_addr;@;[ ;0{;{	;o;;o;	;
+@
+;i<g;""const uint8_t                ;@;o;;o;	;
+@
+;iYg;"mmd;@;[ ;0{;{	;o;;o;	;
+@
+;iug;""const uint16_t               ;@;o;;o;	;
+@
+;iíg;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iØg;""const uint16_t               ;@;o;;o;	;
+@
+;iÃg;"
+value;@;[ ;0;o;;o;	;
+@
+;i◊g;"CAP(PORT_10G);@{
+;o;;o;	;
+@
+;iÌh;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ii;"mesa_bool_t       ;@;o;;o;	;
+@
+;ii;"complete;@;[ ;0{;{;{	;o;;o;	;
+@
+;iWi;"mesa_bool_t       ;@;o;;o;	;
+@
+;iii;"active;@;[ ;0{;{;{	;o;;o;	;
+@
+;i†i;"mesa_port_speed_t ;@;o;;o;	;
+@
+;i≤i;"speed_req;@;[ ;0{;{;{	;o;;o;	;
+@
+;ij;"mesa_bool_t       ;@;o;;o;	;
+@
+;ij;"request_fec_change;@;[ ;0{;{;{	;o;;o;	;
+@
+;itj;"mesa_bool_t       ;@;o;;o;	;
+@
+;iÜj;"r_fec_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i“j;"mesa_bool_t       ;@;o;;o;	;
+@
+;i‰j;"rs_fec_enable ;@;[ ;o;;o;	;
+@
+;iÚj;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i2k;"uint32_t          ;@;o;;o;	;
+@
+;iDk;"sm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜk;"uint32_t          ;@;o;;o;	;
+@
+;iòk;"hist          ;@;[ ;o;;o;	;
+@
+;i¶k;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i‘k;"mesa_bool_t       ;@;o;;o;	;
+@
+;iÊk;"lp_aneg_able;@;[ ;0{;{;{	;o;;o;	;
+@
+;i%l;"mesa_bool_t       ;@;o;;o;	;
+@
+;i7l;"block_lock;@;[ ;0{;{;{	;o;;o;	;
+@
+;iul;"uint16_t          ;@;o;;o;	;
+@
+;iál;"lp_bp0        ;@;[ ;o;;o;	;
+@
+;iïl;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i»l;"uint16_t          ;@;o;;o;	;
+@
+;i⁄l;"lp_bp1        ;@;[ ;o;;o;	;
+@
+;iËl;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;im;"uint16_t          ;@;o;;o;	;
+@
+;i.m;"lp_bp2        ;@;[ ;o;;o;	;
+@
+;i<m;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;ipm;"uint16_t          ;@;o;;o;	;
+@
+;iÇm;"lp_np0        ;@;[ ;o;;o;	;
+@
+;iêm;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i√m;"uint16_t          ;@;o;;o;	;
+@
+;i’m;"lp_np1        ;@;[ ;o;;o;	;
+@
+;i„m;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;in;"uint16_t          ;@;o;;o;	;
+@
+;i)n;"lp_np2        ;@;[ ;o;;o;	;
+@
+;i7n;"CAP(PORT_KR_IRQ);@;o;;o;	;
+@
+;iin;"'mesa_port_kr_status_aneg_t        ;@;[ ;o;;o;	;
+@
+;iãn;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;i∞n;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i≈n;"mesa_bool_t ;@;o;;o;	;
+@
+;i—n;"complete;@;[ ;0{;{;{	;o;;o;	;
+@
+;i!o;"uint8_t     ;@;o;;o;	;
+@
+;i-o;"cm_ob_tap_result;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇo;"uint8_t     ;@;o;;o;	;
+@
+;iéo;"cp_ob_tap_result;@;[ ;0{;{;{	;o;;o;	;
+@
+;i„o;"uint8_t     ;@;o;;o;	;
+@
+;iÔo;"c0_ob_tap_result;@;[ ;0{;{;{	;o;;o;	;
+@
+;iDp;"uint32_t    ;@;o;;o;	;
+@
+;iPp;"frame_sent       ;@;[ ;o;;o;	;
+@
+;iap;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;ièp;"uint16_t    ;@;o;;o;	;
+@
+;iõp;"frame_errors     ;@;[ ;o;;o;	;
+@
+;i¨p;"CAP(PORT_KR_IRQ);@;o;;o;	;
+@
+;i⁄p;"$mesa_port_kr_status_train_t    ;@;[ ;o;;o;	;
+@
+;i˘p;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;iq;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i.q;"mesa_bool_t  ;@;o;;o;	;
+@
+;i;q;"r_fec_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;izq;"mesa_bool_t  ;@;o;;o;	;
+@
+;iáq;"rs_fec_enable ;@;[ ;o;;o;	;
+@
+;iïq;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i‘q;"uint32_t     ;@;o;;o;	;
+@
+;i·q;"corrected_block_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;ir;"uint32_t     ;@;o;;o;	;
+@
+;i+r;"uncorrected_block_cnt;@;[ ;0;o;;o;	;
+@
+;iir;"mesa_port_kr_status_fec_t ;@;[ ;o;;o;	;
+@
+;iÉr;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;iµr;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i r;"!mesa_port_kr_status_aneg_t  ;@;o;;o;	;
+@
+;iÊr;"	aneg;@;[ ;0{;{;{	;o;;o;	;
+@
+;is;"!mesa_port_kr_status_train_t ;@;o;;o;	;
+@
+;is;"
+train;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@s;"!mesa_port_kr_status_fec_t   ;@;o;;o;	;
+@
+;i\s;"fec;@;[ ;0;o;;o;	;
+@
+;ivs;"mesa_port_kr_status_t ;@;[ ;o;;o;	;
+@
+;iås;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;i«s;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i‹s;"mesa_bool_t ;@;o;;o;	;
+@
+;iËs;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;it;"mesa_bool_t ;@;o;;o;	;
+@
+;i(t;"adv_25g     ;@;[ ;o;;o;	;
+@
+;i4t;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i[t;"mesa_bool_t ;@;o;;o;	;
+@
+;igt;"adv_10g;@;[ ;0{;{;{	;o;;o;	;
+@
+;iöt;"mesa_bool_t ;@;o;;o;	;
+@
+;i¶t;"adv_5g      ;@;[ ;o;;o;	;
+@
+;i≤t;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;iÿt;"mesa_bool_t ;@;o;;o;	;
+@
+;i‰t;"adv_2g5     ;@;[ ;o;;o;	;
+@
+;it;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;iu;"mesa_bool_t ;@;o;;o;	;
+@
+;i#u;"adv_1g      ;@;[ ;o;;o;	;
+@
+;i/u;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;iUu;"mesa_bool_t ;@;o;;o;	;
+@
+;iau;"r_fec_req;@;[ ;0{;{;{	;o;;o;	;
+@
+;iîu;"mesa_bool_t ;@;o;;o;	;
+@
+;i†u;"rs_fec_req  ;@;[ ;o;;o;	;
+@
+;i¨u;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i⁄u;"mesa_bool_t ;@;o;;o;	;
+@
+;iÊu;"next_page   ;@;[ ;o;;o;	;
+@
+;iÚu;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i(v;"mesa_bool_t ;@;o;;o;	;
+@
+;i4v;"
+no_pd;@;[ ;0;o;;o;	;
+@
+;iuv;"mesa_port_kr_aneg_t       ;@;[ ;o;;o;	;
+@
+;ièv;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;i¥v;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i…v;"mesa_bool_t ;@;o;;o;	;
+@
+;i’v;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw;"mesa_bool_t ;@;o;;o;	;
+@
+;i+w;"no_remote   ;@;[ ;o;;o;	;
+@
+;i7w;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;iqw;"mesa_bool_t ;@;o;;o;	;
+@
+;i}w;"no_eq_apply ;@;[ ;o;;o;	;
+@
+;iâw;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;iœw;"mesa_bool_t ;@;o;;o;	;
+@
+;i€w;"use_ber_cnt ;@;[ ;o;;o;	;
+@
+;iÁw;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;i%x;"mesa_bool_t ;@;o;;o;	;
+@
+;i1x;"test_mode   ;@;[ ;o;;o;	;
+@
+;i=x;"CAP(PORT_KR_IRQ);@{;{;{	;o;;o;	;
+@
+;ibx;"uint32_t ;@;o;;o;	;
+@
+;ikx;"test_repeat    ;@;[ ;o;;o;	;
+@
+;izx;"CAP(PORT_KR_IRQ);@;o;;o;	;
+@
+;iùx;"mesa_port_kr_train_t      ;@;[ ;o;;o;	;
+@
+;i∑x;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;iÂx;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i˙x;"mesa_port_kr_aneg_t  ;@;o;;o;	;
+@
+;iy;"	aneg;@;[ ;0{;{;{	;o;;o;	;
+@
+;iGy;"mesa_port_kr_train_t ;@;o;;o;	;
+@
+;i\y;"
+train;@;[ ;0;o;;o;	;
+@
+;iñy;"mesa_port_kr_conf_t ;@;[ ;o;;o;	;
+@
+;i™y;"CAP(PORT_KR);@{; {;{	;o;;o;	;
+@
+;i£z;"mesa_rc ;@;o;;o;	;
+@
+;i´z;"mesa_port_kr_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¡z;"const mesa_inst_t ;@;o;;o;	;
+@
+;i”z;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˚z;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i{;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i;{;"&const mesa_port_kr_conf_t *const ;@;o;;o;	;
+@
+;i\{;"	conf;@;[ ;0;o;;o;	;
+@
+;if{;"CAP(PORT_KR);@{; {;{	;o;;o;	;
+@
+;i‘{;"mesa_rc ;@;o;;o;	;
+@
+;i‹{;"mesa_port_kr_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iÚ{;"const mesa_inst_t ;@;o;;o;	;
+@
+;i|;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i,|;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iA|;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;il|;" mesa_port_kr_conf_t *const ;@;o;;o;	;
+@
+;iá|;"	conf;@;[ ;0;o;;o;	;
+@
+;ië|;"CAP(PORT_KR);@{; {;{	;o;;o;	;
+@
+;i};"mesa_rc ;@;o;;o;	;
+@
+;i};"mesa_port_kr_status_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i.};"const mesa_inst_t ;@;o;;o;	;
+@
+;i@};"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ij};"const mesa_port_no_t ;@;o;;o;	;
+@
+;i};"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i¨};""mesa_port_kr_status_t *const ;@;o;;o;	;
+@
+;i…};"status;@;[ ;0;o;;o;	;
+@
+;i’};"CAP(PORT_KR);@{;o;;o;	;
+@
+;i‰};"+#define MESA_KR_AN_RATE         (0xF)
+;@{;o;;o;	;
+@
+;i
+~;"/#define MESA_KR_ACTV            (1 << 29)
+;@{;o;;o;	;
+@
+;i4~;"/#define MESA_KR_LPSVALID        (1 << 28)
+;@{;o;;o;	;
+@
+;i^~;"/#define MESA_KR_LPCVALID        (1 << 27)
+;@{;o;;o;	;
+@
+;ià~;"/#define MESA_KR_WT_DONE         (1 << 26)
+;@{;o;;o;	;
+@
+;i≤~;"/#define MESA_KR_MW_DONE         (1 << 25)
+;@{;o;;o;	;
+@
+;i‹~;"/#define MESA_KR_BER_BUSY_0      (1 << 24)
+;@{;o;;o;	;
+@
+;i;"/#define MESA_KR_BER_BUSY_1      (1 << 23)
+;@{;o;;o;	;
+@
+;i0;"/#define MESA_KR_REM_RDY_0       (1 << 22)
+;@{;o;;o;	;
+@
+;iZ;"/#define MESA_KR_REM_RDY_1       (1 << 21)
+;@{;o;;o;	;
+@
+;iÑ;"/#define MESA_KR_FRLOCK_0        (1 << 20)
+;@{;o;;o;	;
+@
+;iÆ;"/#define MESA_KR_FRLOCK_1        (1 << 19)
+;@{;o;;o;	;
+@
+;iÿ;"/#define MESA_KR_DME_VIOL_0      (1 << 18)
+;@{;o;;o;	;
+@
+;iÄ;"/#define MESA_KR_DME_VIOL_1      (1 << 17)
+;@{;o;;o;	;
+@
+;i,Ä;"/#define MESA_KR_AN_XMIT_DISABLE (1 << 16)
+;@{;o;;o;	;
+@
+;iVÄ;"/#define MESA_KR_TRAIN           (1 << 15)
+;@{;o;;o;	;
+@
+;iÄÄ;"/#define MESA_KR_RATE_DET        (1 << 14)
+;@{;o;;o;	;
+@
+;i™Ä;"/#define MESA_KR_CMPL_ACK        (1 << 13)
+;@{;o;;o;	;
+@
+;i‘Ä;"/#define MESA_KR_AN_GOOD         (1 << 12)
+;@{;o;;o;	;
+@
+;i˛Ä;"/#define MESA_KR_LINK_FAIL       (1 << 11)
+;@{;o;;o;	;
+@
+;i(Å;"/#define MESA_KR_ABD_FAIL        (1 << 10)
+;@{;o;;o;	;
+@
+;iRÅ;".#define MESA_KR_ACK_FAIL        (1 << 9)
+;@{;o;;o;	;
+@
+;i{Å;".#define MESA_KR_NP_FAIL         (1 << 8)
+;@{;o;;o;	;
+@
+;i§Å;".#define MESA_KR_NP_RX           (1 << 7)
+;@{;o;;o;	;
+@
+;iÕÅ;".#define MESA_KR_INCP_LINK       (1 << 6)
+;@{;o;;o;	;
+@
+;iˆÅ;".#define MESA_KR_GEN0_DONE       (1 << 5)
+;@{;o;;o;	;
+@
+;iÇ;".#define MESA_KR_GEN1_DONE       (1 << 4)
+;@{;o;;o;	;
+@
+;iHÇ;"(#define MESA_KR_ANEG_RATE_25G    7
+;@{;o;;o;	;
+@
+;ikÇ;"(#define MESA_KR_ANEG_RATE_25G_S  8
+;@{;o;;o;	;
+@
+;iéÇ;"(#define MESA_KR_ANEG_RATE_10G    9
+;@{;o;;o;	;
+@
+;i±Ç;")#define MESA_KR_ANEG_RATE_5G     11
+;@{;o;;o;	;
+@
+;i’Ç;")#define MESA_KR_ANEG_RATE_2G5    12
+;@{;o;;o;	;
+@
+;i˘Ç;"*#define MESA_KR_ANEG_RATE_1G     13
+
+;@{
+;o;;o;	;
+@
+;iÉ;"typedef;@;{;o;;o;	;
+@
+;i&É;"	enum;@;[{;{;o;;o;	;
+@
+;i1É;"MESA_TR_INITILIZE;@;0{;{;o;;o;	;
+@
+;iHÉ;"MESA_TR_SEND_TRAINING;@;0{;{;o;;o;	;
+@
+;icÉ;"MESA_TR_TRAIN_LOCAL;@;0{;{;o;;o;	;
+@
+;i|É;"MESA_TR_TRAIN_REMOTE;@;0{;{;o;;o;	;
+@
+;iñÉ;"MESA_TR_SEND_DATA;@;0{;{;o;;o;	;
+@
+;i≠É;"MESA_TR_TRAINING_FAILURE;@;0{;{;o;;o;	;
+@
+;iÀÉ;"MESA_TR_LINK_READY
+;@;0;o;;o;	;
+@
+;i‡É;"mesa_train_state_t ;@;[ ;o;;o;	;
+@
+;iÛÉ;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;iÑ;"typedef;@;{;o;;o;	;
+@
+;iÑ;"	enum;@;[	{;{;o;;o;	;
+@
+;iÑ;"MESA_BER_GO_TO_MIN;@;0{;{;o;;o;	;
+@
+;i1Ñ;"MESA_BER_CALCULATE_BER;@;0{;{;o;;o;	;
+@
+;iMÑ;"MESA_BER_MOVE_TO_MID_MARK;@;0{;{;o;;o;	;
+@
+;ilÑ;"MESA_BER_LOCAL_RX_TRAINED
+;@;0;o;;o;	;
+@
+;iàÑ;"mesa_ber_stage_t ;@;[ ;o;;o;	;
+@
+;iôÑ;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;i¨Ñ;"typedef;@;{;o;;o;	;
+@
+;i¥Ñ;"	enum;@;[{;{;o;;o;	;
+@
+;iøÑ;"MESA_TAP_CM1;@;0{;{;o;;o;	;
+@
+;i—Ñ;"MESA_TAP_C0;@;0{;{;o;;o;	;
+@
+;i‚Ñ;"MESA_TAP_CP1;@;0;o;;o;	;
+@
+;iÚÑ;"mesa_kr_tap_t ;@;[ ;o;;o;	;
+@
+;i Ö;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;iÖ;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i(Ö;"uint16_t ;@;o;;o;	;
+@
+;i1Ö;"cm1;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:Ö;"uint16_t ;@;o;;o;	;
+@
+;iCÖ;"c0;@;[ ;0{;{;{	;o;;o;	;
+@
+;iKÖ;"uint16_t ;@;o;;o;	;
+@
+;iTÖ;"cp1;@;[ ;0{;{;{	;o;;o;	;
+@
+;i]Ö;"uint16_t ;@;o;;o;	;
+@
+;ifÖ;"	coef;@;[ ;0{;{;{	;o;;o;	;
+@
+;ipÖ;"uint16_t ;@;o;;o;	;
+@
+;iyÖ;"status;@;[ ;0;o;;o;	;
+@
+;iÉÖ;"mesa_kr_status_results_t ;@;[ ;o;;o;	;
+@
+;iúÖ;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;iØÖ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iƒÖ;"uint32_t ;@;o;;o;	;
+@
+;iÕÖ;"vga;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷Ö;"uint32_t ;@;o;;o;	;
+@
+;iﬂÖ;"edc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iËÖ;"uint32_t ;@;o;;o;	;
+@
+;iÒÖ;"eqr;@;[ ;0;o;;o;	;
+@
+;i¯Ö;"mesa_port_ctle_t;@;[ ;0{
+;o;;o;	;
+@
+;i5Ü;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iJÜ;"mesa_train_state_t       ;@;o;;o;	;
+@
+;icÜ;"current_state;@;[ ;0{;{;{	;o;;o;	;
+@
+;ivÜ;"mesa_ber_stage_t         ;@;o;;o;	;
+@
+;ièÜ;"ber_training_stage;@;[ ;0{;{;{	;o;;o;	;
+@
+;ißÜ;"mesa_kr_tap_t            ;@;o;;o;	;
+@
+;i¿Ü;"current_tap;@;[ ;0{;{;{	;o;;o;	;
+@
+;i—Ü;"mesa_bool_t              ;@;o;;o;	;
+@
+;iÍÜ;"signal_detect;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝Ü;"mesa_bool_t              ;@;o;;o;	;
+@
+;iá;"training_started;@;[ ;0{;{;{	;o;;o;	;
+@
+;i,á;"mesa_bool_t              ;@;o;;o;	;
+@
+;iEá;"remote_rx_ready;@;[ ;0{;{;{	;o;;o;	;
+@
+;iZá;"mesa_bool_t              ;@;o;;o;	;
+@
+;isá;"local_rx_ready;@;[ ;0{;{;{	;o;;o;	;
+@
+;iáá;"mesa_bool_t              ;@;o;;o;	;
+@
+;i†á;"dme_viol_handled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂á;"mesa_bool_t              ;@;o;;o;	;
+@
+;iœá;"dme_viol;@;[ ;0{;{;{	;o;;o;	;
+@
+;i›á;"mesa_bool_t              ;@;o;;o;	;
+@
+;iˆá;"ber_busy;@;[ ;0{;{;{	;o;;o;	;
+@
+;ià;"mesa_bool_t              ;@;o;;o;	;
+@
+;ià;"tap_max_reached;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2à;"mesa_bool_t              ;@;o;;o;	;
+@
+;iKà;"receiver_ready_sent;@;[ ;0{;{;{	;o;;o;	;
+@
+;idà;"mesa_bool_t              ;@;o;;o;	;
+@
+;i}à;"kr_mw_done;@;[ ;0{;{;{	;o;;o;	;
+@
+;içà;"mesa_bool_t              ;@;o;;o;	;
+@
+;i¶à;"ignore_fail;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∑à;"mesa_port_speed_t        ;@;o;;o;	;
+@
+;i–à;"next_parallel_spd;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁà;"uint16_t                 ;@;o;;o;	;
+@
+;i â;"lp_tap_max_cnt;@;[{;#o;;o;	;
+@
+;iâ;"3;@;0{;{;{	;o;;o;	;
+@
+;iâ;"uint16_t                 ;@;o;;o;	;
+@
+;i0â;"lp_tap_end_cnt;@;[{;#o;;o;	;
+@
+;i?â;"3;@;0{;{;{	;o;;o;	;
+@
+;iGâ;"uint32_t                 ;@;o;;o;	;
+@
+;i`â;"tap_idx;@;[ ;0{;{;{	;o;;o;	;
+@
+;imâ;"uint16_t                 ;@;o;;o;	;
+@
+;iÜâ;"ber_cnt;@;[{;#o;;o;	;
+@
+;iéâ;"3;@{;#o;;o;	;
+@
+;iëâ;"64;@;0{;{;{	;o;;o;	;
+@
+;iöâ;"uint16_t                 ;@;o;;o;	;
+@
+;i≥â;"eye_height;@;[{;#o;;o;	;
+@
+;iæâ;"3;@{;#o;;o;	;
+@
+;i¡â;"64;@;0{;{;{	;o;;o;	;
+@
+;i â;"uint16_t                 ;@;o;;o;	;
+@
+;i„â;"decr_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÒâ;"uint16_t                 ;@;o;;o;	;
+@
+;i
+ä;"ber_coef_frm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iä;"uint16_t                 ;@;o;;o;	;
+@
+;i5ä;"ber_status_frm;@;[ ;0{;{;{	;o;;o;	;
+@
+;iIä;"mesa_bool_t              ;@;o;;o;	;
+@
+;ibä;"test_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;iqä;"mesa_bool_t              ;@;o;;o;	;
+@
+;iää;"test_repeat;@;[ ;0{;{;{	;o;;o;	;
+@
+;iõä;"mesa_kr_status_results_t ;@;o;;o;	;
+@
+;i¥ä;"tr_res;@;[ ;0;o;;o;	;
+@
+;iæä;"mesa_port_kr_state_t ;@;[ ;o;;o;	;
+@
+;i”ä;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;iÊä;"mesa_rc ;@;o;;o;	;
+@
+;iÓä;"mesa_port_kr_state_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iã;"const mesa_inst_t ;@;o;;o;	;
+@
+;iã;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i<ã;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iQã;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iyã;"!mesa_port_kr_state_t *const ;@;o;;o;	;
+@
+;iïã;"
+state;@;[ ;0;o;;o;	;
+@
+;i†ã;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;iÀã;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i‡ã;"mesa_bool_t ;@;o;;o;	;
+@
+;iÏã;"
+r_fec;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=å;"mesa_bool_t ;@;o;;o;	;
+@
+;iIå;"rs_fec ;@;[ ;o;;o;	;
+@
+;iPå;"CAP(PORT_KR_IRQ);@;o;;o;	;
+@
+;iòå;"mesa_port_kr_fec_t ;@;[ ;o;;o;	;
+@
+;i´å;"CAP(PORT_KR);@{
+;o;;o;	;
+@
+;i…å;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iﬁå;"uint32_t ;@;o;;o;	;
+@
+;iÁå;"height;@;[ ;0;o;;o;	;
+@
+;iÒå;"mesa_port_kr_eye_dim_t ;@;[ ;o;;o;	;
+@
+;iç;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;iùç;"mesa_rc ;@;o;;o;	;
+@
+;i•ç;"mesa_port_kr_fec_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i∫ç;"const mesa_inst_t ;@;o;;o;	;
+@
+;iÃç;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÔç;"const mesa_port_no_t ;@;o;;o;	;
+@
+;ié;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i*é;"mesa_port_kr_fec_t *const ;@;o;;o;	;
+@
+;iDé;"	conf;@;[ ;0;o;;o;	;
+@
+;iNé;"CAP(PORT_KR);@{; {;{	;o;;o;	;
+@
+;iﬂé;"mesa_rc ;@;o;;o;	;
+@
+;iÁé;"mesa_port_kr_fec_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¸é;"const mesa_inst_t ;@;o;;o;	;
+@
+;iè;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1è;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iFè;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ilè;"%const mesa_port_kr_fec_t *const ;@;o;;o;	;
+@
+;iåè;"	conf;@;[ ;0;o;;o;	;
+@
+;iñè;"CAP(PORT_KR);@{; {;{	;o;;o;	;
+@
+;i¯è;"mesa_rc ;@;o;;o;	;
+@
+;i ê;"mesa_port_kr_irq_apply;@;[ ;0;![{;{	;o;;o;	;
+@
+;iê;"const mesa_inst_t ;@;o;;o;	;
+@
+;i)ê;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iNê;"const mesa_port_no_t ;@;o;;o;	;
+@
+;icê;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iãê;"const uint32_t *const ;@;o;;o;	;
+@
+;i°ê;"irq_vec;@;[ ;0;o;;o;	;
+@
+;iÆê;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;ië;"mesa_rc ;@;o;;o;	;
+@
+;i$ë;"mesa_port_kr_irq_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i9ë;"const mesa_inst_t ;@;o;;o;	;
+@
+;iKë;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;inë;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iÉë;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i©ë;"uint32_t *const ;@;o;;o;	;
+@
+;iπë;"irq_vec;@;[ ;0;o;;o;	;
+@
+;i∆ë;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;i•í;"mesa_rc ;@;o;;o;	;
+@
+;i≠í;"mesa_port_kr_event_enable;@;[ ;0;![{;{	;o;;o;	;
+@
+;i«í;"const mesa_inst_t ;@;o;;o;	;
+@
+;iŸí;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iì;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iì;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iAì;"mesa_bool_t ;@;o;;o;	;
+@
+;iMì;"enable;@;[ ;0;o;;o;	;
+@
+;iYì;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;i÷ì;"mesa_rc ;@;o;;o;	;
+@
+;iﬁì;"mesa_port_kr_irq_activity;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¯ì;"mesa_inst_t ;@;o;;o;	;
+@
+;iî;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i,î;"uint32_t *const ;@;o;;o;	;
+@
+;i<î;"	mask;@;[ ;0;o;;o;	;
+@
+;iFî;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;i0ï;"mesa_rc ;@;o;;o;	;
+@
+;i8ï;"mesa_port_kr_eye_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iMï;"mesa_inst_t ;@;o;;o;	;
+@
+;iYï;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i|ï;"const mesa_port_no_t ;@;o;;o;	;
+@
+;iëï;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i∑ï;"#mesa_port_kr_eye_dim_t *const ;@;o;;o;	;
+@
+;i’ï;"eye;@;[ ;0;o;;o;	;
+@
+;iﬁï;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;iìñ;"mesa_rc ;@;o;;o;	;
+@
+;iõñ;"mesa_port_kr_ctle_adjust;@;[ ;0;![{;{	;o;;o;	;
+@
+;i¥ñ;"mesa_inst_t ;@;o;;o;	;
+@
+;i¿ñ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÁñ;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i¸ñ;"port_no;@;[ ;0;o;;o;	;
+@
+;i	ó;"CAP(PORT_KR_IRQ);@{; {;{	;o;;o;	;
+@
+;i›ó;"mesa_rc ;@;o;;o;	;
+@
+;iÂó;"mesa_port_kr_ctle_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;i˚ó;"mesa_inst_t ;@;o;;o;	;
+@
+;iò;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i+ò;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i@ò;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iIò;"mesa_port_ctle_t *const ;@;o;;o;	;
+@
+;iaò;"	ctle;@;[ ;0;o;;o;	;
+@
+;ikò;"CAP(PORT_KR_IRQ);@{
+;o;;o;	;
+@
+;iÖô;"typedef;@;{;o;;o;	;
+@
+;içô;"	enum;@;[
+{;{;o;;o;	;
+@
+;iòô;"MESA_PORT_LB_DISABLED;@;0{;{;o;;o;	;
+@
+;i»ô;"MESA_PORT_LB_NEAR_END;@;0{;{;o;;o;	;
+@
+;i¯ô;"MESA_PORT_LB_FAR_END;@;0{;{;o;;o;	;
+@
+;i'ö;"MESA_PORT_LB_FACILITY;@;0{;{;o;;o;	;
+@
+;iWö;"MESA_PORT_LB_EQUIPMENT ;@;0;o;;o;	;
+@
+;iÜö;"mesa_port_lb_t;@;[ ;0{
+;o;;o;	;
+@
+;iºö;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i—ö;"mesa_port_lb_t ;@;o;;o;	;
+@
+;i‡ö;"loopback;@;[ ;0;o;;o;	;
+@
+;i˝ö;"mesa_port_test_conf_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i}õ;"mesa_rc ;@;o;;o;	;
+@
+;iÖõ;"mesa_port_test_conf_get;@;[ ;0;![{;{	;o;;o;	;
+@
+;iùõ;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i¥õ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i⁄õ;"const mesa_port_no_t   ;@;o;;o;	;
+@
+;iÒõ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iú;"#mesa_port_test_conf_t  *const ;@;o;;o;	;
+@
+;i8ú;"	conf;@;[ ;0;0{; {;{	;o;;o;	;
+@
+;i®ú;"mesa_rc ;@;o;;o;	;
+@
+;i∞ú;"mesa_port_test_conf_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;i»ú;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iÂú;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iù;""const mesa_port_no_t         ;@;o;;o;	;
+@
+;i(ù;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iQù;")const mesa_port_test_conf_t  *const ;@;o;;o;	;
+@
+;iuù;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iôù;"typedef;@;{;o;;o;	;
+@
+;i°ù;"	enum;@;[{;{;o;;o;	;
+@
+;i¨ù;"MESA_SERDES_PRE_CURSOR;@;0{;{;o;;o;	;
+@
+;i»ù;"MESA_SERDES_MAIN_CURSOR;@;0{;{;o;;o;	;
+@
+;iÂù;"MESA_SERDES_POST_CURSOR;@;0;o;;o;	;
+@
+;i û;" mesa_port_serdes_tap_enum_t;@;[ ;0{;o;;o;	;
+@
+;iÖü;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;içü;"mesa_rc ;@:fptr_nameo;;o;	;
+@
+;ióü;"mesa_port_serdes_tap_get_t;@;![
+{;{	;o;;o;	;
+@
+;i≥ü;"'const mesa_inst_t                 ;@;o;;o;	;
+@
+;i’ü;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i	†;"'const mesa_port_no_t              ;@;o;;o;	;
+@
+;i+†;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ib†;"'const mesa_port_speed_t           ;@;o;;o;	;
+@
+;iÑ†;"
+speed;@;[ ;0{;{	;o;;o;	;
+@
+;iπ†;"'const mesa_port_serdes_tap_enum_t ;@;o;;o;	;
+@
+;i€†;"tap;@;[ ;0{;{	;o;;o;	;
+@
+;i°;".uint32_t                          *const ;@;o;;o;	;
+@
+;i7°;"
+value;@;[ ;0;0{
+;o;;o;	;
+@
+;if°;"typedef;@;{;o;;o;	;
+@
+;in°;"	enum;@;[{;{;o;;o;	;
+@
+;iy°;"MESA_SERDES_DFE_PRM;@;0{;{;o;;o;	;
+@
+;i…°;"MESA_SERDES_CTLE_PRM;@;0{;{;o;;o;	;
+@
+;i¢;"MESA_SERDES_TXEQ_PRM;@;0;o;;o;	;
+@
+;ic¢;"mesa_serdes_debug_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i±¢;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i∆¢;"mesa_serdes_debug_type_t ;@;o;;o;	;
+@
+;iﬂ¢;"debug_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÔ¢;"uint32_t                 ;@;o;;o;	;
+@
+;i£;"serdes_prm;@;[{;#o;;o;	;
+@
+;i£;"10;@;0;o;;o;	;
+@
+;i8£;"mesa_port_serdes_debug_t;@;[ ;0{; {;{	;o;;o;	;
+@
+;i*§;"mesa_rc ;@;o;;o;	;
+@
+;i2§;"mesa_port_serdes_debug_set;@;[ ;0;![{;{	;o;;o;	;
+@
+;iM§;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;il§;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iï§;"$const mesa_port_no_t           ;@;o;;o;	;
+@
+;i¥§;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‡§;"+const mesa_port_serdes_debug_t *const ;@;o;;o;	;
+@
+;i•;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;i•;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i6•;"4#endif // _MICROCHIP_ETHERNET_SWITCH_API_PORT_
+;@

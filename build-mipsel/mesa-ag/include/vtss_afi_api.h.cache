@@ -1,0 +1,1159 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"µW// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file vtss_afi_api.h
+ * \brief AFI API
+ * \details This header file describes Automatic Frame Injector functions.
+ */
+
+#ifndef _VTSS_AFI_API_H_
+#define _VTSS_AFI_API_H_
+
+#include <vtss/api/options.h>
+
+#if defined(VTSS_FEATURE_AFI_SWC)
+
+#include <vtss/api/types.h>
+
+// Define checks
+#if !defined(VTSS_AFI_V1) && !defined(VTSS_AFI_V2)
+#error Neither VTSS_AFI_V1 nor VTSS_AFI_V2 defined
+#endif
+
+#if defined(VTSS_AFI_V1) && defined(VTSS_AFI_V2)
+#error Both VTSS_AFI_V1 and VTSS_AFI_V2 defined
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * \brief AFI identifier. Identifies the resources allocated for a periodically injected frame.
+ */
+typedef u32 vtss_afi_id_t;
+
+#define VTSS_AFI_ID_NONE (0xFFFFFFFF) /**< Use this to encode Tx headers for non-AFI frame */
+
+#if defined(VTSS_AFI_V1)
+#define VTSS_AFI_SLOT_CNT 1024 /**< Maximum number of AFI flows */
+
+/** \page AFI Automatic Frame Injector.
+ *
+ * The automatic frame injector allows for periodic
+ * transmission of frames from within the switch core.
+ *
+ * The flow for setting up a frame to be periodically
+ * injected is as follows for external CPUs:\n
+ *
+ * 1) Allocate resources for the frame using vtss_afi_alloc().
+ *    This function takes a structure in which the application
+ *    must specify properties, like transmissions per seconds.\n
+ *
+ * 2) The vtss_afi_alloc() function returns a unique ID, which
+ *    must be transferred in vtss_packet_tx_info_t::afi_id of the
+ *    structure that is passed to vtss_packet_tx_hdr_encode().\n
+ *
+ * 3) Transmit the frame with the injection header that came
+ *    out of vtss_packet_tx_hdr_encode().\n
+ *
+ * 4) Optionally call vtss_afi_hijack() to check that the frame indeed got
+ *    all the way to the AFI H/W.
+ *    Calling this function is a must if you attempt to send more traffic to a
+ *    port from the AFI than the port's speed allows for.
+ *
+ * 5) In order to cancel the frame transmission, call vtss_afi_free()
+ *    with the ID returned originally by vtss_afi_alloc().\n
+ *
+ * 6) If the port onto which the frame is transmitted gets a link-down event,
+ *    the Vitesse API will autonomously pause frame transmission.
+ *    When the link comes back up, the external CPU will have to re-transmit
+ *    the frame with the ID retrieved in the original call to vtss_afi_alloc(),
+ *    because internally in the API, the frame is seen as paused, not cancelled.
+ */
+
+/**
+ * \brief AFI Frame description structure.
+ *
+ * Contains properties that describe how a frame should be
+ * injected periodically.
+ * Upon exit from vtss_afi_alloc() it contains additional
+ * information about the injection.
+ * For future compatibility, memset() this structure
+ * to 0 before filling it in.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Frame rate (in frames per second) at which a frame
+     * should be transmitted.
+     */
+    u32 fps;
+
+    /**
+     * [OUT]
+     * On some platforms, it may not be possible to achieve
+     * the requested frame rate in one single go. A work-around
+     * for this is to inject the same frame with different
+     * frame rates. Typically, a particular desired frame rate
+     * can be obtained by transmitting the same frame a number
+     * of times.
+     * vtss_afi_alloc() fills in #actual_fps with the number
+     * of frames that the AFI will actually send.
+     * It is guaranteed that #actual_fps <= #fps, so that
+     * vtss_afi_alloc() can be called repeatedly with the
+     * missing frame count.
+     *
+     * The API supports two different allocation methods.
+     * Which one is currently active depends on
+     * the value of the VTSS_OPT_AFI_OPTIMIZE_FOR_TIMERS compile-
+     * time flag.
+     *
+     * If VTSS_OPT_AFI_OPTIMIZE_FOR_TIMERS is 0 (default/legacy), the
+     * AFI code attempts to use as few frame-slots as possible
+     * to achieve the desired rate. This is at the expense of
+     * timers.
+     * Setting VTSS_OPT_AFI_CAL_TYPE to 1 causes the AFI code
+     * to optimize for timers rather than frame-slots.
+     * This might be a better solution, because there are much
+     * more frame-slots than timers.
+     * When optimizing for timers, each timer is pre-configured
+     * to provide a fixed number of frames per second. In this mode
+     * the application may have to call into the vtss_afi_alloc()
+     * function more times than had it been in the "optimize-for-
+     * frame-slots" mode.
+     */
+    u32 actual_fps;
+
+} vtss_afi_frm_dscr_t;
+
+#define VTSS_AFI_FPS_MAX (3800000)    /**< Maximum number of frames per second we support (corresponds to wirespeed 2.5Gbps 64 byte frames) */
+
+/**
+ * \brief Allocate resources for an AFI frame.
+ *
+ * This function allocates resources required for a frame subject to
+ * automatic frame injection.
+ *
+ * The function returns an ID that can be used in subsequent calls to
+ * vtss_packet_tx_hdr_encode() and vtss_afi_free(). The ID is only valid
+ * for one single frame.
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param dscr [INOUT] Pointer to structure describing how the frame should be injected.
+ * \param id   [OUT]   Pointer receiving a unique ID that identifies the allocated resources for this frame.
+ *
+ * \return VTSS_RC_OK on success. VTSS_RC_ERROR on error.
+ */
+vtss_rc vtss_afi_alloc(const vtss_inst_t inst, vtss_afi_frm_dscr_t *const dscr, vtss_afi_id_t *const id);
+
+/**
+ * \brief Free resources associated with an AFI frame.
+ *
+ * This function cancels any ongoing transmissions of the frame
+ * associated with the ID passed to this function, and frees the
+ * allocated resources.
+ *
+ * \param inst [IN] Target instance reference.
+ * \param id   [IN] ID of AFI frame to cancel and free resources for.
+ *
+ * \return VTSS_RC_OK on success. VTSS_RC_ERROR on error.
+ */
+vtss_rc vtss_afi_free(const vtss_inst_t inst, vtss_afi_id_t id);
+
+/**
+ * \brief Check that the frame just transmitted to the AFI indeed gets to get
+ * known by the AFI.
+ *
+ * After the frame is injected, make sure it gets known by H/W by calling this
+ * function.
+ * Especially if the already-applied AFI rate on the port this frame is supposed
+ * to egress is very high (higher than the port's link rate), will there be a
+ * chance that subsequent frames sent from S/W to the AFI won't make it to the
+ * AFI, because all B/W from the queue system towards the port is in use by
+ * the AFI itself, which has higher Tx priority than other frames from the
+ * queue system.
+ * You will not need to call this function if you know that the rate towards
+ * a given port is lower than the link speed of that port.
+ *
+ * \param inst [IN] Target instance reference.
+ * \param id   [IN] ID of AFI frame to cancel and free resources for.
+ *
+ * \return VTSS_RC_OK on success. VTSS_RC_ERROR on error.
+ */
+vtss_rc vtss_afi_hijack(const vtss_inst_t inst, vtss_afi_id_t id);
+
+#endif /* defined(VTSS_AFI_V1) */
+
+#if defined(VTSS_AFI_V2)
+
+// Chip specific properties
+#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C)
+#define VTSS_AFI_SLOW_INJ_CNT     4096           /**< Maximum number of simultaneous slow injections */
+#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+#define VTSS_AFI_FAST_INJ_BPS_MAX 10000000000ULL /**< Max rate in bits per second: 10Gbps (including IFG and preamble) */
+#endif
+
+#if defined(VTSS_ARCH_SPARX5)
+#define VTSS_AFI_SLOW_INJ_CNT     4096           /**< Maximum number of simultaneous slow injections */
+#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+#define VTSS_AFI_FAST_INJ_BPS_MAX 25000000000ULL /**< Max rate in bits per second: 25Gbps (including IFG and preamble) */
+#endif
+
+#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+#if defined(VTSS_ARCH_LAN966X_FPGA)
+#define VTSS_AFI_SLOW_INJ_CNT     64             /**< Maximum number of simultaneous slow injections */
+#else
+#define VTSS_AFI_SLOW_INJ_CNT     2048           /**< Maximum number of simultaneous slow injections */
+#endif
+#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+#define VTSS_AFI_FAST_INJ_BPS_MAX 10000000000ULL /**< Max rate in bits per second: 10Gbps (including IFG and preamble) */
+#endif
+
+#define VTSS_AFI_SLOW_INJ_FPH_MAX (60 * 60 * 300) /**< Maximum number of frames per hour supported by slow injections */
+
+/** \page Automatic Frame Injector (AFI)
+ *
+ * Two types of AFI injections are supported:
+ * a) Fast injections
+ *    Injection of a sequence of frames consisting of one or more frames with rates of up to several Gbps.
+ *    IFG proportional to frame size are inserted between frames.
+ *    This is known as Delay-Triggered Injections (DTI).
+ * b) Slow injections
+ *    Typically used for injecting single frames with an interval of ~3.3ms or slower.
+ *    This is known as Timer-Triggered Injections (TTI).
+ *
+ * Fast injections are used as follows:
+ * 1) Allocate resources identified by a 'fastid' using vtss_afi_fast_inj_alloc().
+ * 2) Transmit frame with IFH.AFI_INJ = 1.
+ * 3) Call vtss_afi_fast_inj_frm_hijack() to configure the frame for injection.
+ *    Repeat steps 2-3 to configure a sequence of frames for injection.
+ * 4) Call vtss_afi_fast_inj_start() to select bandwidth and start injection.
+ * 5) Call vtss_afi_fast_inj_stop() to stop injection.
+ *    vtss_afi_fast_inj_seq_cnt_get() can be called to check the remaining number
+ *    of injections.
+ *    Repeat 4-5 as desired.
+ *    Note that fast injections, which are started with seq_cnt set to a
+ *    non-zero value must also be stopped with vtss_afi_fast_inj_stop() before
+ *    it can be started again.
+ * 6) Call vtss_afi_fast_inj_free() to free allocated resources.
+ *
+ * Slow injections are used as follows:
+ * 1) Allocate resources identified by a 'slowid' using vtss_afi_slow_inj_alloc().
+ * 2) Transmit frame with IFH.AFI_INJ=1.
+ * 3) Call vtss_afi_slow_inj_frm_hijack() to configure the frame for injection.
+ * 4) Call vtss_afi_slow_inj_start() to start injection.
+ * 5) Call vtss_afi_slow_inj_stop() to stop injection.
+ *    Repeat 4-5 as desired.
+ * 6) Call vtss_afi_slow_inj_free() to free allocated resources.
+ *
+ * During link down, all injections (slow as well as fast) are automatically stopped
+ * and upon link up, injections are restarted.
+ *
+ * Maximum one frame (with AFI_INJ=1) can be setup at a time. I.e. another frame
+ * must not be injected with AFI_INJ=1 until the previous such frame has been hijacked
+ * using vtss_afi_slow_inj_frm_hijack() or vtss_afi_fast_inj_frm_hijack().
+ */
+
+// TOETBD - Jaguar2a:
+// Note that if port is disabled when freeing (slow or fast), then AFI
+// API must do the following:
+// a) Disable all other injections on same port.
+// b) Enable injections for port (FRM_OUT_MAX>0)
+// c) Configure removals.
+// d) Wait for removal injections to complete.
+// e) Disable injections for port (FRM_OUT_MAX=0)
+// f) Reenable the injections, which were disable in a).
+//
+// With PORT_TBL:PORT_CFG.FRM_RM_ONLY this can be done simpler for ServalT.
+
+// ========================================
+// Fast injections
+// ----------------------------------------
+
+/**
+ * Maximum number of frames in fast injection sequence.
+ * The recommended default EMIX in ITU-T Y.1564 consists of 5 frames
+ * of sizes 1518, 1518, 1024, 64, 64.
+ */
+#define VTSS_AFI_FAST_INJ_FRM_CNT_MAX 8
+
+#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+#define VTSS_AFI_FAST_INJ_CNT 32 /**< Maximum number of simultaneous fast injections */
+#elif defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+#define VTSS_AFI_FAST_INJ_CNT 16 /**< Maximum number of simultaneous fast injections */
+#else
+#error "Unsupported architecture"
+#endif
+
+typedef u32 vtss_afi_fastid_t; /**< Opaque type for IDs of fast injections */
+
+/**
+ * Structure defining properties of a fast injection.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Port number onto which the frame sequence shall be transmitted.
+     *
+     * Set to VTSS_PORT_NO_NONE to use Virtual Device #1 (VD1) (for Up-MEPs)
+     * and fill in \p masquerade_port_no with masqueraded port.
+     *
+     * The reason that the destination port number must be conveyed
+     * to the AFI in addition to conveying it in the IFH is that
+     * once the AFI starts injection, it doesn't have access to the IFH.
+     */
+    vtss_port_no_t port_no;
+
+    /**
+     * [IN]
+     * Priority on which the frame sequence shall be transmitted.
+     *
+     * Valid values are in the range [0; VTSS_PRIO_END] and
+     * [VTSS_PRIO_SUPER; VTSS_PRIO_SUPER + 1].
+     */
+    vtss_prio_t prio;
+
+    /**
+     * [IN]
+     * Number of frames in sequence, i.e. number of frames to be hijacked
+     * using vtss_afi_fast_inj_frm_hijack().
+     * Maximum is VTSS_AFI_FAST_INJ_FRM_CNT_MAX.
+     */
+    u32 frm_cnt;
+
+    /**
+     * [IN]
+     * For up-flows, that is, when setting \p port_no to VTSS_PORT_NO_NONE,
+     * convey the port number on which the flow ingresses, that is, the
+     * masquerade port.
+     *
+     * It is not used unless \p port_no is set to VTSS_PORT_NO_NONE.
+     */
+    vtss_port_no_t masquerade_port_no;
+} vtss_afi_fast_inj_alloc_cfg_t;
+
+/**
+ * \brief Allocate AFI fast injection resource
+ *
+ * \param inst   [IN]  Target instance reference.
+ * \param cfg    [IN]  Injection descriptor.
+ * \param fastid [OUT] ID used for referencing the allocated resource.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_alloc(const vtss_inst_t                          inst,
+                                const vtss_afi_fast_inj_alloc_cfg_t *const cfg,
+                                      vtss_afi_fastid_t             *const fastid);
+
+/**
+ * \brief Free AFI fast injection resource
+ *
+ * Before resources are freed, fast injection must be stopped.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param fastid [IN] Fast injection ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_free(const vtss_inst_t       inst,
+                                     vtss_afi_fastid_t fastid);
+
+/**
+ * Structure needed when hijacking frame.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Frame size in bytes.
+     * frm_size is only used for calculating bandwidth and need not match
+     * the actual frame size. If IFG and preamble shall be included in the
+     * bandwidth calculation, then this must be added to frm_size.
+     */
+    u32 frm_size;
+} vtss_afi_fast_inj_frm_cfg_t;
+
+/**
+ * \brief Setup frame for fast injection.
+ *
+ * When a sequence of frames is configured, then the frame order
+ * is the order in which frames are setup.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param fastid [IN] Fast injection ID.
+ * \param cfg    [IN] Frame setup configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_frm_hijack(const vtss_inst_t                        inst,
+                                           vtss_afi_fastid_t                  fastid,
+                                     const vtss_afi_fast_inj_frm_cfg_t *const cfg);
+
+/**
+ * Structure defining properties of a fast injection.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Requested injection rate. Bits per second (type = Layer1/Line rate)
+     * Maximum value is VTSS_AFI_FAST_INJ_BPS_MAX.
+     * bps = 0 => Injection at line speed (for ports with speed <= VTSS_AFI_FAST_INJ_BPS_MAX).
+     */
+    u64 bps;
+
+    /**
+     * [IN]
+     * Number of sequences to inject. 0 => inject until stopped.
+     * Maximum value is 2^31-1
+     */
+    u32 seq_cnt;
+
+    /**
+     * [OUT]
+     * Actual injection rate. Bits per second.
+     * bps_actual is always <= bps.
+     * For rates close to VTSS_AFI_FAST_INJ_BPS_MAX precision is 1%, or better.
+     * For lower rates precision is better than 0.1%.
+     * The actual rate will always be at or lower than the requested rate.
+     * If bps is set to 0, then bps_actual is also set to 0.
+     */
+    u64 bps_actual;
+} vtss_afi_fast_inj_start_cfg_t;
+
+/**
+ * \brief Start fast injection.
+ *
+ * \param inst   [IN]    Target instance reference.
+ * \param fastid [IN]    Fast injection ID.
+ * \param cfg    [INOUT] Fast injection configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_start(const vtss_inst_t                          inst,
+                                      vtss_afi_fastid_t                    fastid,
+                                      vtss_afi_fast_inj_start_cfg_t *const cfg);
+
+/**
+ * \brief Stop fast injection.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param fastid [IN] Fast injection ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_stop(const vtss_inst_t       inst,
+                                     vtss_afi_fastid_t fastid);
+
+/**
+ * \brief Get seq_cnt for fast injection.
+ *        If seq_cnt is set to 0 in vtss_afi_fast_inj_start() then the value
+ *        read will be the number of frames injected.
+ *        Otherwise the value read will be the remaining number of sequences
+ *        to inject.
+ *
+ * \param inst    [IN]  Target instance reference.
+ * \param fastid  [IN]  Fast injection ID.
+ * \param seq_cnt [OUT] Sequence/frame count read.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_fast_inj_seq_cnt_get(const vtss_inst_t              inst,
+                                            vtss_afi_fastid_t        fastid,
+                                            u32               *const seq_cnt);
+
+// ========================================
+// Slow injections
+// ----------------------------------------
+typedef u32 vtss_afi_slowid_t; /**< Opaque type for IDs of slow injections */
+
+/**
+ * Structure defining properties of a slow injection.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Port number onto which the frame shall be transmitted periodically.
+     *
+     * Set to VTSS_PORT_NO_NONE to use Virtual Device #1 (VD1) (for Up-MEPs)
+     * and fill in \p masquerade_port_no with the masqueraded port.
+     */
+    vtss_port_no_t port_no;
+
+    /**
+     * [IN]
+     * Priority on which the frame sequence shall be transmitted.
+     *
+     * Valid values are in the range [0; VTSS_PRIO_END] and
+     * [VTSS_PRIO_SUPER; VTSS_PRIO_SUPER + 1].
+     */
+    vtss_prio_t prio;
+
+    /**
+     * [IN]
+     * For up-flows, that is, when setting \p port_no to VTSS_PORT_NO_NONE,
+     * convey the port number on which the flow ingresses, that is, the
+     * masquerade port.
+     *
+     * It is not used unless \p port_no is set to VTSS_PORT_NO_NONE.
+     */
+    vtss_port_no_t masquerade_port_no;
+} vtss_afi_slow_inj_alloc_cfg_t;
+
+/**
+ * \brief Allocate AFI slow injection resource
+ *
+ * \param inst   [IN]  Target instance reference.
+ * \param cfg    [IN]  Injection descriptor.
+ * \param slowid [OUT] ID used for referencing the allocated resource.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_slow_inj_alloc(const vtss_inst_t                          inst,
+                                const vtss_afi_slow_inj_alloc_cfg_t *const cfg,
+                                      vtss_afi_slowid_t             *const slowid);
+
+/**
+ * \brief Free AFI slow injection resource
+ *
+ * Before resources are freed, slow injection must be stopped.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param slowid [IN] Slow injection ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_slow_inj_free(const vtss_inst_t       inst,
+                                     vtss_afi_slowid_t slowid);
+
+/**
+ * \brief Setup frame for slow injection.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param slowid [IN] Slow injection ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_slow_inj_frm_hijack(const vtss_inst_t       inst,
+                                           vtss_afi_slowid_t slowid);
+
+/**
+ * Structure defining properties of a slow injection.
+ */
+typedef struct {
+    /**
+     * [IN]
+     * Frames per hour.
+     */
+    u64 fph;
+
+    /**
+     * [IN]
+     * 0: No injection time jitter.
+     * 1: Injection delta time is randomized in interval [0.75*60*60/fph; 60/fph] secs
+     * 2: Injection delta time is randomized in interval [0.50*60*60/fph; 60/fph] secs
+     * 3: Injection delta time is randomized in interval [1 tick; 60*60/fph secs]
+     *
+     * E.g. to be used for PTP Delay Request, ref IEEE1588-2008, 9.5.11.2.
+     */
+    u8 jitter_mode;
+
+    /**
+     * [IN]
+     * If FALSE, first frame is transmitted a randomized number of timer ticks
+     * after call to vtss_afi_slow_inj_start() to minimize risk of bursting in
+     * case many flows are started "simultaneously".
+     * If TRUE, first frame must be transmitted ASAP.
+     */
+    BOOL first_frame_urgent;
+} vtss_afi_slow_inj_start_cfg_t;
+
+/**
+ * \brief Start slow injection.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param slowid [IN] Slow injection ID.
+ * \param cfg    [IN] Slow injection configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_slow_inj_start(const vtss_inst_t                          inst,
+                                      vtss_afi_slowid_t                    slowid,
+                                const vtss_afi_slow_inj_start_cfg_t *const cfg);
+
+/**
+ * \brief Stop slow injection.
+ *
+ * \param inst   [IN] Target instance reference.
+ * \param slowid [IN] Slow injection ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_slow_inj_stop(const vtss_inst_t       inst,
+                                     vtss_afi_slowid_t slowid);
+
+// ========================================
+// Other functions
+// ----------------------------------------
+
+// Stopping and starting all injections for port.
+// Note that during link down, injections are automatically stopped and
+// (re)started upon link up.
+
+/**
+ * \brief (Re)start all injections for specific port
+ *
+ * \param inst    [IN] Target instance reference.
+ * \param port_no [IN] Port number. VTSS_PORT_NO_NONE for VD1.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_port_start(const vtss_inst_t    inst,
+                                  vtss_port_no_t port_no);
+
+/**
+ * \brief Stop all injections for specific port
+ *
+ * \param inst    [IN] Target instance reference.
+ * \param port_no [IN] Port number. VTSS_PORT_NO_NONE for VD1.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_afi_port_stop(const vtss_inst_t    inst,
+                                 vtss_port_no_t port_no);
+
+#endif // VTSS_AFI_V2
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // VTSS_FEATURE_AFI_SWC
+#endif // _VTSS_AFI_API_H_
+:@byteposiÎ:	@str"#ifndef _VTSS_AFI_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[yiPipiqiriviâiõiÊiÍiÎiiii<i=i_i`i|i}iéi¡iÙi˚i¸i-i]idieixiÖiåiçiëiÒiıiiioipiâiÃiÕiıi¯i,icifiúiÀiŒiiLiçiêiœiiRiUiíiæi¡ii.i}i∑i∫i i=i@iéi–i	im	iæ	i¬	i√	i«	iÚ	iı	i0
+iJ
+iÑ
+i®
+i›
+i˚
+iˇ
+iii$i^i|iÑiëiíiöißi„i#i^iùi‹iÌi*i\iñi–iÏiÛi-i]iüi±i∏i˛i=i{iäi»iˇi>ici£iÁi)ikiÖiçi°i¢iπi∫iIiJiNi}iÄi≈i„iÊi,iuiéiëi√iiâiåi∆i i4i5i9ipisi≥iÙiii>iÑiái¡i≈iiiiYiniqi¿iÕiiliªiiRici∞iÎiÓiicifi†i§iÁiËi
+ii$i%iAiÑiÏieiﬂiÊiÁiimiÊi`igihi¶i i2i8i†ißi  iö i° i¢ i!i!iE!iH!iv!iå!i˜!i9"ir"ià"iﬂ"i#i#iC#iñ#i¡#i$iY$iß$iﬁ$i0%iE%ib%i´%i˙%i&iZ&i]&iÖ&iÿ&i'iQ'iä'i¡'iﬁ'i(i"(iw(i¶(i©(i˙(iQ)iú)i†)i°)i∑)i˛)i*iM*i~*iò*i«*i˘*i2+i5+iÅ+iÇ+iÆ+i¡+iÌ+iÓ+iÚ+i*,io,iï,iô,i¡,i¬,i"-iz-i∫-i.i.i:.iA.iB.iê.ië.iï.iÀ.iœ.i‡.iË.iÙ.i;/iB/iè/iœ/i÷/i0i[0i§0i¨0i»0i…0i—0i›0i1i&1ib1ië1iô1iØ1i∞1i∏1iƒ1i2i;2il2it2iÖ2iÜ2ié2iö2iÊ2i.3iF3iM3ií3iö3i¡3i‚3i„3iÁ3i4i4iK4ix4iø4i¬4i⁄4iﬂ4i05iÄ5i‘5i’5iŸ5i6i6iF6iI6iz6i£6i¶6iæ6i√6i 7i@7iA7iE7io7is7iÑ7iå7iò7i¥7i˛7iI8iå8iî8i¶8i≈8i∆8i 8iÙ8i˜8i89ic9if9ió9i¿9iÒ9iÙ9i:i:ie:iª:i;i;i;iJ;iN;i_;ig;is;iæ;iÒ;iP<iX<ie<if<in<iz<iª<i⁄<i‚<iÛ<iÙ<i¸<i	=i8=i\=i¨=i‚=i->ij>ir>iÜ>iß>i®>i¨>iÃ>iœ>i?i/?if?ii?iÅ?iÜ?i◊?i*@i{@i|@iÄ@iü@i¢@i”@i¸@iˇ@iAiAiYAiôAiöAiûAi»AiBiKBiòBi≠Bi∞Bi„BiCiACiDCi\CiaCi¨Ci˘CiHDiIDiuDiàDi¥DiEiEiEi=EiAEiREiZEifEi±Ei∏EiFiIFiQFimFinFivFiÇFiƒFiÀFiGi6Gi>GiTGiUGi]GiiGiµGi˝GiHiHiaHiiHiêHi±Hi≤Hi∂HiÂHiËHiIiGIiéIiëIi©IiÆIiˇIiOJi£Ji§Ji®Ji”Ji÷JiKiKiIKirKiuKiçKiíKiœKiLiLiLi>LiALirLiõLiûLi∂LiªLi˛LiDMiEMiIMiMiÉMiîMiúMi®Mi¿Mi»Mi’Mi÷MiﬁMiÍMiNieNiºNiOiOi`OihOi|Oi}OiÖOiëOi‡Oi/PidPiöPi¢PiøPi‡Pi·PiÂPiQiQi9QibQiñQiôQi±Qi∂QiRiZRi´Ri¨Ri∞RiœRi“RiSi,Si/SiGSiLSiâSi…Si SiˆSi	Ti5Ti6TihTi∞TiÕTiŒTi“TiUi
+Ui<Ui{Ui~UiñUiõUi“UiViViViBViEViwVi∂ViπVi—Vi÷ViWiFWiGWi]Wi^WiqWisWizWi{WiöWiµW:@last_line_endiµW{;o;;o;	;
+@
+;i;"#define _VTSS_AFI_API_H_
+
+;@{;o;;o;	;
+@
+;i;"$#include <vtss/api/options.h>
+
+;@{;o;;o;	;
+@
+;i=;"(#if defined(VTSS_FEATURE_AFI_SWC)
+
+;@{;o;;o;	;
+@
+;i`;""#include <vtss/api/types.h>
+
+;@{;o;;o;	;
+@
+;ié;"8#if !defined(VTSS_AFI_V1) && !defined(VTSS_AFI_V2)
+;@{;o;;o;	;
+@
+;i¡;"8#error Neither VTSS_AFI_V1 nor VTSS_AFI_V2 defined
+;@{;o;;o;	;
+@
+;iÙ;"#endif
+
+;@{;o;;o;	;
+@
+;i¸;"6#if defined(VTSS_AFI_V1) && defined(VTSS_AFI_V2)
+;@{;o;;o;	;
+@
+;i-;"5#error Both VTSS_AFI_V1 and VTSS_AFI_V2 defined
+;@{;o;;o;	;
+@
+;i];"#endif
+
+;@{;o;;o;	;
+@
+;ie;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;ix;"extern;@:stringo;;o;	;
+@
+;i;""C";@; [C{;o;;o;	;
+@
+;iÖ;"#endif
+
+;@{
+;o;;o;	;
+@
+;iı;"typedef;@:type_aliaso;;o;	;
+@
+;i˝;"	u32 ;@:typedef_nameo;;o;	;
+@
+;i;"vtss_afi_id_t;@:
+array[ :cap0{;o;;o;	;
+@
+;i;"d#define VTSS_AFI_ID_NONE (0xFFFFFFFF) /**< Use this to encode Tx headers for non-AFI frame */
+
+;@{;o;;o;	;
+@
+;ip;"#if defined(VTSS_AFI_V1)
+;@{;o;;o;	;
+@
+;iâ;"I#define VTSS_AFI_SLOT_CNT 1024 /**< Maximum number of AFI flows */
+
+;@{
+;o;;o;	;
+@
+;iˇ
+;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;ià;"	u32 ;@:	nameo;;o;	;
+@
+;iå;"fps;@;[ ;0{;{;{	;o;;o;	;
+@
+;ië;"	u32 ;@;o;;o;	;
+@
+;iï;"actual_fps;@;[ ;0;o;;o;	;
+@
+;i§;"vtss_afi_frm_dscr_t;@;[ ;0{;o;;o;	;
+@
+;i∫;"ê#define VTSS_AFI_FPS_MAX (3800000)    /**< Maximum number of frames per second we support (corresponds to wirespeed 2.5Gbps 64 byte frames) */
+
+;@{:func_proto{;{	;o;;o;	;
+@
+;i ;"vtss_rc ;@;o;;o;	;
+@
+;i“;"vtss_afi_alloc;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i·;"const vtss_inst_t ;@;o;;o;	;
+@
+;iÛ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˘;" vtss_afi_frm_dscr_t *const ;@;o;;o;	;
+@
+;i;"	dscr;@;[ ;0{;{	;o;;o;	;
+@
+;i;"vtss_afi_id_t *const ;@;o;;o;	;
+@
+;i/;"id;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i≈;"vtss_rc ;@;o;;o;	;
+@
+;iÕ;"vtss_afi_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;i€;"const vtss_inst_t ;@;o;;o;	;
+@
+;iÌ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÛ;"vtss_afi_id_t ;@;o;;o;	;
+@
+;i;"id;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i§;"vtss_rc ;@;o;;o;	;
+@
+;i¨;"vtss_afi_hijack;@;[ ;0;[{;{	;o;;o;	;
+@
+;iº;"const vtss_inst_t ;@;o;;o;	;
+@
+;iŒ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‘;"vtss_afi_id_t ;@;o;;o;	;
+@
+;i‚;"id;@;[ ;0;0{;o;;o;	;
+@
+;iË;"(#endif /* defined(VTSS_AFI_V1) */
+
+;@{;o;;o;	;
+@
+;i;"#if defined(VTSS_AFI_V2)
+
+;@{;o;;o;	;
+@
+;iA;"H#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C)
+;@{;o;;o;	;
+@
+;iÑ;"m#define VTSS_AFI_SLOW_INJ_CNT     4096           /**< Maximum number of simultaneous slow injections */
+;@{;o;;o;	;
+@
+;iÏ;"~#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;ie;"#define VTSS_AFI_FAST_INJ_BPS_MAX 10000000000ULL /**< Max rate in bits per second: 10Gbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;iﬂ;"#endif
+
+;@{;o;;o;	;
+@
+;iÁ;"##if defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i;"m#define VTSS_AFI_SLOW_INJ_CNT     4096           /**< Maximum number of simultaneous slow injections */
+;@{;o;;o;	;
+@
+;im;"~#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;iÊ;"#define VTSS_AFI_FAST_INJ_BPS_MAX 25000000000ULL /**< Max rate in bits per second: 25Gbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;i`;"#endif
+
+;@{;o;;o;	;
+@
+;ih;"C#if defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;i¶;")#if defined(VTSS_ARCH_LAN966X_FPGA)
+;@{;o;;o;	;
+@
+;i ;"m#define VTSS_AFI_SLOW_INJ_CNT     64             /**< Maximum number of simultaneous slow injections */
+;@{;o;;o;	;
+@
+;i2;"#else
+;@{;o;;o;	;
+@
+;i8;"m#define VTSS_AFI_SLOW_INJ_CNT     2048           /**< Maximum number of simultaneous slow injections */
+;@{;o;;o;	;
+@
+;i†;"#endif
+;@{;o;;o;	;
+@
+;iß;"~#define VTSS_AFI_FAST_INJ_BPS_MIN 1000ULL        /**< Min rate in bits per second: 1kbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;i  ;"#define VTSS_AFI_FAST_INJ_BPS_MAX 10000000000ULL /**< Max rate in bits per second: 10Gbps (including IFG and preamble) */
+;@{;o;;o;	;
+@
+;iö ;"#endif
+
+;@{;o;;o;	;
+@
+;i¢ ;"#define VTSS_AFI_SLOW_INJ_FPH_MAX (60 * 60 * 300) /**< Maximum number of frames per hour supported by slow injections */
+
+;@{;o;;o;	;
+@
+;iô,;".#define VTSS_AFI_FAST_INJ_FRM_CNT_MAX 8
+
+;@{;o;;o;	;
+@
+;i¬,;"e#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i"-;"]#define VTSS_AFI_FAST_INJ_CNT 32 /**< Maximum number of simultaneous fast injections */
+;@{;o;;o;	;
+@
+;iz-;"E#elif defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;i∫-;"]#define VTSS_AFI_FAST_INJ_CNT 16 /**< Maximum number of simultaneous fast injections */
+;@{;o;;o;	;
+@
+;i.;"#else
+;@{;o;;o;	;
+@
+;i.;"'#error "Unsupported architecture"
+;@{;o;;o;	;
+@
+;i:.;"#endif
+
+;@{
+;o;;o;	;
+@
+;iB.;"typedef;@;o;;o;	;
+@
+;iJ.;"	u32 ;@;o;;o;	;
+@
+;iN.;"vtss_afi_fastid_t;@;[ ;0{
+;o;;o;	;
+@
+;iœ.;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i∞0;"vtss_port_no_t ;@;o;;o;	;
+@
+;iø0;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iù1;"vtss_prio_t ;@;o;;o;	;
+@
+;i©1;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;ix2;"	u32 ;@;o;;o;	;
+@
+;i|2;"frm_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;iû3;"vtss_port_no_t ;@;o;;o;	;
+@
+;i≠3;"masquerade_port_no;@;[ ;0;o;;o;	;
+@
+;i√3;""vtss_afi_fast_inj_alloc_cfg_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂ4;"vtss_rc ;@;o;;o;	;
+@
+;iÁ4;"vtss_afi_fast_inj_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;iˇ4;"0const vtss_inst_t                          ;@;o;;o;	;
+@
+;i*5;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iP5;"0const vtss_afi_fast_inj_alloc_cfg_t *const ;@;o;;o;	;
+@
+;i{5;"cfg;@;[ ;0{;{	;o;;o;	;
+@
+;i¶5;"*vtss_afi_fastid_t             *const ;@;o;;o;	;
+@
+;iÀ5;"fastid;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i√6;"vtss_rc ;@;o;;o;	;
+@
+;iÀ6;"vtss_afi_fast_inj_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;i‚6;"const vtss_inst_t       ;@;o;;o;	;
+@
+;i˙6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i%7;"vtss_afi_fastid_t ;@;o;;o;	;
+@
+;i77;"fastid;@;[ ;0;0{
+;o;;o;	;
+@
+;is7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iò8;"	u32 ;@;o;;o;	;
+@
+;iú8;"frm_size;@;[ ;0;o;;o;	;
+@
+;i®8;" vtss_afi_fast_inj_frm_cfg_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i:;"vtss_rc ;@;o;;o;	;
+@
+;i:;"!vtss_afi_fast_inj_frm_hijack;@;[ ;0;[{;{	;o;;o;	;
+@
+;i6:;".const vtss_inst_t                        ;@;o;;o;	;
+@
+;i_:;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iê:;"(vtss_afi_fastid_t                  ;@;o;;o;	;
+@
+;i≥:;"fastid;@;[ ;0{;{	;o;;o;	;
+@
+;i‡:;".const vtss_afi_fast_inj_frm_cfg_t *const ;@;o;;o;	;
+@
+;i	;;"cfg;@;[ ;0;0{
+;o;;o;	;
+@
+;iN;;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i\<;"	u64 ;@;o;;o;	;
+@
+;i`<;"bps;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÊ<;"	u32 ;@;o;;o;	;
+@
+;iÍ<;"seq_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;iv>;"	u64 ;@;o;;o;	;
+@
+;iz>;"bps_actual;@;[ ;0;o;;o;	;
+@
+;ià>;""vtss_afi_fast_inj_start_cfg_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜ?;"vtss_rc ;@;o;;o;	;
+@
+;ié?;"vtss_afi_fast_inj_start;@;[ ;0;[{;{	;o;;o;	;
+@
+;i¶?;"0const vtss_inst_t                          ;@;o;;o;	;
+@
+;i—?;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˝?;"*vtss_afi_fastid_t                    ;@;o;;o;	;
+@
+;i"@;"fastid;@;[ ;0{;{	;o;;o;	;
+@
+;iP@;"*vtss_afi_fast_inj_start_cfg_t *const ;@;o;;o;	;
+@
+;iu@;"cfg;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iA;"vtss_rc ;@;o;;o;	;
+@
+;i$A;"vtss_afi_fast_inj_stop;@;[ ;0;[{;{	;o;;o;	;
+@
+;i;A;"const vtss_inst_t       ;@;o;;o;	;
+@
+;iSA;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i~A;"vtss_afi_fastid_t ;@;o;;o;	;
+@
+;iêA;"fastid;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iaC;"vtss_rc ;@;o;;o;	;
+@
+;iiC;""vtss_afi_fast_inj_seq_cnt_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iáC;"$const vtss_inst_t              ;@;o;;o;	;
+@
+;i¶C;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÿC;"vtss_afi_fastid_t        ;@;o;;o;	;
+@
+;iÒC;"fastid;@;[ ;0{;{	;o;;o;	;
+@
+;i%D;"u32               *const ;@;o;;o;	;
+@
+;i>D;"seq_cnt;@;[ ;0;0{
+;o;;o;	;
+@
+;i¥D;"typedef;@;o;;o;	;
+@
+;iºD;"	u32 ;@;o;;o;	;
+@
+;i¿D;"vtss_afi_slowid_t;@;[ ;0{
+;o;;o;	;
+@
+;iAE;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iUF;"vtss_port_no_t ;@;o;;o;	;
+@
+;idF;"port_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;iBG;"vtss_prio_t ;@;o;;o;	;
+@
+;iNG;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;imH;"vtss_port_no_t ;@;o;;o;	;
+@
+;i|H;"masquerade_port_no;@;[ ;0;o;;o;	;
+@
+;iíH;""vtss_afi_slow_inj_alloc_cfg_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÆI;"vtss_rc ;@;o;;o;	;
+@
+;i∂I;"vtss_afi_slow_inj_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;iŒI;"0const vtss_inst_t                          ;@;o;;o;	;
+@
+;i˘I;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iJ;"0const vtss_afi_slow_inj_alloc_cfg_t *const ;@;o;;o;	;
+@
+;iJJ;"cfg;@;[ ;0{;{	;o;;o;	;
+@
+;iuJ;"*vtss_afi_slowid_t             *const ;@;o;;o;	;
+@
+;iöJ;"slowid;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iíK;"vtss_rc ;@;o;;o;	;
+@
+;iöK;"vtss_afi_slow_inj_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;i±K;"const vtss_inst_t       ;@;o;;o;	;
+@
+;i…K;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÙK;"vtss_afi_slowid_t ;@;o;;o;	;
+@
+;iL;"slowid;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iªL;"vtss_rc ;@;o;;o;	;
+@
+;i√L;"!vtss_afi_slow_inj_frm_hijack;@;[ ;0;[{;{	;o;;o;	;
+@
+;i‡L;"const vtss_inst_t       ;@;o;;o;	;
+@
+;i¯L;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i)M;"vtss_afi_slowid_t ;@;o;;o;	;
+@
+;i;M;"slowid;@;[ ;0;0{
+;o;;o;	;
+@
+;iÉM;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÃM;"	u64 ;@;o;;o;	;
+@
+;i–M;"fph;@;[ ;0{;{;{	;o;;o;	;
+@
+;ilO;"u8 ;@;o;;o;	;
+@
+;ioO;"jitter_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶P;"
+BOOL ;@;o;;o;	;
+@
+;i´P;"first_frame_urgent;@;[ ;0;o;;o;	;
+@
+;i¡P;""vtss_afi_slow_inj_start_cfg_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂Q;"vtss_rc ;@;o;;o;	;
+@
+;iæQ;"vtss_afi_slow_inj_start;@;[ ;0;[{;{	;o;;o;	;
+@
+;i÷Q;"0const vtss_inst_t                          ;@;o;;o;	;
+@
+;iR;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i-R;"*vtss_afi_slowid_t                    ;@;o;;o;	;
+@
+;iRR;"slowid;@;[ ;0{;{	;o;;o;	;
+@
+;izR;"0const vtss_afi_slow_inj_start_cfg_t *const ;@;o;;o;	;
+@
+;i•R;"cfg;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iLS;"vtss_rc ;@;o;;o;	;
+@
+;iTS;"vtss_afi_slow_inj_stop;@;[ ;0;[{;{	;o;;o;	;
+@
+;ikS;"const vtss_inst_t       ;@;o;;o;	;
+@
+;iÉS;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÆS;"vtss_afi_slowid_t ;@;o;;o;	;
+@
+;i¿S;"slowid;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iõU;"vtss_rc ;@;o;;o;	;
+@
+;i£U;"vtss_afi_port_start;@;[ ;0;[{;{	;o;;o;	;
+@
+;i∑U;"const vtss_inst_t    ;@;o;;o;	;
+@
+;iÃU;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÙU;"vtss_port_no_t ;@;o;;o;	;
+@
+;iV;"port_no;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i÷V;"vtss_rc ;@;o;;o;	;
+@
+;iﬁV;"vtss_afi_port_stop;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÒV;"const vtss_inst_t    ;@;o;;o;	;
+@
+;iW;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i-W;"vtss_port_no_t ;@;o;;o;	;
+@
+;i<W;"port_no;@;[ ;0;0{;o;;o;	;
+@
+;iGW;"#endif // VTSS_AFI_V2
+
+;@{;o;;o;	;
+@
+;i^W;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;isW;"#endif
+
+;@{;o;;o;	;
+@
+;i{W;"$#endif // VTSS_FEATURE_AFI_SWC
+;@{;o;;o;	;
+@
+;iöW;" #endif // _VTSS_AFI_API_H_
+;@

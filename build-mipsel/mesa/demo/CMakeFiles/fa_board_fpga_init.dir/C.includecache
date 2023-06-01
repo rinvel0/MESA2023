@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/fa_board_fpga_init.c
+stdio.h
+-
+errno.h
+-
+fcntl.h
+-
+unistd.h
+-
+stdint.h
+-
+string.h
+-
+sys/ioctl.h
+-
+linux/types.h
+-
+linux/spi/spidev.h
+-
+stdlib.h
+-
+

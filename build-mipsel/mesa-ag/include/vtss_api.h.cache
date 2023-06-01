@@ -1,0 +1,249 @@
+{:	root[7{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"5// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief Vitesse API main header file
+ * \details This is the only header file which must be included by the application
+ */
+
+#ifndef _VTSS_API_H_
+#define _VTSS_API_H_
+
+
+
+#include <vtss/api/options.h>
+
+#include <vtss_os.h>
+
+#include <vtss/api/types.h>
+#include <vtss/api/l2_types.h>
+#include <vtss_init_api.h>
+
+#ifdef VTSS_FEATURE_MISC
+#include <vtss_misc_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_PORT_CONTROL
+#include <vtss_port_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_LAYER2
+#include <vtss_tsn_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_QOS
+#include <vtss_qos_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_AFI_SWC
+#include <vtss_afi_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_PACKET
+#include <vtss_packet_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_VOP
+#include <vtss_vop_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_MRP
+#include <vtss_mrp_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_LAYER2
+#include <vtss_l2_api.h>
+#endif
+
+#if defined(VTSS_FEATURE_LAYER3)
+#include <vtss_l3_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_LAYER2
+#include <vtss_security_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_SYNCE
+#include <vtss_sync_api.h>
+#endif
+
+#if defined(VTSS_FEATURE_TIMESTAMP)
+#include <vtss_ts_api.h>
+#endif
+
+#ifdef VTSS_FEATURE_CLOCK
+#include <vtss_clock_api.h>
+#endif
+
+#endif /* _VTSS_API_H_ */
+:@byteposi˘:	@str"#ifndef _VTSS_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[UiPipiqirivii°iÙi¯i˘ii#i$i%i&iDiEiZi[iwiñi±i≤iÀiÊiÌiÓii*i1i2iMiginioiái°i®i©i≈iﬂiÊiÁiii&i'i?iYi`iaiyiìiöiõi∂iœi÷i◊i¯iiii4iSiZi[iuiêióiòiºi’i‹i›i˜iiii5:@last_line_endi5{;o;;o;	;
+@
+;i;"#define _VTSS_API_H_
+
+
+
+;@{;o;;o;	;
+@
+;i&;"$#include <vtss/api/options.h>
+
+;@{;o;;o;	;
+@
+;iE;"#include <vtss_os.h>
+
+;@{;o;;o;	;
+@
+;i[;"!#include <vtss/api/types.h>
+;@{;o;;o;	;
+@
+;iw;"$#include <vtss/api/l2_types.h>
+;@{;o;;o;	;
+@
+;iñ;"!#include <vtss_init_api.h>
+
+;@{;o;;o;	;
+@
+;i≤;"#ifdef VTSS_FEATURE_MISC
+;@{;o;;o;	;
+@
+;iÀ;" #include <vtss_misc_api.h>
+;@{;o;;o;	;
+@
+;iÊ;"#endif
+
+;@{;o;;o;	;
+@
+;iÓ;"&#ifdef VTSS_FEATURE_PORT_CONTROL
+;@{;o;;o;	;
+@
+;i;" #include <vtss_port_api.h>
+;@{;o;;o;	;
+@
+;i*;"#endif
+
+;@{;o;;o;	;
+@
+;i2;" #ifdef VTSS_FEATURE_LAYER2
+;@{;o;;o;	;
+@
+;iM;"#include <vtss_tsn_api.h>
+;@{;o;;o;	;
+@
+;ig;"#endif
+
+;@{;o;;o;	;
+@
+;io;"#ifdef VTSS_FEATURE_QOS
+;@{;o;;o;	;
+@
+;iá;"#include <vtss_qos_api.h>
+;@{;o;;o;	;
+@
+;i°;"#endif
+
+;@{;o;;o;	;
+@
+;i©;"!#ifdef VTSS_FEATURE_AFI_SWC
+;@{;o;;o;	;
+@
+;i≈;"#include <vtss_afi_api.h>
+;@{;o;;o;	;
+@
+;iﬂ;"#endif
+
+;@{;o;;o;	;
+@
+;iÁ;" #ifdef VTSS_FEATURE_PACKET
+;@{;o;;o;	;
+@
+;i;""#include <vtss_packet_api.h>
+;@{;o;;o;	;
+@
+;i;"#endif
+
+;@{;o;;o;	;
+@
+;i';"#ifdef VTSS_FEATURE_VOP
+;@{;o;;o;	;
+@
+;i?;"#include <vtss_vop_api.h>
+;@{;o;;o;	;
+@
+;iY;"#endif
+
+;@{;o;;o;	;
+@
+;ia;"#ifdef VTSS_FEATURE_MRP
+;@{;o;;o;	;
+@
+;iy;"#include <vtss_mrp_api.h>
+;@{;o;;o;	;
+@
+;iì;"#endif
+
+;@{;o;;o;	;
+@
+;iõ;" #ifdef VTSS_FEATURE_LAYER2
+;@{;o;;o;	;
+@
+;i∂;"#include <vtss_l2_api.h>
+;@{;o;;o;	;
+@
+;iœ;"#endif
+
+;@{;o;;o;	;
+@
+;i◊;"&#if defined(VTSS_FEATURE_LAYER3)
+;@{;o;;o;	;
+@
+;i¯;"#include <vtss_l3_api.h>
+;@{;o;;o;	;
+@
+;i;"#endif
+
+;@{;o;;o;	;
+@
+;i;" #ifdef VTSS_FEATURE_LAYER2
+;@{;o;;o;	;
+@
+;i4;"$#include <vtss_security_api.h>
+;@{;o;;o;	;
+@
+;iS;"#endif
+
+;@{;o;;o;	;
+@
+;i[;"#ifdef VTSS_FEATURE_SYNCE
+;@{;o;;o;	;
+@
+;iu;" #include <vtss_sync_api.h>
+;@{;o;;o;	;
+@
+;iê;"#endif
+
+;@{;o;;o;	;
+@
+;iò;")#if defined(VTSS_FEATURE_TIMESTAMP)
+;@{;o;;o;	;
+@
+;iº;"#include <vtss_ts_api.h>
+;@{;o;;o;	;
+@
+;i’;"#endif
+
+;@{;o;;o;	;
+@
+;i›;"#ifdef VTSS_FEATURE_CLOCK
+;@{;o;;o;	;
+@
+;i˜;"!#include <vtss_clock_api.h>
+;@{;o;;o;	;
+@
+;i;"#endif
+
+;@{;o;;o;	;
+@
+;i;"#endif /* _VTSS_API_H_ */
+;@

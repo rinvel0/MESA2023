@@ -1,0 +1,2058 @@
+{:	root[U{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"s// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+#define _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+/******************************************************************************/
+/******************  Introduction to VOP API  *********************************/
+/******************************************************************************/
+/* This OAM API in combination with the Enhanced VLAN API enables
+ * configuration of MEPs and Half-MIPs.
+ *
+ * First, VOP must be configured by calling mesa_vop_conf_set().
+ *
+ * Configuring and operating a MEP:
+ * 1 Allocate an OAM-supporting VOE resource.
+ * 2 Do basic VOE configuration.
+ * 3 Do OAM feature related VOE configuration.
+ * 4 Inject OAM frames hitting VOE on egress.
+ *   Injection of OAM frames can be done using AFI or CPU single frame injection.
+ *   Hitting a Service VOE requires a TCE entry that maps Tx OAM frames to VOE.
+ *   Hitting a Port VOE requires that the frame did not hit a Service VOE.
+ * 5 Extract OAM frames hitting VOE on ingress.
+ *   Extraction of frames can be controlled through VOE configuration.
+ *   Hitting a Service VOE requires a VCE entry mapping Rx OAM frames to VOE.
+ *   Hitting a Port VOE requires frame did not hit a Service VOE.
+ * 6 Event handling.
+ *   Events from VOE can be enabled or disabled.
+ *   On interrupt from VOE (or any time) any active event source can be determined.
+ * 7 Status information.
+ *   Basic status information can be retrieved .
+ *   OAM feature status information can be retrieved .
+ *
+ * Configuring and operating a Half-MIP (MHF):
+ * 1 Allocate an OAM-supporting VOI resource.
+ * 2 Do VOI configuration.
+ * 3 Inject OAM frames.
+ *   Injection of OAM frames can be done using AFI or CPU single frame injection.
+ *   Hitting a VOI is not required.
+ * 4 Extract OAM frames hitting VOI on ingress.
+ *   Extraction of frames can be controlled through VOI configuration.
+ *   Hitting a Down VOI requires a VCE entry mapping Rx OAM frames to VOI.
+ *   Hitting an Up VOI requires a VCE entry mapping Rx OAM frames to an ingress
+ *   flow ID and a TCE that matches the ingress flow ID and maps forwarded OAM
+ *   frames to the VOI.
+ * 5 Event handling.
+ *   There are no events from VOI.
+ * 6 Status information.
+ *   There is no status information from VOI.
+ */
+/*****************************************************************************/
+
+// -------------------------------------------------------------------------
+// --- VOP - Versatile OAM Processor ---------------------------------------
+// -------------------------------------------------------------------------
+
+// VOP configuration. Once the VOP is configured, VOEs and MRPs (see mrp.h) can be configured.
+typedef struct {
+    mesa_mac_t  multicast_dmac;     // Common MC DMAC for all VOEs
+
+    // Two timer periods used for OAM frame auto copy to CPU.
+    // Values in microseconds. A value of 0 disables the timer.
+    uint32_t    auto_copy_period[2]  CAP(VOP_V2);
+
+    // auto_copy_xxx members are auto copy to CPU timer period selector for PDU types.
+    // Value 0 or 1 select one of the two periods in 'auto_copy_period'
+
+    uint8_t     auto_copy_ccm_valid CAP(VOP_V2); // PDU CCM is valid
+    // PDU CCM has TLVs other than port and interface status TLV.
+    uint8_t     auto_copy_ccm_tlv   CAP(VOP_V2);
+    uint8_t     auto_copy_ccm_err   CAP(VOP_V2); // PDU CCM validation failed.
+    uint8_t     auto_copy_lbr       CAP(VOP_V2); // PDU Loop Back Reply
+
+    // CPU extraction queues to use for the various packet types
+    mesa_packet_rx_queue_t  voe_queue_ccm;
+    mesa_packet_rx_queue_t  voe_queue_lt  CAP(VOP_CFM); // LTM, LTR common settings
+    mesa_packet_rx_queue_t  voe_queue_lbm CAP(VOP_CFM);
+    mesa_packet_rx_queue_t  voe_queue_lbr CAP(VOP_CFM);
+    mesa_packet_rx_queue_t  voe_queue_aps CAP(VOP_CFM); // LAPS and RAPS
+    mesa_packet_rx_queue_t  voe_queue_err;
+    mesa_packet_rx_queue_t  voi_queue     CAP(VOP_V2);
+    mesa_packet_rx_queue_t  mrp_queue     CAP(VOP_MRP);
+} mesa_vop_conf_t CAP(VOP);
+
+// Set VOP configuration.
+// inst [IN] Target instance reference.
+// conf [IN] New configuration for the VOP.
+mesa_rc mesa_vop_conf_set(const mesa_inst_t       inst,
+                          const mesa_vop_conf_t  *const conf) CAP(VOP);
+
+mesa_rc mesa_vop_conf_get(const mesa_inst_t  inst,
+                          mesa_vop_conf_t    *const conf) CAP(VOP);
+
+
+// -------------------------------------------------------------------------
+// --- VOE - Versatile OAM End point ---------------------------------------
+// -------------------------------------------------------------------------
+
+typedef enum {
+    MESA_VOE_TYPE_SERVICE,
+    MESA_VOE_TYPE_PORT,
+} mesa_voe_type_t CAP(VOP_CFM);
+
+typedef enum {
+    MESA_OAM_DIRECTION_DOWN,
+    MESA_OAM_DIRECTION_UP,
+} mesa_oam_direction_t CAP(VOP_CFM);
+
+// VOE Allocation structure.
+typedef struct {
+    mesa_voe_type_t       type CAP(VOP_CFM);
+    mesa_port_no_t        port;
+    mesa_oam_direction_t  direction CAP(VOP_CFM);
+} mesa_voe_allocation_t CAP(VOP);
+
+// Allocate a VOE.
+// inst      [IN]  Target instance reference.
+// param     [IN]  Allocation parameters
+// voe_idx   [OUT] Index of allocated VOE instance.
+//                 This index can be used when creating VCE or TCE entries
+mesa_rc mesa_voe_alloc(const mesa_inst_t            inst,
+                       const mesa_voe_allocation_t  *const param,
+                       mesa_voe_idx_t               *const voe_idx)  CAP(VOP);
+
+// Free a VOE.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of previously allocated VOE instance.
+mesa_rc mesa_voe_free(const mesa_inst_t    inst,
+                      const mesa_voe_idx_t voe_idx) CAP(VOP);
+
+// Kind of DMAC check to perform on incoming OAM PDUs.
+// When DMAC check is failing the frame is discarded
+typedef enum {
+    MESA_VOE_DMAC_CHECK_UNICAST,    // Check unicast DMAC against VOE configured 'unicast_mac'. Multicast is discarded.
+    MESA_VOE_DMAC_CHECK_MULTICAST,  // Check multicast DMAC against VOP configured 'multicast_dmac'. Unicast is discarded.
+    MESA_VOE_DMAC_CHECK_BOTH,       // Check both unicast and multicast DMAC.
+    MESA_VOE_DMAC_CHECK_NONE        // No Check of DMAC.
+} mesa_voe_dmac_check_t CAP(VOP);
+
+// VOE Basic configuration structure.
+typedef struct {
+    mesa_bool_t            enable;          // Enable the VOE
+    mesa_mac_t             unicast_mac;     // The VOE unicast MAC
+    uint8_t                meg_level;       // MEG Level (MEL)
+    mesa_voe_dmac_check_t  dmac_check_type; // Kind of DMAC check to perform
+    mesa_iflow_id_t        loop_iflow_id  CAP(VOP_CFM);  // Loop ingress flow ID or MESA_IFLOW_ID_NONE
+
+    // Block OAM PDUs with MEG level higher than the VOE MEG level
+    mesa_bool_t            block_mel_high  CAP(VOP_V2);
+
+    mesa_port_max_tags_t   tagging  CAP(VOP_TAGGING);  // OAM PDU is behind this many tags
+} mesa_voe_conf_t CAP(VOP);
+
+// Set VOE Basic configuration.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of VOE configuration to set.
+// conf     [IN] New configuration for the VOE.
+mesa_rc mesa_voe_conf_set(const mesa_inst_t      inst,
+                          const mesa_voe_idx_t   voe_idx,
+                          const mesa_voe_conf_t  *const conf)  CAP(VOP);
+
+mesa_rc mesa_voe_conf_get(const mesa_inst_t      inst,
+                          const mesa_voe_idx_t   voe_idx,
+                          mesa_voe_conf_t        *const conf)  CAP(VOP);
+
+// VOE CCM periods supported.
+typedef enum {
+    MESA_VOE_CCM_PERIOD_3_3_MS,
+    MESA_VOE_CCM_PERIOD_10_MS,
+    MESA_VOE_CCM_PERIOD_100_MS,
+    MESA_VOE_CCM_PERIOD_1_SEC,
+    MESA_VOE_CCM_PERIOD_10_SEC  CAP(VOP_V2)
+} mesa_voe_ccm_period_t CAP(VOP);
+
+// VOE/VOI CPU copy selection.
+typedef enum {
+    MESA_OAM_CPU_COPY_NONE,
+    MESA_OAM_CPU_COPY_ALL,
+
+    // The PDUs are auto-copied to CPU based on 'mesa_vop_conf_t.auto_copy_xxx'
+    // period selector.
+    MESA_OAM_CPU_COPY_AUTO  CAP(VOP_V2)
+} mesa_oam_cpu_copy_t CAP(VOP);
+
+// VOE Continuity Check configuration.
+#define MESA_OAM_MEG_ID_LENGTH  48     // The MEG ID length
+typedef struct {
+    mesa_bool_t            enable;        // Enable CCM PDU handling in HW
+    mesa_oam_cpu_copy_t    cpu_copy;      // Control copy of CCM PDUs to CPU
+    mesa_bool_t            seq_no_update; // Update Tx CCM sequence number
+
+    // Count PDU as selected.
+    // When false, counts in mesa_voe_counters_t::rx/tx_counter
+    // When true,  counts in mesa_voe_counters_t::rx/tx_selected_counter
+    mesa_bool_t            count_as_selected;
+
+    // Expected received CCM PDU period.
+    mesa_voe_ccm_period_t  expected_period;
+
+    // Expected received CCM PDU Priority
+    uint8_t                expected_priority;
+
+    // Expected received CCM PDU MEG ID.
+    uint8_t                expected_megid[MESA_OAM_MEG_ID_LENGTH];
+
+    // Expected received CCM_PDU peer MEP ID.
+    uint16_t               expected_peer_mepid;
+} mesa_voe_cc_conf_t CAP(VOP);
+
+// VOE Continuity Check configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for CC.
+mesa_rc mesa_voe_cc_conf_set(const mesa_inst_t         inst,
+                             const mesa_voe_idx_t      voe_idx,
+                             const mesa_voe_cc_conf_t  *const conf)  CAP(VOP);
+
+mesa_rc mesa_voe_cc_conf_get(const mesa_inst_t      inst,
+                             const mesa_voe_idx_t   voe_idx,
+                             mesa_voe_cc_conf_t     *const conf)  CAP(VOP);
+
+// VOE Continuity Check Remote Defect Indication status set.
+// This RDI is inserted in transmitted CCM PDUs if CC is enabled.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+// rdi      [IN] The CCM RDI status.
+mesa_rc mesa_voe_cc_rdi_set(const mesa_inst_t     inst,
+                            const mesa_voe_idx_t  voe_idx,
+                            const mesa_bool_t     rdi) CAP(VOP);
+
+mesa_rc mesa_voe_cc_rdi_get(const mesa_inst_t      inst,
+                            const mesa_voe_idx_t   voe_idx,
+                            mesa_bool_t            *const rdi) CAP(VOP);
+
+// VOE Continuity Check copy next received CC PDU to CPU set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+mesa_rc mesa_voe_cc_cpu_copy_next_set(const mesa_inst_t     inst,
+                                      const mesa_voe_idx_t  voe_idx) CAP(VOP);
+
+// VOE Link Trace configuration.
+typedef struct {
+    mesa_bool_t   enable;   // Enable LT PDU handling in HW
+
+    // Count PDU as selected.
+    // When false, counts in mesa_voe_counters_t::rx/tx_counter
+    // When true,  counts in mesa_voe_counters_t::rx/tx_selected_counter
+    mesa_bool_t   count_as_selected;
+
+    mesa_bool_t   ltm_cpu_copy;   // Copy all LTM PDUs to CPU
+    mesa_bool_t   ltr_cpu_copy;   // Copy all LTR PDUs to CPU
+} mesa_voe_lt_conf_t CAP(VOP_CFM);
+
+// VOE Link Trace configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LT.
+mesa_rc mesa_voe_lt_conf_set(const mesa_inst_t          inst,
+                             const mesa_voe_idx_t       voe_idx,
+                             const mesa_voe_lt_conf_t   *const conf)  CAP(VOP_CFM);
+
+mesa_rc mesa_voe_lt_conf_get(const mesa_inst_t      inst,
+                             const mesa_voe_idx_t   voe_idx,
+                             mesa_voe_lt_conf_t     *const conf)  CAP(VOP_CFM);
+
+// VOE Loop Back configuration.
+#define MESA_VOE_LBM_TRANSACTION_ID_NONE    0xFFFFFFFF
+typedef struct {
+    mesa_bool_t   enable;   // Enable LBM/LBR PDU handling in HW
+
+    // Count PDU as selected.
+    // When false, counts in mesa_voe_counters_t::rx/tx_counter
+    // When true,  counts in mesa_voe_counters_t::rx/tx_selected_counter
+    mesa_bool_t   count_as_selected;
+
+    mesa_bool_t          lbm_cpu_copy;  // Copy all LBM PDUs to CPU
+    mesa_oam_cpu_copy_t  lbr_cpu_copy;  // Control copy of LBR PDUs to CPU
+
+    // LBM Transaction ID to use on Tx. Must be greater than zero.
+    // Auto increment of transaction ID is always enabled.
+    // MESA_VOE_LBM_TRANSACTION_ID_NONE means do not change.
+    uint32_t             trans_id;
+} mesa_voe_lb_conf_t CAP(VOP_CFM);
+
+// VOE Loop Back configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LB.
+mesa_rc mesa_voe_lb_conf_set(const mesa_inst_t          inst,
+                             const mesa_voe_idx_t       voe_idx,
+                             const mesa_voe_lb_conf_t   *const conf)  CAP(VOP_CFM);
+
+mesa_rc mesa_voe_lb_conf_get(const mesa_inst_t      inst,
+                             const mesa_voe_idx_t   voe_idx,
+                             mesa_voe_lb_conf_t     *const conf)  CAP(VOP_CFM);
+
+// VOE Linear Automatic Protection Switching configuration.
+typedef struct {
+    mesa_bool_t   enable;   // Enable LAPS PDU handling in HW
+
+    // Count PDU as selected.
+    // When false, counts in mesa_voe_counters_t::rx/tx_counter
+    // When true,  counts in mesa_voe_counters_t::rx/tx_selected_counter
+    mesa_bool_t   count_as_selected;
+
+    mesa_bool_t   cpu_copy;   // Copy all LAPS PDUs to CPU
+} mesa_voe_laps_conf_t CAP(VOP_CFM);
+
+// VOE Linear Automatic Protection Switch configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LAPS.
+mesa_rc mesa_voe_laps_conf_set(const mesa_inst_t            inst,
+                               const mesa_voe_idx_t         voe_idx,
+                               const mesa_voe_laps_conf_t   *const conf)  CAP(VOP_CFM);
+
+mesa_rc mesa_voe_laps_conf_get(const mesa_inst_t      inst,
+                               const mesa_voe_idx_t   voe_idx,
+                               mesa_voe_laps_conf_t   *const conf)  CAP(VOP_CFM);
+
+// VOE status.
+typedef struct {
+    // Indications that an OAM PDU has been seen.
+    // Are cleared during call to mesa_voe_status_get().
+    mesa_bool_t  opcode_unexp_seen;
+    mesa_bool_t  dmac_unexp_seen;
+    mesa_bool_t  tx_level_low_seen  CAP(VOP_CFM); // Tx with level low
+    mesa_bool_t  version_unexp_seen CAP(VOP_V2);
+    mesa_bool_t  rx_level_low_seen  CAP(VOP_V2);  // Rx with level low
+    mesa_bool_t  rx_level_high_seen CAP(VOP_V2);  // Only if 'block_mel_high' is configured
+} mesa_voe_status_t CAP(VOP);
+
+// VOE status information get.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// status   [IN] Status information for VOE instance.
+mesa_rc mesa_voe_status_get(const mesa_inst_t     inst,
+                            const mesa_voe_idx_t  voe_idx,
+                            mesa_voe_status_t     *const status)  CAP(VOP);
+
+// VOE counters
+typedef struct {
+    // All the following counters are cleared during call to
+    // mesa_voe_counters_clear().
+
+    // OAM PDU Rx and Tx counters.
+    uint64_t     rx_counter;
+    uint64_t     tx_counter CAP(VOP_CFM);
+
+    // Counters named '_selected_' are counting any OAM PDU type that is
+    // configured to 'count_as_selected'.
+    uint64_t     rx_selected_counter;
+    uint64_t     tx_selected_counter CAP(VOP_CFM);
+
+    // Rx/Tx PDUs that are discarded due to filtering
+    uint64_t     rx_discard_counter CAP(VOP_V2);  // Check of MEL or DMAC or Version or CCM
+    uint64_t     tx_discard_counter CAP(VOP_V2);  // Check of MEL
+} mesa_voe_counters_t  CAP(VOP);
+
+// Get VOE counters.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the configured VOE instance.
+// counters [OUT] VOE counters.
+mesa_rc mesa_voe_counters_get(const mesa_inst_t    inst,
+                              const mesa_voe_idx_t voe_idx,
+                              mesa_voe_counters_t  *counters)  CAP(VOP);
+
+// VOE counter clear.
+// Clear counters in mesa_voe_counters_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+mesa_rc mesa_voe_counters_clear(const mesa_inst_t     inst,
+                                const mesa_voe_idx_t  voe_idx)  CAP(VOP);
+
+// VOE CC status
+typedef struct {
+    // (period == 0) for last received CCM PDU
+    mesa_bool_t  zero_period;
+
+    // (RDI == 1) for last received CCM PDU
+    mesa_bool_t  rdi;
+
+    // dLOC (Loss Of Continuity defect) as described in G.8021 6.1.2
+    mesa_bool_t  loc;
+
+    // If MESA_CAP_VOP_CCM_DEFECT is TRUE then the following status is a defect
+    // as described in G.8021 6.1.2.
+
+    // (period != expected) for last received CCM PDU or dUNP (Unexpected
+    // Periodicity defect) as described in G.8021 6.1.2
+    mesa_bool_t  period_unexp;
+
+    // (priority != expected) for last received CCM PDU or dUNPr (Unexpected
+    // Priority defect) as described in G.8021 6.1.2
+    mesa_bool_t  priority_unexp;
+
+    // (MEP-ID != expected) for last received CCM PDU or dUNM (defect Unexpected
+    // MEP defect) as described in G.8022 6.1.2
+    mesa_bool_t  mep_id_unexp;
+
+    // (MEG-ID != expected) for last received CCM PDU or dMMG (MisMerGe defect)
+    // as described in G.8021 6.1.2
+    mesa_bool_t  meg_id_unexp;
+
+    // (MEL != expected) for last received CCM PDU or dUNL (Unexpected MEL
+    // defect) as described in G.8021 6.1.2
+    mesa_bool_t  mel_unexp  CAP(VOP_V2);
+
+    // This CCM related status is based on the latest received CCM PDU.
+    mesa_port_no_t  rx_port  CAP(VOP_V2);          // The ingress port
+    uint8_t         port_status_tlv  CAP(VOP_V2);  // Port Status TLV value
+    uint8_t         if_status_tlv  CAP(VOP_V2);    // Interface Status TLV value
+
+    // Indications that a CCM PDU has been seen.
+    // Are cleared during call to mesa_voe_cc_status_get()
+    mesa_bool_t  seen;
+    mesa_bool_t  tlv_seen  CAP(VOP_V2);        // With TLV
+    mesa_bool_t  seq_unexp_seen  CAP(VOP_V2);  // With unexpected sequence number
+} mesa_voe_cc_status_t CAP(VOP);
+
+// VOE Continuity Check status get.
+//
+// When CCM G.8021 defects are not supported in VOE (MESA_CAP_VOP_CCM_DEFECT ==
+// false), it can be calculated by application like this:
+// mesa_voe_event_get(NULL, voe_idx, &mask);
+// mesa_voe_cc_status_get(NULL, voe_idx, &status);
+// if (mask | MESA_VOE_EVENT_CCM_PERIOD) {  // Period event detected
+//    if (status.period_unexp) {   // Unexpected Period received
+//        dUNP = true;
+//        Cancel dUNP clear timer;
+//    } else {                     // Expected Period received
+//        Start dUNP clear timer with the longest period received
+//        in CCM PDU with unexpected period;
+//    }
+// }
+// if (dUNP clear time out) {   // Time out of the dUNP clear timer
+//     dUNP = false;
+// }
+//
+// The above will give a clear timer that is longer that specified in G.8021 6.1.3.
+// The clear timer should have been started when the last CCM PDU with
+// unexpected Period was received.
+//
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] CCM status information.
+mesa_rc mesa_voe_cc_status_get(const mesa_inst_t     inst,
+                               const mesa_voe_idx_t  voe_idx,
+                               mesa_voe_cc_status_t  *status)  CAP(VOP);
+
+// VOE CC Counters
+typedef struct {
+    // CCM PDU Rx and Tx counters
+    // Are cleared during call to mesa_voe_cc_counters_clear()
+    uint64_t  rx_valid_counter;
+    uint64_t  rx_invalid_counter;
+    uint64_t  rx_oo_counter;  // Out of Order sequence numbers counter
+    uint64_t  tx_counter;
+} mesa_voe_cc_counters_t  CAP(VOP);
+
+// Get VOE Continuity Check counters.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+// counters [OUT] CC counters.
+mesa_rc mesa_voe_cc_counters_get(const mesa_inst_t      inst,
+                                 const mesa_voe_idx_t   voe_idx,
+                                 mesa_voe_cc_counters_t *counters)  CAP(VOP);
+
+// VOE Continuity Check counters clear.
+// Clear CC counters in mesa_voe_cc_counters_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+mesa_rc mesa_voe_cc_counters_clear(const mesa_inst_t     inst,
+                                   const mesa_voe_idx_t  voe_idx)  CAP(VOP);
+
+// VOE Link Trace status
+typedef struct {
+    // Indications that an LT PDU has been seen.
+    // Are cleared during call to mesa_voe_lt_status_get()
+    mesa_bool_t   ltm_seen;
+    mesa_bool_t   ltr_seen;
+} mesa_voe_lt_status_t CAP(VOP_CFM);
+
+// VOE Link Trace status get.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] LT status.
+mesa_rc mesa_voe_lt_status_get(const mesa_inst_t      inst,
+                               const mesa_voe_idx_t   voe_idx,
+                               mesa_voe_lt_status_t   *status)  CAP(VOP_CFM);
+
+// VOE Loop Back status.
+typedef struct {
+    // Indications that an LB PDU has been seen.
+    // Are cleared during call to mesa_voe_lb_status_get()
+    mesa_bool_t   lbm_seen;
+    mesa_bool_t   lbr_seen;
+    mesa_bool_t   trans_unexp_seen CAP(VOP_V2);  // LBR PDU with unexpected transaction ID
+
+    uint32_t   tx_trans_id;         // The next transmitted transaction ID
+    uint32_t   rx_trans_id;         // The last received transaction ID
+} mesa_voe_lb_status_t CAP(VOP_CFM);
+
+/* VOE Loop Back status get.
+ * inst     [IN]  Target instance reference.
+ * voe_idx  [IN]  Index of the VOE instance.
+ * status   [OUT] LB status. */
+mesa_rc mesa_voe_lb_status_get(const mesa_inst_t      inst,
+                               const mesa_voe_idx_t   voe_idx,
+                               mesa_voe_lb_status_t   *status)  CAP(VOP_CFM);
+
+// VOE LB counters
+typedef struct {
+    // LB PDU Rx and Tx counters
+    // Are cleared during call to mesa_voe_lb_counters_clear()
+    uint64_t   rx_lbr_counter;
+    uint64_t   tx_lbm_counter;
+    uint64_t   rx_lbr_oo_counter;               // Out of Order sequence numbers counter
+    uint64_t   rx_lbr_crc_counter  CAP(VOP_V2); // Test TLV that has CRC error counter
+    uint64_t   tx_lbr_counter      CAP(VOP_V2);
+} mesa_voe_lb_counters_t  CAP(VOP_CFM);
+
+// Get VOE Loop Back counters.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// counters [OUT] LB counters.
+mesa_rc mesa_voe_lb_counters_get(const mesa_inst_t      inst,
+                                 const mesa_voe_idx_t   voe_idx,
+                                 mesa_voe_lb_counters_t *counters)  CAP(VOP_CFM);
+
+// VOE Loop Back counters clear.
+// Clear LB counters in mesa_voe_lb_status_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+mesa_rc mesa_voe_lb_counters_clear(const mesa_inst_t     inst,
+                                  const mesa_voe_idx_t  voe_idx)  CAP(VOP_CFM);
+
+// VOE Linear Automatic Protection Switch status
+typedef struct {
+    // Indications that a LAPS PDU has been seen.
+    // Are cleared during call to mesa_voe_laps_status_get()
+    mesa_bool_t   seen;
+} mesa_voe_laps_status_t CAP(VOP_CFM);
+
+// VOE Linear Automatic Protection Switch status get.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] LAPS status.
+mesa_rc mesa_voe_laps_status_get(const mesa_inst_t        inst,
+                                 const mesa_voe_idx_t     voe_idx,
+                                 mesa_voe_laps_status_t   *status)  CAP(VOP_CFM);
+
+// VOE event active state get
+// Get bit mask array indicating VOEs with active events.
+// Function called by interrupt or periodically.
+// inst        [IN]  Target instance reference.
+// active_size [IN]  The size of the active event mask array.
+//                   Must be MESA_CAP_VOP_EVENT_ARRAY_SIZE.
+// active      [OUT] Active event mask array. The LSBit of active[0] is VOE
+//                   index 0.
+mesa_rc mesa_voe_event_active_get(const mesa_inst_t   inst,
+                                  const uint32_t      active_size,
+                                  uint32_t            *const active)  CAP(VOP);
+
+// VOE Event indication flags.
+// Different events can be enabled/disabled and polled.
+// The events are represented by a bit in an event mask.
+// MESA_CAP(MESA_CAP_VOP_EVENT_SUPPORTED) will return an event mask with the
+// events supported on a given platform
+#define MESA_VOE_EVENT_MASK_NONE                0x000
+// Period check state changed
+#define MESA_VOE_EVENT_MASK_CCM_PERIOD          0x001
+// Period zero check state changed
+#define MESA_VOE_EVENT_MASK_CCM_ZERO_PERIOD     0x002
+// Priority check state changed
+#define MESA_VOE_EVENT_MASK_CCM_PRIORITY        0x004
+// Loss Of Continuity state changed
+#define MESA_VOE_EVENT_MASK_CCM_LOC             0x008
+// MEP ID state changed
+#define MESA_VOE_EVENT_MASK_CCM_MEP_ID          0x010
+// MEG ID state changed
+#define MESA_VOE_EVENT_MASK_CCM_MEG_ID          0x020
+// MEG Level state changed
+#define MESA_VOE_EVENT_MASK_CCM_MEG_LEVEL       0x040
+// RDI flag value changed
+#define MESA_VOE_EVENT_MASK_CCM_RX_RDI          0x080
+// Rx source port move detected
+#define MESA_VOE_EVENT_MASK_CCM_SRC_PORT_MOVE   0x100
+// Port status TLV value changed
+#define MESA_VOE_EVENT_MASK_CCM_TLV_PORT_STATUS 0x200
+// Interface status TLV value changed
+#define MESA_VOE_EVENT_MASK_CCM_TLV_IF_STATUS   0x400
+#define MESA_VOE_EVENT_MASK_ALL                 0xFFF
+
+// VOE event generation enable/disable.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// mask     [IN] Mask of events to either enable or disable.
+// enable   [IN] Whether to enable or disable the events specified in the mask.
+mesa_rc mesa_voe_event_mask_set(const mesa_inst_t     inst,
+                                const mesa_voe_idx_t  voe_idx,
+                                const uint32_t        mask,
+                                const mesa_bool_t     enable)  CAP(VOP);
+
+mesa_rc mesa_voe_event_mask_get(const mesa_inst_t     inst,
+                                const mesa_voe_idx_t  voe_idx,
+                                uint32_t              *const mask)  CAP(VOP);
+
+// VOE event polling.
+// Mask is returned indicating pending events. Pending event are cleared after get.
+// inst      [IN]  Target instance reference.
+// voe_idx   [IN]  Index of polled VOE instance.
+// mask      [OUT] Mask of detected pending events during get.
+mesa_rc mesa_voe_event_get(const mesa_inst_t     inst,
+                           const mesa_voe_idx_t  voe_idx,
+                           uint32_t              *const mask)  CAP(VOP);
+
+
+
+
+// -------------------------------------------------------------------------
+// --- VOI - Versatile OAM Intermediate point     --------------------------
+// --- Note that in registers this is called MIP  --------------------------
+// -------------------------------------------------------------------------
+
+// VOI Allocation structure.
+typedef struct {
+    mesa_port_no_t        port;
+    mesa_oam_direction_t  direction;
+} mesa_voi_allocation_t CAP(VOP_V2);
+
+// Allocate a VOI.
+// inst      [IN]  Target instance reference.
+// param     [IN]  Allocation parameters
+// voi_idx   [OUT] Index of allocated VOI instance.
+//                 this index can be used when creating VCE or TCE entries
+mesa_rc mesa_voi_alloc(const mesa_inst_t            inst,
+                       const mesa_voi_allocation_t  *const param,
+                       mesa_voi_idx_t               *const voi_idx)  CAP(VOP_V2);
+
+// Free a VOI.
+// inst      [IN] Target instance reference.
+// voi_idx   [IN] Index of previously allocated VOI instance.
+mesa_rc mesa_voi_free(const mesa_inst_t       inst,
+                      const mesa_voi_idx_t    voi_idx)  CAP(VOP_V2);
+
+// VOI APS PDU handling.
+typedef enum {
+    MESA_OAM_RAPS_HANDLING_NONE,        // RAPS PDUs are not handled
+    MESA_OAM_RAPS_HANDLING_COPY_CPU,    // RAPS PDUs are copied to CPU
+    MESA_OAM_RAPS_HANDLING_REDIR_CPU,   // RAPS PDUs are redirected to CPU
+    MESA_OAM_RAPS_HANDLING_DISCARD,     // RAPS PDUs are discarded
+} mesa_oam_raps_handling_t CAP(VOP_V2);
+
+// VOI configuration.
+typedef struct {
+    mesa_bool_t               enable;         // Enable the VOI
+    mesa_mac_t                unicast_mac;    // The VOI unicast MAC
+    uint32_t                  meg_level;      // MEG Level (MEL)
+    mesa_bool_t               lbm_cpu_redir;  // Enable LBM redirect to CPU
+    mesa_bool_t               ltm_cpu_redir;  // Enable LTM redirect to CPU
+    mesa_oam_raps_handling_t  raps_handling;  // Control handling of RAPS PDUs
+} mesa_voi_conf_t CAP(VOP_V2);
+
+// VOI configuration set.
+// inst      [IN] Target instance reference.
+// voi_idx   [IN] Index of the configured VOI instance.
+// conf      [IN] Configuration parameters for VOI.
+mesa_rc mesa_voi_conf_set(const mesa_inst_t       inst,
+                          const mesa_voi_idx_t    voi_idx,
+                          const mesa_voi_conf_t   *const conf)  CAP(VOP_V2);
+
+mesa_rc mesa_voi_conf_get(const mesa_inst_t      inst,
+                          const mesa_voi_idx_t   voi_idx,
+                          mesa_voi_conf_t        *const conf)  CAP(VOP_V2);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+
+:@byteposir:	@str"1#ifndef _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[´iPipiqiriôi≈i∆i˜iAiBiìi‰i5iwiüi¢i„iÊi
+i8iYiài∂iiXi£i”iihi™iøiiDi]iéi≈i»i˜i%i@iXi™iŒi˛iEiêi‡i/	iG	i\	i	iò	i∆	i 	i
+i
+ih
+iµ
+iiibisi∂i∑iıi5igihiøiiiMièi¿iiWiXiôiƒiiPiài—i¸i3ikiáiài¢i iˆi.iviwi™iÓiÔii=iäi◊iÿiÁiii:i;iJigiÇißi®i≈i÷ii#iUiwixiãiπi‚iiaiõi›i,i-i<ihi•i÷iiiLiÅiêiiÉi—i
+i,i-iSidi¢iÂi$iqiÿiŸiiTiUi∞iÃiÕiÌiiMi}i¥iÓi7i8ioi©iÚiÛii i@i_iiûi iÏiÌiii7iRiSi£iªi„i i i+ ig ix i√ i!i[!i\!iz!i∫!i"i1"i2"i["iá"ià"i≤"i‡"i·"i
+#iM#iN#i|#i¨#iÀ#iÃ#i˜#i#$iZ$iå$i…$i	%iX%iY%iì%i–%i&i&iZ&iú&i»&iÙ&i'iQ'iå'iÕ'iŒ'i(iC(iå(iç(iÀ(i˜(i#)ie)i¥)iµ)i÷)iÁ)i#*i$*iB*iÇ*iÀ*i*iÒ*i/+im+iê+ië+i∂+i‚+i,iK,iâ,i ,i-i-iY-iñ-iÊ-iÁ-i.i>.iO.iê.ië.iØ.iÔ.i8/i]/i^/i¢/iÌ/iÓ/i10il0i©0iÃ0iÔ0i0i1i@1iw1i©1iÁ1i(2i|2i}2i∑2iÙ2iD3iE3iÅ3ií3i–3i—3iÔ3i/4ix4iù4iû4iŸ4i˛4iˇ4i<5ih5iü5i”5i6iZ6i≤6i≥6iÔ6i.7iÄ7iÅ7iê7i°7i”7i8i08iR8iô8i 8i9im9iã9iå9i´9i◊9i:iD:i|:i∑:i;i;i;i%;ib;iÑ;iÖ;i®;i≈;iÔ;i;i9<ic<iâ<iº<iΩ<iÛ<iO=ië=i≤=i≥=i»=iı=i->iM>iÜ>i¬>i?i?i"?iK?iw?i£?iﬂ?i)@i*@i;@iL@i{@iô@iö@i∆@i‹@i›@i"Ai8Ai9AiâAiÆAiØAi˘Ai1BiPBiQBiûBi”BiÙBiıBiFCivCiïCiñCiÊCi
+Di)Di*DiuDi°Di DiÀDiEiZEi¶Ei˜Ei¯Ei)FidFi{Fi∂FiGi)Gi*GiNGiQGi°Gi€GiHi;HiÄHi¡HiÿHi˚Hi:Ii|Ii©Ii±Ii∂Ii˙IiJiJiJikJi≤Ji’JiÿJiKi2Ki\KióKi’KiLiLi2LiCLieLi§LiƒLiÊLi-MiGMikMilMiíMiæMiÍMi	NiGNiàNi÷Ni◊NiˇNi.OiZOiÜOi≈OiPiPi,Pi=PinPi©Pi≈Pi·PiQiQi%QiRQiQiúQiÿQiRieRifRiRiêRi¡Ri¸RiSi4SièSiêSi€Si#TiHTiITifTiìTi¿Ti‡TiUi[Ui©Ui™UiΩUiŒUiÔUi.ViMVilVi≈ViWiLWitWiuWiîWi¡WiÓWiXiKXiåXiﬁXiﬂXi Yi-YiYYiÖYiƒYiZiZiFZiWZiâZi∆ZiﬁZi[i[i<[ii[iñ[iµ[iı[i8\iä\iã\i©\i„\i]iD]iÇ]iæ]i
+^i(^id^iß^i˜^i¯^i_iO_ià_i’_i˝_i3`iQ`iá`i™`i‡`i ai6aiZaiêai®aiﬁaiˆai,biGbi}bióbiÕbiÌbi#ciDcizci†ci÷cididi5diadiòdi’di%eiaei†ei‹ei%fi&fibfi°fiÔfifigiZgiàgiπgi¯gi/hiihi≤hi≥hi¥hiµhi∂hiiiPiiùiiÍiiÎiijiji9ji^jiÉjiÑjióji≈jiÓji"kimkißkiÈki;li<liKlixli∂liÍli/mi0miImiXmiùmi‰mi/nirniöniõni±ni¬nioiGoiàoi‘oi piopiépièpi©pi÷piqiBqizqiµqiriri:ritri¿ri¡riÈrisis:@last_line_endis{;o;;o;	;
+@
+;iô;"2#define _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+
+;@{;o;;o;	;
+@
+;i∆;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˜;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;ib;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iw;"mesa_mac_t  ;@:	nameo;;o;	;
+@
+;iÉ;"multicast_dmac;@:
+array[ :cap0{;{;{	;o;;o;	;
+@
+;i9;"uint32_t    ;@;o;;o;	;
+@
+;iE;"auto_copy_period;@;[{:	expro;;o;	;
+@
+;iV;"2;@;o;;o;	;
+@
+;iZ;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i;"uint8_t     ;@;o;;o;	;
+@
+;i;"auto_copy_ccm_valid ;@;[ ;o;;o;	;
+@
+;i,;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iì;"uint8_t     ;@;o;;o;	;
+@
+;iü;"auto_copy_ccm_tlv   ;@;[ ;o;;o;	;
+@
+;i≥;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iƒ;"uint8_t     ;@;o;;o;	;
+@
+;i–;"auto_copy_ccm_err   ;@;[ ;o;;o;	;
+@
+;i‰;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i;"uint8_t     ;@;o;;o;	;
+@
+;i;"auto_copy_lbr       ;@;[ ;o;;o;	;
+@
+;i3;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iù;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iµ;"voe_queue_ccm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i‡;"voe_queue_lt  ;@;[ ;o;;o;	;
+@
+;iÓ;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i4;"voe_queue_lbm ;@;[ ;o;;o;	;
+@
+;iB;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iT;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;il;"voe_queue_lbr ;@;[ ;o;;o;	;
+@
+;iz;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iå;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i§;"voe_queue_aps ;@;[ ;o;;o;	;
+@
+;i≤;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i’;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iÌ;"voe_queue_err;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i;"voi_queue     ;@;[ ;o;;o;	;
+@
+;i&;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i7;"mesa_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iO;"mrp_queue     ;@;[ ;o;;o;	;
+@
+;i];"CAP(VOP_MRP);@:typedef_nameo;;o;	;
+@
+;im;"mesa_vop_conf_t ;@;[ ;o;;o;	;
+@
+;i};"CAP(VOP);@{:func_proto{;{	;o;;o;	;
+@
+;iˆ;"mesa_rc ;@;o;;o;	;
+@
+;i˛;"mesa_vop_conf_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i(;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iH;"#const mesa_vop_conf_t  *const ;@;o;;o;	;
+@
+;if;"	conf;@;[ ;0;o;;o;	;
+@
+;il;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iw;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_vop_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ië;"const mesa_inst_t  ;@;o;;o;	;
+@
+;i§;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iƒ;"mesa_vop_conf_t    *const ;@;o;;o;	;
+@
+;iﬁ;"	conf;@;[ ;0;o;;o;	;
+@
+;i‰;"CAP(VOP);@{
+;o;;o;	;
+@
+;iÿ;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i‡;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÎ;"MESA_VOE_TYPE_SERVICE;@;0{;!{;"o;;o;	;
+@
+;i;"MESA_VOE_TYPE_PORT;@;0;o;;o;	;
+@
+;i;"mesa_voe_type_t ;@;[ ;o;;o;	;
+@
+;i,;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;i;;"typedef;@;{;o;;o;	;
+@
+;iC;"	enum;@; [{;!{;"o;;o;	;
+@
+;iN;"MESA_OAM_DIRECTION_DOWN;@;0{;!{;"o;;o;	;
+@
+;ik;"MESA_OAM_DIRECTION_UP;@;0;o;;o;	;
+@
+;iÑ;"mesa_oam_direction_t ;@;[ ;o;;o;	;
+@
+;iô;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;i≈;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i⁄;"mesa_voe_type_t       ;@;o;;o;	;
+@
+;i;"
+type ;@;[ ;o;;o;	;
+@
+;iı;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i;"mesa_port_no_t        ;@;o;;o;	;
+@
+;i;"	port;@;[ ;0{;{;{	;o;;o;	;
+@
+;i';"mesa_oam_direction_t  ;@;o;;o;	;
+@
+;i=;"direction ;@;[ ;o;;o;	;
+@
+;iG;"CAP(VOP_CFM);@;o;;o;	;
+@
+;iW;"mesa_voe_allocation_t ;@;[ ;o;;o;	;
+@
+;im;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;ia;"mesa_rc ;@;o;;o;	;
+@
+;ii;"mesa_voe_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;ix;""const mesa_inst_t            ;@;o;;o;	;
+@
+;iï;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i≤;")const mesa_voe_allocation_t  *const ;@;o;;o;	;
+@
+;i÷;"
+param;@;[ ;0{;{	;o;;o;	;
+@
+;iÙ;")mesa_voe_idx_t               *const ;@;o;;o;	;
+@
+;i;"voe_idx;@;[ ;0;o;;o;	;
+@
+;i";"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i•;"mesa_rc ;@;o;;o;	;
+@
+;i≠;"mesa_voe_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;iª;"const mesa_inst_t    ;@;o;;o;	;
+@
+;i–;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÏ;"const mesa_voe_idx_t ;@;o;;o;	;
+@
+;i;"voe_idx;@;[ ;0;o;;o;	;
+@
+;i
+;"CAP(VOP);@{
+;o;;o;	;
+@
+;iÅ;"typedef;@;{;o;;o;	;
+@
+;iâ;"	enum;@; [	{;!{;"o;;o;	;
+@
+;iî;" MESA_VOE_DMAC_CHECK_UNICAST;@;0{;!{;"o;;o;	;
+@
+;i;""MESA_VOE_DMAC_CHECK_MULTICAST;@;0{;!{;"o;;o;	;
+@
+;iá;"MESA_VOE_DMAC_CHECK_BOTH;@;0{;!{;"o;;o;	;
+@
+;i’;"%MESA_VOE_DMAC_CHECK_NONE        ;@;0;o;;o;	;
+@
+;i;"mesa_voe_dmac_check_t ;@;[ ;o;;o;	;
+@
+;i";"CAP(VOP);@{
+;o;;o;	;
+@
+;iS;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ih;"mesa_bool_t            ;@;o;;o;	;
+@
+;i;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶;"mesa_mac_t             ;@;o;;o;	;
+@
+;iΩ;"unicast_mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈ;"uint8_t                ;@;o;;o;	;
+@
+;i ;"meg_level;@;[ ;0{;{;{	;o;;o;	;
+@
+;i(;"mesa_voe_dmac_check_t  ;@;o;;o;	;
+@
+;i?;"dmac_check_type;@;[ ;0{;{;{	;o;;o;	;
+@
+;iu;"mesa_iflow_id_t        ;@;o;;o;	;
+@
+;iå;"loop_iflow_id  ;@;[ ;o;;o;	;
+@
+;iõ;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i ;"mesa_bool_t            ;@;o;;o;	;
+@
+;i7;"block_mel_high  ;@;[ ;o;;o;	;
+@
+;iG;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iY;"mesa_port_max_tags_t   ;@;o;;o;	;
+@
+;ip;"tagging  ;@;[ ;o;;o;	;
+@
+;iy;"CAP(VOP_TAGGING);@;o;;o;	;
+@
+;i≤;"mesa_voe_conf_t ;@;[ ;o;;o;	;
+@
+;i¬;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i};"mesa_rc ;@;o;;o;	;
+@
+;iÖ;"mesa_voe_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;ió;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iÆ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iŒ;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iÂ;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i;"#const mesa_voe_conf_t  *const ;@;o;;o;	;
+@
+;i&;"	conf;@;[ ;0;o;;o;	;
+@
+;i-;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i8;"mesa_rc ;@;o;;o;	;
+@
+;i@;"mesa_voe_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iR;"const mesa_inst_t      ;@;o;;o;	;
+@
+;ii;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iâ;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;i†;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i√;"#mesa_voe_conf_t        *const ;@;o;;o;	;
+@
+;i·;"	conf;@;[ ;0;o;;o;	;
+@
+;iË;"CAP(VOP);@{
+;o;;o;	;
+@
+;i;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@; [
+{;!{;"o;;o;	;
+@
+;i$;"MESA_VOE_CCM_PERIOD_3_3_MS;@;0{;!{;"o;;o;	;
+@
+;iD;"MESA_VOE_CCM_PERIOD_10_MS;@;0{;!{;"o;;o;	;
+@
+;ic;"MESA_VOE_CCM_PERIOD_100_MS;@;0{;!{;"o;;o;	;
+@
+;iÉ;"MESA_VOE_CCM_PERIOD_1_SEC;@;0{;!{;"o;;o;	;
+@
+;i¢;"!MESA_VOE_CCM_PERIOD_10_SEC  ;@;o;;o;	;
+@
+;iæ;"CAP(VOP_V2)
+;@;o;;o;	;
+@
+;iÃ;"mesa_voe_ccm_period_t ;@;[ ;o;;o;	;
+@
+;i‚;"CAP(VOP);@{
+;o;;o;	;
+@
+;i;"typedef;@;{;o;;o;	;
+@
+;i;"	enum;@; [{;!{;"o;;o;	;
+@
+;i;"MESA_OAM_CPU_COPY_NONE;@;0{;!{;"o;;o;	;
+@
+;i;;"MESA_OAM_CPU_COPY_ALL;@;0{;!{;"o;;o;	;
+@
+;iø;"MESA_OAM_CPU_COPY_AUTO  ;@;o;;o;	;
+@
+;i◊;"CAP(VOP_V2)
+;@;o;;o;	;
+@
+;iÂ;"mesa_oam_cpu_copy_t ;@;[ ;o;;o;	;
+@
+;i˘;"CAP(VOP);@{;o;;o;	;
+@
+;i+ ;"A#define MESA_OAM_MEG_ID_LENGTH  48     // The MEG ID length
+;@{
+;o;;o;	;
+@
+;ig ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i| ;"mesa_bool_t            ;@;o;;o;	;
+@
+;iì ;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i« ;"mesa_oam_cpu_copy_t    ;@;o;;o;	;
+@
+;iﬁ ;"cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;i!;"mesa_bool_t            ;@;o;;o;	;
+@
+;i+!;"seq_no_update;@;[ ;0{;{;{	;o;;o;	;
+@
+;i";"mesa_bool_t            ;@;o;;o;	;
+@
+;i";"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_";"mesa_voe_ccm_period_t  ;@;o;;o;	;
+@
+;iv";"expected_period;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂";"uint8_t                ;@;o;;o;	;
+@
+;iÕ";"expected_priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;i#;"uint8_t                ;@;o;;o;	;
+@
+;i%#;"expected_megid;@;[{;o;;o;	;
+@
+;i4#;"MESA_OAM_MEG_ID_LENGTH;@;0{;{;{	;o;;o;	;
+@
+;iÄ#;"uint16_t               ;@;o;;o;	;
+@
+;ió#;"expected_peer_mepid;@;[ ;0;o;;o;	;
+@
+;iÆ#;"mesa_voe_cc_conf_t ;@;[ ;o;;o;	;
+@
+;i¡#;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iå$;"mesa_rc ;@;o;;o;	;
+@
+;iî$;"mesa_voe_cc_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i©$;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i√$;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÊ$;"const mesa_voe_idx_t      ;@;o;;o;	;
+@
+;i %;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i&%;"&const mesa_voe_cc_conf_t  *const ;@;o;;o;	;
+@
+;iG%;"	conf;@;[ ;0;o;;o;	;
+@
+;iN%;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iY%;"mesa_rc ;@;o;;o;	;
+@
+;ia%;"mesa_voe_cc_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iv%;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iç%;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∞%;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;i«%;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÌ%;"#mesa_voe_cc_conf_t     *const ;@;o;;o;	;
+@
+;i&;"	conf;@;[ ;0;o;;o;	;
+@
+;i&;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i';"mesa_rc ;@;o;;o;	;
+@
+;i!';"mesa_voe_cc_rdi_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i5';"const mesa_inst_t     ;@;o;;o;	;
+@
+;iK';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;im';"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;iÉ';"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i®';"const mesa_bool_t     ;@;o;;o;	;
+@
+;iæ';"rdi;@;[ ;0;o;;o;	;
+@
+;i√';"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iŒ';"mesa_rc ;@;o;;o;	;
+@
+;i÷';"mesa_voe_cc_rdi_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÍ';"const mesa_inst_t      ;@;o;;o;	;
+@
+;i(;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i#(;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;i:(;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i_(;"#mesa_bool_t            *const ;@;o;;o;	;
+@
+;i}(;"rdi;@;[ ;0;o;;o;	;
+@
+;iÇ(;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i#);"mesa_rc ;@;o;;o;	;
+@
+;i+);""mesa_voe_cc_cpu_copy_next_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iI);"const mesa_inst_t     ;@;o;;o;	;
+@
+;i_);"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iã);"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;i°);"voe_idx;@;[ ;0;o;;o;	;
+@
+;i™);"CAP(VOP);@{
+;o;;o;	;
+@
+;i÷);"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÎ);"mesa_bool_t   ;@;o;;o;	;
+@
+;i˘);"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœ*;"mesa_bool_t   ;@;o;;o;	;
+@
+;i›*;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı*;"mesa_bool_t   ;@;o;;o;	;
+@
+;i+;"ltm_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;i3+;"mesa_bool_t   ;@;o;;o;	;
+@
+;iA+;"ltr_cpu_copy;@;[ ;0;o;;o;	;
+@
+;io+;"mesa_voe_lt_conf_t ;@;[ ;o;;o;	;
+@
+;iÇ+;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iK,;"mesa_rc ;@;o;;o;	;
+@
+;iS,;"mesa_voe_lt_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;ih,;" const mesa_inst_t          ;@;o;;o;	;
+@
+;iÉ,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¶,;" const mesa_voe_idx_t       ;@;o;;o;	;
+@
+;i¡,;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÁ,;"'const mesa_voe_lt_conf_t   *const ;@;o;;o;	;
+@
+;i	-;"	conf;@;[ ;0;o;;o;	;
+@
+;i-;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i-;"mesa_rc ;@;o;;o;	;
+@
+;i'-;"mesa_voe_lt_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i<-;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iS-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iv-;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iç-;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i≥-;"#mesa_voe_lt_conf_t     *const ;@;o;;o;	;
+@
+;i—-;"	conf;@;[ ;0;o;;o;	;
+@
+;iÿ-;"CAP(VOP_CFM);@{;o;;o;	;
+@
+;i.;"<#define MESA_VOE_LBM_TRANSACTION_ID_NONE    0xFFFFFFFF
+;@{
+;o;;o;	;
+@
+;i>.;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iS.;"mesa_bool_t   ;@;o;;o;	;
+@
+;ia.;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i</;"mesa_bool_t   ;@;o;;o;	;
+@
+;iJ/;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;ib/;"mesa_bool_t          ;@;o;;o;	;
+@
+;iw/;"lbm_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶/;"mesa_oam_cpu_copy_t  ;@;o;;o;	;
+@
+;iª/;"lbr_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≠0;"uint32_t             ;@;o;;o;	;
+@
+;i¬0;"trans_id;@;[ ;0;o;;o;	;
+@
+;iŒ0;"mesa_voe_lb_conf_t ;@;[ ;o;;o;	;
+@
+;i·0;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i©1;"mesa_rc ;@;o;;o;	;
+@
+;i±1;"mesa_voe_lb_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i∆1;" const mesa_inst_t          ;@;o;;o;	;
+@
+;i·1;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i2;" const mesa_voe_idx_t       ;@;o;;o;	;
+@
+;i2;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iE2;"'const mesa_voe_lb_conf_t   *const ;@;o;;o;	;
+@
+;ig2;"	conf;@;[ ;0;o;;o;	;
+@
+;in2;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i}2;"mesa_rc ;@;o;;o;	;
+@
+;iÖ2;"mesa_voe_lb_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iö2;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i±2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‘2;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iÎ2;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i3;"#mesa_voe_lb_conf_t     *const ;@;o;;o;	;
+@
+;i/3;"	conf;@;[ ;0;o;;o;	;
+@
+;i63;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;iÅ3;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iñ3;"mesa_bool_t   ;@;o;;o;	;
+@
+;i§3;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i|4;"mesa_bool_t   ;@;o;;o;	;
+@
+;iä4;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢4;"mesa_bool_t   ;@;o;;o;	;
+@
+;i∞4;"cpu_copy;@;[ ;0;o;;o;	;
+@
+;i€4;"mesa_voe_laps_conf_t ;@;[ ;o;;o;	;
+@
+;i4;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i”5;"mesa_rc ;@;o;;o;	;
+@
+;i€5;"mesa_voe_laps_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÚ5;""const mesa_inst_t            ;@;o;;o;	;
+@
+;i6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i46;""const mesa_voe_idx_t         ;@;o;;o;	;
+@
+;iQ6;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iy6;")const mesa_voe_laps_conf_t   *const ;@;o;;o;	;
+@
+;iù6;"	conf;@;[ ;0;o;;o;	;
+@
+;i§6;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i≥6;"mesa_rc ;@;o;;o;	;
+@
+;iª6;"mesa_voe_laps_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i“6;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iÈ6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i7;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;i%7;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iM7;"#mesa_voe_laps_conf_t   *const ;@;o;;o;	;
+@
+;ik7;"	conf;@;[ ;0;o;;o;	;
+@
+;ir7;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;iê7;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i8;"mesa_bool_t  ;@;o;;o;	;
+@
+;i8;"opcode_unexp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i48;"mesa_bool_t  ;@;o;;o;	;
+@
+;iA8;"dmac_unexp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV8;"mesa_bool_t  ;@;o;;o;	;
+@
+;ic8;"tx_level_low_seen  ;@;[ ;o;;o;	;
+@
+;iv8;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iù8;"mesa_bool_t  ;@;o;;o;	;
+@
+;i™8;"version_unexp_seen ;@;[ ;o;;o;	;
+@
+;iΩ8;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iŒ8;"mesa_bool_t  ;@;o;;o;	;
+@
+;i€8;"rx_level_low_seen  ;@;[ ;o;;o;	;
+@
+;iÓ8;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i9;"mesa_bool_t  ;@;o;;o;	;
+@
+;i"9;"rx_level_high_seen ;@;[ ;o;;o;	;
+@
+;i59;"CAP(VOP_V2);@;o;;o;	;
+@
+;io9;"mesa_voe_status_t ;@;[ ;o;;o;	;
+@
+;iÅ9;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iD:;"mesa_rc ;@;o;;o;	;
+@
+;iL:;"mesa_voe_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i`:;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iv:;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iò:;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;iÆ:;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i”:;""mesa_voe_status_t     *const ;@;o;;o;	;
+@
+;i:;"status;@;[ ;0;o;;o;	;
+@
+;i˘:;"CAP(VOP);@{
+;o;;o;	;
+@
+;i;;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¨;;"uint64_t     ;@;o;;o;	;
+@
+;iπ;;"rx_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…;;"uint64_t     ;@;o;;o;	;
+@
+;i÷;;"tx_counter ;@;[ ;o;;o;	;
+@
+;i·;;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;ig<;"uint64_t     ;@;o;;o;	;
+@
+;it<;"rx_selected_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iç<;"uint64_t     ;@;o;;o;	;
+@
+;iö<;"tx_selected_counter ;@;[ ;o;;o;	;
+@
+;iÆ<;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i˜<;"uint64_t     ;@;o;;o;	;
+@
+;i=;"rx_discard_counter ;@;[ ;o;;o;	;
+@
+;i=;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iS=;"uint64_t     ;@;o;;o;	;
+@
+;i`=;"tx_discard_counter ;@;[ ;o;;o;	;
+@
+;is=;"CAP(VOP_V2);@;o;;o;	;
+@
+;iì=;"mesa_voe_counters_t  ;@;[ ;o;;o;	;
+@
+;i®=;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iM>;"mesa_rc ;@;o;;o;	;
+@
+;iU>;"mesa_voe_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ik>;"const mesa_inst_t    ;@;o;;o;	;
+@
+;iÄ>;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i§>;"const mesa_voe_idx_t ;@;o;;o;	;
+@
+;iπ>;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i‡>;"mesa_voe_counters_t  *;@;o;;o;	;
+@
+;iˆ>;"counters;@;[ ;0;o;;o;	;
+@
+;i?;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i£?;"mesa_rc ;@;o;;o;	;
+@
+;i´?;"mesa_voe_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i√?;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iŸ?;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iˇ?;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;i@;"voe_idx;@;[ ;0;o;;o;	;
+@
+;i@;"CAP(VOP);@{
+;o;;o;	;
+@
+;i;@;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i@;"mesa_bool_t  ;@;o;;o;	;
+@
+;iå@;"zero_period;@;[ ;0{;{;{	;o;;o;	;
+@
+;i @;"mesa_bool_t  ;@;o;;o;	;
+@
+;i◊@;"rdi;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&A;"mesa_bool_t  ;@;o;;o;	;
+@
+;i3A;"loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5B;"mesa_bool_t  ;@;o;;o;	;
+@
+;iBB;"period_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i◊B;"mesa_bool_t  ;@;o;;o;	;
+@
+;i‰B;"priority_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;izC;"mesa_bool_t  ;@;o;;o;	;
+@
+;iáC;"mep_id_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iD;"mesa_bool_t  ;@;o;;o;	;
+@
+;iD;"meg_id_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i•D;"mesa_bool_t  ;@;o;;o;	;
+@
+;i≤D;"mel_unexp  ;@;[ ;o;;o;	;
+@
+;iΩD;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iE;"mesa_port_no_t  ;@;o;;o;	;
+@
+;i'E;"rx_port  ;@;[ ;o;;o;	;
+@
+;i0E;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i^E;"uint8_t         ;@;o;;o;	;
+@
+;inE;"port_status_tlv  ;@;[ ;o;;o;	;
+@
+;iE;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i™E;"uint8_t         ;@;o;;o;	;
+@
+;i∫E;"if_status_tlv  ;@;[ ;o;;o;	;
+@
+;i…E;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;ihF;"mesa_bool_t  ;@;o;;o;	;
+@
+;iuF;"	seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iF;"mesa_bool_t  ;@;o;;o;	;
+@
+;iåF;"tlv_seen  ;@;[ ;o;;o;	;
+@
+;iñF;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i∫F;"mesa_bool_t  ;@;o;;o;	;
+@
+;i«F;"seq_unexp_seen  ;@;[ ;o;;o;	;
+@
+;i◊F;"CAP(VOP_V2);@;o;;o;	;
+@
+;i
+G;"mesa_voe_cc_status_t ;@;[ ;o;;o;	;
+@
+;iG;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i\K;"mesa_rc ;@;o;;o;	;
+@
+;idK;"mesa_voe_cc_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i{K;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iëK;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∂K;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;iÃK;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÙK;"mesa_voe_cc_status_t  *;@;o;;o;	;
+@
+;iL;"status;@;[ ;0;o;;o;	;
+@
+;iL;"CAP(VOP);@{
+;o;;o;	;
+@
+;i2L;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i®L;"uint64_t  ;@;o;;o;	;
+@
+;i≤L;"rx_valid_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»L;"uint64_t  ;@;o;;o;	;
+@
+;i“L;"rx_invalid_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍL;"uint64_t  ;@;o;;o;	;
+@
+;iÙL;"rx_oo_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1M;"uint64_t  ;@;o;;o;	;
+@
+;i;M;"tx_counter;@;[ ;0;o;;o;	;
+@
+;iIM;"mesa_voe_cc_counters_t  ;@;[ ;o;;o;	;
+@
+;iaM;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i	N;"mesa_rc ;@;o;;o;	;
+@
+;iN;"mesa_voe_cc_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i*N;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iAN;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ihN;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iN;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i©N;"mesa_voe_cc_counters_t *;@;o;;o;	;
+@
+;i¡N;"counters;@;[ ;0;o;;o;	;
+@
+;iÃN;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;iÜO;"mesa_rc ;@;o;;o;	;
+@
+;iéO;"mesa_voe_cc_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i©O;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iøO;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iËO;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;i˛O;"voe_idx;@;[ ;0;o;;o;	;
+@
+;iP;"CAP(VOP);@{
+;o;;o;	;
+@
+;i,P;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i≠P;"mesa_bool_t   ;@;o;;o;	;
+@
+;iªP;"ltm_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…P;"mesa_bool_t   ;@;o;;o;	;
+@
+;i◊P;"ltr_seen;@;[ ;0;o;;o;	;
+@
+;i„P;"mesa_voe_lt_status_t ;@;[ ;o;;o;	;
+@
+;i¯P;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iúQ;"mesa_rc ;@;o;;o;	;
+@
+;i§Q;"mesa_voe_lt_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iªQ;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i“Q;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˜Q;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iR;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i6R;"mesa_voe_lt_status_t   *;@;o;;o;	;
+@
+;iNR;"status;@;[ ;0;o;;o;	;
+@
+;iWR;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;iR;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i S;"mesa_bool_t   ;@;o;;o;	;
+@
+;iS;"lbm_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iS;"mesa_bool_t   ;@;o;;o;	;
+@
+;i*S;"lbr_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i8S;"mesa_bool_t   ;@;o;;o;	;
+@
+;iFS;"trans_unexp_seen ;@;[ ;o;;o;	;
+@
+;iWS;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iîS;"uint32_t   ;@;o;;o;	;
+@
+;iüS;"tx_trans_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬂS;"uint32_t   ;@;o;;o;	;
+@
+;iÍS;"rx_trans_id;@;[ ;0;o;;o;	;
+@
+;i%T;"mesa_voe_lb_status_t ;@;[ ;o;;o;	;
+@
+;i:T;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i‡T;"mesa_rc ;@;o;;o;	;
+@
+;iËT;"mesa_voe_lb_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iˇT;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iU;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i;U;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iRU;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;izU;"mesa_voe_lb_status_t   *;@;o;;o;	;
+@
+;iíU;"status;@;[ ;0;o;;o;	;
+@
+;iõU;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;iΩU;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i2V;"uint64_t   ;@;o;;o;	;
+@
+;i=V;"rx_lbr_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iQV;"uint64_t   ;@;o;;o;	;
+@
+;i\V;"tx_lbm_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;ipV;"uint64_t   ;@;o;;o;	;
+@
+;i{V;"rx_lbr_oo_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i…V;"uint64_t   ;@;o;;o;	;
+@
+;i‘V;"rx_lbr_crc_counter  ;@;[ ;o;;o;	;
+@
+;iËV;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i W;"uint64_t   ;@;o;;o;	;
+@
+;i+W;"tx_lbr_counter      ;@;[ ;o;;o;	;
+@
+;i?W;"CAP(VOP_V2);@;o;;o;	;
+@
+;iNW;"mesa_voe_lb_counters_t  ;@;[ ;o;;o;	;
+@
+;ifW;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iX;"mesa_rc ;@;o;;o;	;
+@
+;iX;"mesa_voe_lb_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i.X;"const mesa_inst_t      ;@;o;;o;	;
+@
+;iEX;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ilX;"const mesa_voe_idx_t   ;@;o;;o;	;
+@
+;iÉX;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i≠X;"mesa_voe_lb_counters_t *;@;o;;o;	;
+@
+;i≈X;"counters;@;[ ;0;o;;o;	;
+@
+;i–X;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iÖY;"mesa_rc ;@;o;;o;	;
+@
+;içY;"mesa_voe_lb_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i®Y;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iæY;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÊY;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;i¸Y;"voe_idx;@;[ ;0;o;;o;	;
+@
+;iZ;"CAP(VOP_CFM);@{
+;o;;o;	;
+@
+;iFZ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i Z;"mesa_bool_t   ;@;o;;o;	;
+@
+;iÿZ;"	seen;@;[ ;0;o;;o;	;
+@
+;i‡Z;"mesa_voe_laps_status_t ;@;[ ;o;;o;	;
+@
+;i˜Z;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;iµ[;"mesa_rc ;@;o;;o;	;
+@
+;iΩ[;"mesa_voe_laps_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i÷[;"const mesa_inst_t        ;@;o;;o;	;
+@
+;iÔ[;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i\;"const mesa_voe_idx_t     ;@;o;;o;	;
+@
+;i/\;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iY\;"mesa_voe_laps_status_t   *;@;o;;o;	;
+@
+;is\;"status;@;[ ;0;o;;o;	;
+@
+;i|\;"CAP(VOP_CFM);@{;{;{	;o;;o;	;
+@
+;i(^;"mesa_rc ;@;o;;o;	;
+@
+;i0^;"mesa_voe_event_active_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iJ^;"const mesa_inst_t   ;@;o;;o;	;
+@
+;i^^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÜ^;"const uint32_t      ;@;o;;o;	;
+@
+;iö^;"active_size;@;[ ;0{;{	;o;;o;	;
+@
+;i…^;" uint32_t            *const ;@;o;;o;	;
+@
+;i‰^;"active;@;[ ;0;o;;o;	;
+@
+;iÌ^;"CAP(VOP);@{;o;;o;	;
+@
+;i˝_;";#define MESA_VOE_EVENT_MASK_NONE                0x000
+;@{;o;;o;	;
+@
+;iQ`;";#define MESA_VOE_EVENT_MASK_CCM_PERIOD          0x001
+;@{;o;;o;	;
+@
+;i™`;";#define MESA_VOE_EVENT_MASK_CCM_ZERO_PERIOD     0x002
+;@{;o;;o;	;
+@
+;i a;";#define MESA_VOE_EVENT_MASK_CCM_PRIORITY        0x004
+;@{;o;;o;	;
+@
+;iZa;";#define MESA_VOE_EVENT_MASK_CCM_LOC             0x008
+;@{;o;;o;	;
+@
+;i®a;";#define MESA_VOE_EVENT_MASK_CCM_MEP_ID          0x010
+;@{;o;;o;	;
+@
+;iˆa;";#define MESA_VOE_EVENT_MASK_CCM_MEG_ID          0x020
+;@{;o;;o;	;
+@
+;iGb;";#define MESA_VOE_EVENT_MASK_CCM_MEG_LEVEL       0x040
+;@{;o;;o;	;
+@
+;iób;";#define MESA_VOE_EVENT_MASK_CCM_RX_RDI          0x080
+;@{;o;;o;	;
+@
+;iÌb;";#define MESA_VOE_EVENT_MASK_CCM_SRC_PORT_MOVE   0x100
+;@{;o;;o;	;
+@
+;iDc;";#define MESA_VOE_EVENT_MASK_CCM_TLV_PORT_STATUS 0x200
+;@{;o;;o;	;
+@
+;i†c;";#define MESA_VOE_EVENT_MASK_CCM_TLV_IF_STATUS   0x400
+;@{;o;;o;	;
+@
+;i÷c;"<#define MESA_VOE_EVENT_MASK_ALL                 0xFFF
+
+;@{;{;{	;o;;o;	;
+@
+;i%e;"mesa_rc ;@;o;;o;	;
+@
+;i-e;"mesa_voe_event_mask_set;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iEe;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i[e;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÅe;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;ióe;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i¿e;"const uint32_t        ;@;o;;o;	;
+@
+;i÷e;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;i¸e;"const mesa_bool_t     ;@;o;;o;	;
+@
+;if;"enable;@;[ ;0;o;;o;	;
+@
+;if;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i&f;"mesa_rc ;@;o;;o;	;
+@
+;i.f;"mesa_voe_event_mask_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iFf;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i\f;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÇf;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;iòf;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i¡f;""uint32_t              *const ;@;o;;o;	;
+@
+;iﬁf;"	mask;@;[ ;0;o;;o;	;
+@
+;iÂf;"CAP(VOP);@{;{;{	;o;;o;	;
+@
+;i¯g;"mesa_rc ;@;o;;o;	;
+@
+;i h;"mesa_voe_event_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ih;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i)h;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iJh;"const mesa_voe_idx_t  ;@;o;;o;	;
+@
+;i`h;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÑh;""uint32_t              *const ;@;o;;o;	;
+@
+;i°h;"	mask;@;[ ;0;o;;o;	;
+@
+;i®h;"CAP(VOP);@{
+;o;;o;	;
+@
+;ij;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ij;"mesa_port_no_t        ;@;o;;o;	;
+@
+;i3j;"	port;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=j;"mesa_oam_direction_t  ;@;o;;o;	;
+@
+;iSj;"direction;@;[ ;0;o;;o;	;
+@
+;i`j;"mesa_voi_allocation_t ;@;[ ;o;;o;	;
+@
+;ivj;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;imk;"mesa_rc ;@;o;;o;	;
+@
+;iuk;"mesa_voi_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÑk;""const mesa_inst_t            ;@;o;;o;	;
+@
+;i°k;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iæk;")const mesa_voi_allocation_t  *const ;@;o;;o;	;
+@
+;i‚k;"
+param;@;[ ;0{;{	;o;;o;	;
+@
+;i l;")mesa_voi_idx_t               *const ;@;o;;o;	;
+@
+;i$l;"voi_idx;@;[ ;0;o;;o;	;
+@
+;i.l;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;i∂l;"mesa_rc ;@;o;;o;	;
+@
+;iæl;"mesa_voi_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÃl;"const mesa_inst_t       ;@;o;;o;	;
+@
+;i‰l;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i m;"const mesa_voi_idx_t    ;@;o;;o;	;
+@
+;im;"voi_idx;@;[ ;0;o;;o;	;
+@
+;i"m;"CAP(VOP_V2);@{
+;o;;o;	;
+@
+;iIm;"typedef;@;{;o;;o;	;
+@
+;iQm;"	enum;@; [	{;!{;"o;;o;	;
+@
+;i\m;" MESA_OAM_RAPS_HANDLING_NONE;@;0{;!{;"o;;o;	;
+@
+;i°m;"$MESA_OAM_RAPS_HANDLING_COPY_CPU;@;0{;!{;"o;;o;	;
+@
+;iËm;"%MESA_OAM_RAPS_HANDLING_REDIR_CPU;@;0{;!{;"o;;o;	;
+@
+;i3n;"#MESA_OAM_RAPS_HANDLING_DISCARD;@;0;o;;o;	;
+@
+;itn;"mesa_oam_raps_handling_t ;@;[ ;o;;o;	;
+@
+;içn;"CAP(VOP_V2);@{
+;o;;o;	;
+@
+;i±n;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i∆n;"mesa_bool_t               ;@;o;;o;	;
+@
+;i‡n;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;io;"mesa_mac_t                ;@;o;;o;	;
+@
+;i o;"unicast_mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;iKo;"uint32_t                  ;@;o;;o;	;
+@
+;ieo;"meg_level;@;[ ;0{;{;{	;o;;o;	;
+@
+;iåo;"mesa_bool_t               ;@;o;;o;	;
+@
+;i¶o;"lbm_cpu_redir;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÿo;"mesa_bool_t               ;@;o;;o;	;
+@
+;iÚo;"ltm_cpu_redir;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$p;"mesa_oam_raps_handling_t  ;@;o;;o;	;
+@
+;i>p;"raps_handling;@;[ ;0;o;;o;	;
+@
+;iqp;"mesa_voi_conf_t ;@;[ ;o;;o;	;
+@
+;iÅp;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;iBq;"mesa_rc ;@;o;;o;	;
+@
+;iJq;"mesa_voi_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i\q;"const mesa_inst_t       ;@;o;;o;	;
+@
+;itq;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iîq;"const mesa_voi_idx_t    ;@;o;;o;	;
+@
+;i¨q;"voi_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iœq;"$const mesa_voi_conf_t   *const ;@;o;;o;	;
+@
+;iÓq;"	conf;@;[ ;0;o;;o;	;
+@
+;iıq;"CAP(VOP_V2);@{;{;{	;o;;o;	;
+@
+;ir;"mesa_rc ;@;o;;o;	;
+@
+;ir;"mesa_voi_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ir;"const mesa_inst_t      ;@;o;;o;	;
+@
+;i4r;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iTr;"const mesa_voi_idx_t   ;@;o;;o;	;
+@
+;ikr;"voi_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iér;"#mesa_voi_conf_t        *const ;@;o;;o;	;
+@
+;i¨r;"	conf;@;[ ;0;o;;o;	;
+@
+;i≥r;"CAP(VOP_V2);@{;o;;o;	;
+@
+;i¡r;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;iÈr;"4#endif // _MICROCHIP_ETHERNET_SWITCH_API_VOP_
+
+;@

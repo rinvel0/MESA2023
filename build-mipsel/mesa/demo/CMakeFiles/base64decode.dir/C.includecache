@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/base64decode.c
+sys/types.h
+-
+sys/stat.h
+-
+stdarg.h
+-
+unistd.h
+-
+stdlib.h
+-
+stdint.h
+-
+stdio.h
+-
+fcntl.h
+-
+zlib.h
+-
+

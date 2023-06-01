@@ -1,0 +1,3328 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"0±// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief Miscellaneous API
+ * \details This header file describes miscellaneous API functions
+ */
+
+#ifndef _VTSS_MISC_API_H_
+#define _VTSS_MISC_API_H_
+
+#include <vtss/api/types.h>
+#include "vtss_init_api.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \brief Trace group layer */
+typedef enum
+{
+    VTSS_TRACE_LAYER_AIL,   /**< Application Interface Layer */
+    VTSS_TRACE_LAYER_CIL,   /**< Chip Interface Layer */
+
+    VTSS_TRACE_LAYER_COUNT  /**< Number of layers */
+} vtss_trace_layer_t;
+
+/** \brief Trace groups */
+typedef enum
+{
+    VTSS_TRACE_GROUP_DEFAULT,       /**< Default trace group */
+    VTSS_TRACE_GROUP_PORT,          /**< Port control */
+    VTSS_TRACE_GROUP_PHY,           /**< PHY control */
+    VTSS_TRACE_GROUP_PACKET,        /**< Packet control */
+    VTSS_TRACE_GROUP_AFI,           /**< AFI */
+    VTSS_TRACE_GROUP_QOS,           /**< Quality of Service */
+    VTSS_TRACE_GROUP_L2,            /**< Layer 2 */
+    VTSS_TRACE_GROUP_L3,            /**< Layer 3 */
+    VTSS_TRACE_GROUP_SECURITY,      /**< Security */
+    VTSS_TRACE_GROUP_EVC,           /**< Ethernet Virtual Connections */
+    VTSS_TRACE_GROUP_FDMA_NORMAL,   /**< (Obsoleted group) */
+    VTSS_TRACE_GROUP_FDMA_IRQ,      /**< (Obsoleted group) */
+    VTSS_TRACE_GROUP_REG_CHECK,     /**< (Obsoleted group) */
+    VTSS_TRACE_GROUP_MPLS,          /**< MPLS */
+    VTSS_TRACE_GROUP_HW_PROT,       /**< Hardware Protection */
+    VTSS_TRACE_GROUP_HQOS,          /**< Hierarchical Quality of Service */
+    VTSS_TRACE_GROUP_MACSEC,        /**< MACSEC control */
+    VTSS_TRACE_GROUP_VCAP,          /**< VCAP */
+    VTSS_TRACE_GROUP_OAM,           /**< OAM */
+    VTSS_TRACE_GROUP_MRP,           /**< MRP */
+    VTSS_TRACE_GROUP_TS,            /**< Timestamping */
+    VTSS_TRACE_GROUP_CLOCK,         /**< Synce Clock */
+    VTSS_TRACE_GROUP_EMUL,          /**< Emulation */
+
+    VTSS_TRACE_GROUP_COUNT          /**< Number of trace groups */
+} vtss_trace_group_t;
+
+/** \brief Trace levels */
+typedef enum
+{
+    VTSS_TRACE_LEVEL_NONE,  /**< No trace */
+    VTSS_TRACE_LEVEL_ERROR, /**< Error trace */
+    VTSS_TRACE_LEVEL_INFO,  /**< Information trace */
+    VTSS_TRACE_LEVEL_DEBUG, /**< Debug trace */
+    VTSS_TRACE_LEVEL_NOISE, /**< More debug information */
+
+    VTSS_TRACE_LEVEL_COUNT  /**< Number of trace levels */
+} vtss_trace_level_t;
+
+/** \brief Trace group configuration */
+typedef struct
+{
+    vtss_trace_level_t level[VTSS_TRACE_LAYER_COUNT]; /**< Trace level per layer */
+} vtss_trace_conf_t;
+
+/**
+ * \brief Get trace configuration
+ *
+ * \param group [IN]  Trace group
+ * \param conf [OUT]  Trace group configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_trace_conf_get(const vtss_trace_group_t  group,
+                            vtss_trace_conf_t         *const conf);
+
+
+/**
+ * \brief Set trace configuration
+ *
+ * \param group [IN]  Trace group
+ * \param conf [IN]   Trace group configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_trace_conf_set(const vtss_trace_group_t  group,
+                            const vtss_trace_conf_t   *const conf);
+
+/** \brief Attribute */
+#if defined(__GNUC__) && (__GNUC__ > 2)
+#define VTSS_ATTR_PRINTF(X, Y) __attribute__ ((format(printf,X,Y)))
+#else
+#define VTSS_ATTR_PRINTF(X, Y)
+#endif
+
+
+/**
+ * \brief Trace callout function
+ *
+ * \param layer [IN]     Trace layer
+ * \param group [IN]     Trace group
+ * \param level [IN]     Trace level
+ * \param file [IN]      File name string
+ * \param line [IN]      Line number in file
+ * \param function [IN]  Function name string
+ * \param format [IN]    Print format string
+ *
+ * \return Nothing.
+ **/
+void vtss_callout_trace_printf(const vtss_trace_layer_t  layer,
+                               const vtss_trace_group_t  group,
+                               const vtss_trace_level_t  level,
+                               const char                *file,
+                               const int                 line,
+                               const char                *function,
+                               const char                *format,
+                               ...) VTSS_ATTR_PRINTF(7, 8);
+
+/**
+ * \brief Trace hex-dump callout function
+ *
+ * \param layer [IN]     Trace layer
+ * \param group [IN]     Trace group
+ * \param level [IN]     Trace level
+ * \param file [IN]      The file from where the trace were called.
+ * \param line [IN]      The line from where the trace were called.
+ * \param function [IN]  The function from where the trace were called.
+ * \param byte_p [IN]    Pointer to start of area to print
+ * \param byte_cnt [IN]  Number of bytes to print
+ *
+ * \return Nothing.
+ **/
+void vtss_callout_trace_hex_dump(const vtss_trace_layer_t  layer,
+                                 const vtss_trace_group_t  group,
+                                 const vtss_trace_level_t  level,
+                                 const char                *file,
+                                 const int                 line,
+                                 const char                *function,
+                                 const u8                  *byte_p,
+                                 const int                 byte_cnt);
+
+#if VTSS_OPT_DEBUG_PRINT
+
+/** \brief Debug layer */
+/* Debug layer */
+typedef enum {
+    VTSS_DEBUG_LAYER_ALL, /**< All layers */
+    VTSS_DEBUG_LAYER_AIL, /**< Application Interface Layer */
+    VTSS_DEBUG_LAYER_CIL  /**< Chip Interface Layer */
+} vtss_debug_layer_t;
+
+/** \brief Debug function group */
+typedef enum {
+    VTSS_DEBUG_GROUP_ALL,       /**< All groups */
+    VTSS_DEBUG_GROUP_INIT,      /**< Initialization */
+    VTSS_DEBUG_GROUP_MISC,      /**< Miscellaneous */
+    VTSS_DEBUG_GROUP_PORT,      /**< Port configuration */
+    VTSS_DEBUG_GROUP_PORT_CNT,  /**< Port counters */
+    VTSS_DEBUG_GROUP_PHY,       /**< PHY */
+    VTSS_DEBUG_GROUP_VLAN,      /**< VLAN */
+    VTSS_DEBUG_GROUP_PVLAN,     /**< PVLAN */
+    VTSS_DEBUG_GROUP_MAC_TABLE, /**< MAC address table */
+    VTSS_DEBUG_GROUP_ACL,       /**< ACL */
+    VTSS_DEBUG_GROUP_QOS,       /**< QoS */
+    VTSS_DEBUG_GROUP_AGGR,      /**< Link aggregation */
+    VTSS_DEBUG_GROUP_GLAG,      /**< Global link aggregation */
+    VTSS_DEBUG_GROUP_STP,       /**< Spanning Tree */
+    VTSS_DEBUG_GROUP_MIRROR,    /**< Mirroring */
+    VTSS_DEBUG_GROUP_EVC,       /**< EVC */
+    VTSS_DEBUG_GROUP_ERPS,      /**< ERPS */
+    VTSS_DEBUG_GROUP_EPS,       /**< EPS */
+    VTSS_DEBUG_GROUP_SR,        /**< Seamless Redundancy */
+    VTSS_DEBUG_GROUP_PACKET,    /**< Packet control */
+    VTSS_DEBUG_GROUP_FDMA,      /**< Obsoleted */
+    VTSS_DEBUG_GROUP_TS,        /**< TS: TimeStamping */
+    VTSS_DEBUG_GROUP_PHY_TS,    /**< PHY_TS: PHY TimeStamping */
+    VTSS_DEBUG_GROUP_WM,        /**< WaterMarks */
+    VTSS_DEBUG_GROUP_LRN,       /**< DEPRECATED. Use VTSS_DEBUG_GROUP_MAC_TABLE instead */
+    VTSS_DEBUG_GROUP_IPMC,      /**< IP Multicast */
+    VTSS_DEBUG_GROUP_STACK,     /**< Stacking */
+    VTSS_DEBUG_GROUP_CMEF,      /**< Congestion Management */
+    VTSS_DEBUG_GROUP_HOST,      /**< CE-MAX Host configuration */
+    VTSS_DEBUG_GROUP_MPLS,      /**< MPLS */
+    VTSS_DEBUG_GROUP_HW_PROT,   /**< HW Protection */
+    VTSS_DEBUG_GROUP_HQOS,      /**< Hierarchical Quality of Service */
+    VTSS_DEBUG_GROUP_VXLAT,     /**< VLAN Translation */
+    VTSS_DEBUG_GROUP_OAM,       /**< OAM, incl. VOEs/VOP */
+    VTSS_DEBUG_GROUP_MRP,       /**< Media Redundancy Protocol (MRP) */
+    VTSS_DEBUG_GROUP_SER_GPIO,  /**< Serial GPIO configuration */
+    VTSS_DEBUG_GROUP_L3,        /**< L3 services */
+    VTSS_DEBUG_GROUP_AFI,       /**< Automatic Frame Injector */
+    VTSS_DEBUG_GROUP_MACSEC,    /**< 802.1AE MacSec */
+    VTSS_DEBUG_GROUP_SERDES,    /**< Serdes Macroes */
+    VTSS_DEBUG_GROUP_KR,        /**< 5G/10G/25Base-KR */
+    VTSS_DEBUG_GROUP_MUX,       /**< Mux mode */
+
+    /* New groups are added above this line */
+    VTSS_DEBUG_GROUP_COUNT      /**< Number of groups */
+} vtss_debug_group_t;
+
+
+/** \brief Special chip number value for showing information from all chips */
+#define VTSS_CHIP_NO_ALL 0xffffffff
+
+/** \brief Debug information structure */
+typedef struct {
+    vtss_debug_layer_t           layer;                           /**< Layer */
+    vtss_debug_group_t           group;                           /**< Function group */
+    vtss_chip_no_t               chip_no;                         /**< Chip number, multi-chip targets */
+    BOOL                         port_list[VTSS_PORT_ARRAY_SIZE]; /**< Port list */
+    BOOL                         full;                            /**< Full information dump */
+    BOOL                         clear;                           /**< Clear counters */
+    BOOL                         vml_format;                      /**< VML format register dump */
+    BOOL                         has_action;                      /**< Action parameter is present */
+    u32                          action;                          /**< Debug group depending action value */
+    u32                          prm[10];                         /**< Parameters from user */
+} vtss_debug_info_t;
+
+/** \brief Debug printf function
+ *
+ * The signature is similar to that of printf(). However, the return value is
+ * not used anywhere within the API.
+ */
+typedef int (*vtss_debug_printf_t)(const char *fmt, ...) VTSS_ATTR_PRINTF(1, 2);
+
+/**
+ * \brief Get default debug information structure
+ *
+ * \param info [OUT]  Debug information
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_debug_info_get(vtss_debug_info_t *const info);
+
+/**
+ * \brief Print default information
+ *
+ * \param inst [IN]   Target instance reference.
+ * \param prntf [IN]  Debug printf function.
+ * \param info [IN]   Debug information
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_debug_info_print(const vtss_inst_t         inst,
+                              const vtss_debug_printf_t prntf,
+                              const vtss_debug_info_t   *const info);
+#endif // VTSS_OPT_DEBUG_PRINT
+
+/* - API protection functions -------------------------------------- */
+
+/** \brief API lock structure */
+typedef struct {
+    vtss_inst_t inst;     /**< Target instance reference */
+    const char *function; /**< Function name */
+    const char *file;     /**< File name */
+    int        line;      /**< Line number */
+} vtss_api_lock_t;
+
+/**
+ * \brief Lock API access
+ *
+ * \param lock [IN]  Lock information
+*/
+void vtss_callout_lock(const vtss_api_lock_t *const lock);
+
+/**
+ * \brief Unlock API access
+ *
+ * \param lock [IN]  Lock information
+*/
+void vtss_callout_unlock(const vtss_api_lock_t *const lock);
+
+/** \brief API debug lock structure */
+typedef struct {
+    vtss_chip_no_t chip_no; /**< Chip number (if multi-chip instance). */
+} vtss_debug_lock_t;
+
+/**
+ * \brief Debug lock API access
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param lock [IN]  Lock information
+ *
+ * \return Return code.
+*/
+vtss_rc vtss_debug_lock(const vtss_inst_t       inst,
+                        const vtss_debug_lock_t *const lock);
+
+/**
+ * \brief Debug unlock API access
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param lock [IN]  Lock information
+ *
+ * \return Return code.
+*/
+vtss_rc vtss_debug_unlock(const vtss_inst_t inst,
+                          vtss_debug_lock_t *const lock);
+
+#if defined(VTSS_FEATURE_MISC)
+/* - Direct register access (for debugging only) ------------------- */
+
+/**
+ * \brief Read value from target register.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param addr [IN]     Address to read. Format depends on target.
+ * \param value [OUT]   Register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_reg_read(const vtss_inst_t    inst,
+                      const vtss_chip_no_t chip_no,
+                      const u32            addr,
+                      u32                  *const value);
+
+
+/**
+ * \brief Write value to target register.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param addr [IN]     Address to read. Format depends on target.
+ * \param value [IN]    Register value.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_reg_write(const vtss_inst_t    inst,
+                       const vtss_chip_no_t chip_no,
+                       const u32            addr,
+                       const u32            value);
+
+
+/**
+ * \brief Read, modify and write value to target register.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param addr [IN]     Address to read. Format depends on target.
+ * \param value [IN]    Register value.
+ * \param mask [IN]     Register mask, only bits enabled are changed.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_reg_write_masked(const vtss_inst_t    inst,
+                              const vtss_chip_no_t chip_no,
+                              const u32            addr,
+                              const u32            value,
+                              const u32            mask);
+
+/* - Secondary chip if ------------------- */
+
+/**
+ * \brief Clear EXT0-1 interrupt sticky bits on secondary chip.
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param ext [IN]     EXT number (0-1).
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_intr_sticky_clear(const vtss_inst_t    inst,
+                               u32                  ext);
+
+/* - Chip ID and revision ------------------------------------------ */
+
+/** \brief Chip ID */
+typedef struct
+{
+    u16  part_number;   /**< BCD encoded part number */
+    u16  revision;      /**< Chip revision */
+} vtss_chip_id_t;
+
+/**
+ * \brief Get chip ID and revision.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_id [IN]  Pointer to chip ID structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_chip_id_get(const vtss_inst_t  inst,
+                         vtss_chip_id_t     *const chip_id);
+
+
+/* - Polling functions ---------------------------------------- */
+
+/**
+ * \brief Polling function called every second.
+ *
+ * \param inst [IN]  Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_poll_1sec(const vtss_inst_t  inst);
+
+/**
+ * \brief Define event (interrupt) types relatesd to PTP in the switch chips
+ *
+ **/
+typedef enum {
+    VTSS_PTP_SYNC_EV =      (1 << 0), /*< PTP Synchronization pulse update */
+    VTSS_PTP_EXT_SYNC_EV =  (1 << 1), /*< PTP External Synchronization input  (Sync 0 on Serval)*/
+    VTSS_PTP_CLK_ADJ_EV =   (1 << 2), /*< PTP Clock adjustment updated */
+    VTSS_PTP_TX_TSTAMP_EV = (1 << 3), /*< Tx timestamp udated (Jaguar and Serval only)*/
+    VTSS_PTP_EXT_1_SYNC_EV =(1 << 4), /*< PTP External Synchronization 1 input (Serval only)*/
+    VTSS_PTP_PIN_0_SYNC_EV =(1 << 5), /*< PTP External pin 0 synchronization (Jaguar2 only)*/
+    VTSS_PTP_PIN_1_SYNC_EV =(1 << 6), /*< PTP External pin 1 synchronization (Jaguar2 only)*/
+    VTSS_PTP_PIN_2_SYNC_EV =(1 << 7), /*< PTP External pin 2 synchronization (Jaguar2 only)*/
+    VTSS_PTP_PIN_3_SYNC_EV =(1 << 8), /*< PTP External pin 3 synchronization (Jaguar2 only)*/
+} vtss_ptp_event_type_t;
+
+/**
+ * \brief PTP polling function called at by interrupt or periodicly
+ *
+ * \param inst       [IN]  Target instance reference.
+ * \param ev_mask    [OUT] Event type mask of active events
+ *
+ * \note The \e ev_mask parameter can be either a single event_type or
+ * multiple event types (or \e VTSS_EVTYPE_ALL). If invoked by a
+ * processor interrupt signal, the type of event to check for may be
+ * narrowed in to specific events.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_ptp_event_poll(const vtss_inst_t      inst,
+                            vtss_ptp_event_type_t  *const ev_mask);
+
+/**
+ * \brief Enable PTP event generation for a specific event type
+ *
+ * \param inst     [IN] Target instance reference.
+ * \param enable   [IN] Enable or disable events
+ * \param ev_mask  [IN] Event type(s) to control (mask)
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_ptp_event_enable(const vtss_inst_t            inst,
+                              const vtss_ptp_event_type_t  ev_mask,
+                              const BOOL                   enable);
+
+/**
+ * \brief Define the dev_all event (interrupt) types
+ *
+ **/
+typedef enum {
+    VTSS_DEV_ALL_TX_TSTAMP_EV = (1 << 0), /*< Tx timestamp udated */
+    VTSS_DEV_ALL_LINK_EV =      (1 << 1), /*< Link state changed */
+} vtss_dev_all_event_type_t;
+
+/**
+ * \brief Define the dev_all polling types
+ *
+ **/
+typedef enum {
+    VTSS_DEV_ALL_POLL_ALL,          /*< Polling all chip */
+    VTSS_DEV_ALL_POLL_PRIMARY,      /*< Polling primary chip */
+    VTSS_DEV_ALL_POLL_SECONDARY,    /*< Polling secondary chip */
+} vtss_dev_all_event_poll_t;
+
+/**
+ * \brief DEV_ALL polling function called at by interrupt or periodically
+ *
+ * \param inst      [IN] Target instance reference.
+ * \param poll_type [IN] Polling type
+ * \param ev_mask   [OUT] Event type mask array of active events for all ports - must be of size VTSS_PORT_ARRAY_SIZE
+ *
+ * \note The \e ev_mask parameter can be either a single event_type or
+ * multiple event types (or \e VTSS_EVTYPE_ALL). If invoked by a
+ * processor interrupt signal, the type of event to check for may be
+ * narrowed in to specific events.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_dev_all_event_poll(const vtss_inst_t                 inst,
+                                const vtss_dev_all_event_poll_t   poll_type,
+                                vtss_dev_all_event_type_t         *const ev_mask);
+
+/**
+ * \brief Enable DEV_ALL event generation for a specific event type
+ *
+ * \param inst     [IN] Target instance reference.
+ * \param port_no  [IN] Port number.
+ * \param enable   [IN] Enable or disable events.
+ * \param ev_mask  [IN] Event type(s) to control (mask).
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_dev_all_event_enable(const vtss_inst_t                inst,
+                                  const vtss_port_no_t             port_no,
+                                  const vtss_dev_all_event_type_t  ev_mask,
+                                  const BOOL                       enable);
+
+#endif /* VTSS_FEATURE_MISC */
+
+/* - GPIOs --------------------------------------------------------- */
+
+#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT)
+/** \brief Number of GPIOs */
+#undef VTSS_GPIOS
+#define VTSS_GPIOS         32
+#endif /* VTSS_ARCH_LUTON26/SERVAL */
+
+#if defined(VTSS_ARCH_JAGUAR_2)
+/** \brief Number of GPIOs */
+#undef VTSS_GPIOS
+#define VTSS_GPIOS         64
+#endif /* VTSS_ARCH_JAGUAR_2 */
+
+#if defined(VTSS_ARCH_SPARX5)
+/** \brief Number of GPIOs */
+#undef VTSS_GPIOS
+#define VTSS_GPIOS         64
+#endif /* VTSS_ARCH_SPARX5 */
+
+#if defined(VTSS_ARCH_LAN966X)
+/** \brief Number of GPIOs */
+#undef VTSS_GPIOS
+#define VTSS_GPIOS         78
+#endif /* VTSS_ARCH_LAN966X */
+
+/** \brief GPIO number */
+typedef u32 vtss_gpio_no_t;
+
+#if defined(VTSS_GPIOS)
+/** \brief GPIO start number */
+#define VTSS_GPIO_NO_START 0
+
+/** \brief GPIO end number */
+#define VTSS_GPIO_NO_END   (VTSS_GPIO_NO_START+VTSS_GPIOS)
+
+/**
+ * \brief GPIO configured mode
+ **/
+typedef enum
+{
+    VTSS_GPIO_OUT,    /**< Output enabled */
+    VTSS_GPIO_IN,     /**< Input enabled */
+    VTSS_GPIO_IN_INT, /**< Input enabled, IRQ gated */
+    VTSS_GPIO_ALT_0,  /**< Alternate function 0 */
+    VTSS_GPIO_ALT_1,  /**< Alternate function 1 */
+    VTSS_GPIO_ALT_2,  /**< Alternate function 2 */
+    VTSS_GPIO_ALT_3,  /**< Alternate function 3 */
+    VTSS_GPIO_ALT_4,  /**< Alternate function 4 */
+    VTSS_GPIO_ALT_5,  /**< Alternate function 5 */
+} vtss_gpio_mode_t;
+
+/**
+ * \brief Set GPIO mode.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param gpio_no [IN]  GPIO pin number.
+ * \param mode [IN]     GPIO mode.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_gpio_mode_set(const vtss_inst_t      inst,
+                           const vtss_chip_no_t   chip_no,
+                           const vtss_gpio_no_t   gpio_no,
+                           const vtss_gpio_mode_t mode);
+
+/**
+ * \brief Set GPIO direction to input or output.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param gpio_no [IN]  GPIO pin number.
+ * \param output [IN]   TRUE if output, FALSE if input.
+ *
+ * \return Return code.
+ *
+ * \em DEPRECATED. Use vtss_gpio_mode_set() instead.
+ **/
+vtss_rc vtss_gpio_direction_set(const vtss_inst_t     inst,
+                                const vtss_chip_no_t  chip_no,
+                                const vtss_gpio_no_t  gpio_no,
+                                const BOOL            output);
+
+
+
+/**
+ * \brief Read from GPIO input pin.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param gpio_no [IN]  GPIO pin number.
+ * \param value [OUT]   TRUE if pin is high, FALSE if it is low.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_gpio_read(const vtss_inst_t     inst,
+                       const vtss_chip_no_t  chip_no,
+                       const vtss_gpio_no_t  gpio_no,
+                       BOOL                  *const value);
+
+
+
+/**
+ * \brief Write to GPIO output pin.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param gpio_no [IN]  GPIO pin number.
+ * \param value [IN]    TRUE to set pin high, FALSE to set pin low.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_gpio_write(const vtss_inst_t     inst,
+                        const vtss_chip_no_t  chip_no,
+                        const vtss_gpio_no_t  gpio_no,
+                        const BOOL            value);
+
+/**
+ * \brief Get GPIO event indication
+ *
+ * \param inst [IN]         Target instance reference.
+ * \param chip_no [IN]      Chip number (if multi-chip instance).
+ * \param events [OUT]      Event indication for each GPIO pin - must point to VTSS_GPIOS of BOOL.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_gpio_event_poll(const vtss_inst_t        inst,
+                             const vtss_chip_no_t     chip_no,
+                             BOOL                     *const events);
+
+/**
+ * \brief Set GPIO event enable
+ *
+ * \param inst [IN]         Target instance reference.
+ * \param chip_no [IN]      Chip number (if multi-chip instance).
+ * \param gpio_no [IN]      GPIO pin number.
+ * \param enable  [IN]      Enable or disable event.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_gpio_event_enable(const vtss_inst_t       inst,
+                               const vtss_chip_no_t    chip_no,
+                               const vtss_gpio_no_t    gpio_no,
+                               BOOL                    enable);
+
+// The GPIO functionality identifier
+typedef enum {
+    VTSS_GPIO_FUNC_PTP_0,   // PTP 0 GPIO functionality
+    VTSS_GPIO_FUNC_PTP_1,   // PTP 1 GPIO functionality
+    VTSS_GPIO_FUNC_PTP_2,   // PTP 2 GPIO functionality
+    VTSS_GPIO_FUNC_PTP_3,   // PTP 3 GPIO functionality
+    VTSS_GPIO_FUNC_PTP_4    // PTP 4 GPIO functionality
+} vtss_gpio_func_t;
+
+// GPIO functionality ALT mode
+typedef enum
+{
+    VTSS_GPIO_FUNC_ALT_0,  // Alternate function 0
+    VTSS_GPIO_FUNC_ALT_1,  // Alternate function 1
+    VTSS_GPIO_FUNC_ALT_2   // Alternate function 2
+} vtss_gpio_func_alt_t;
+
+// GPIO functionality information
+typedef struct {
+    vtss_gpio_no_t       gpio_no;    // GPIO pin number.
+    vtss_gpio_func_alt_t alt;        // GPIO ALT function.
+} vtss_gpio_func_info_t;
+
+/**
+ * \brief Get the GPIO information that is board specific for this GPIO functionality
+ *
+ * \param gpio_func [IN]    GPIO functionality identifier.
+ * \param info [OUT]        GPIO pin functionality information.
+ *
+ * \return Return code.
+ **/
+typedef vtss_rc (*vtss_gpio_func_info_get_t)(const vtss_inst_t       inst,
+                                             const vtss_gpio_func_t  gpio_func,
+                                             vtss_gpio_func_info_t   *const info);
+
+#endif /* GPIOS */
+
+/* - Serial GPIO control ---------------------------------------------------- */
+
+#if defined(VTSS_FEATURE_SERIAL_GPIO)
+
+#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+/** \brief Number of serial GPIO groups */
+#define VTSS_SGPIO_GROUPS 1
+#endif /* VTSS_ARCH_LUTON26/SERVAL/SERVAL_T */
+
+#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C)
+/** \brief Number of serial GPIO groups */
+#define VTSS_SGPIO_GROUPS 3
+#endif /* VTSS_ARCH_JAGUAR_2_B/C */
+
+#if defined(VTSS_ARCH_SPARX5)
+/** \brief Number of serial GPIO groups */
+#define VTSS_SGPIO_GROUPS  3
+#endif /* VTSS_ARCH_SPARX5 */
+
+/** \brief Serial GPIO group */
+typedef u32 vtss_sgpio_group_t;
+
+/** \brief Number of serial GPIO ports */
+#define VTSS_SGPIO_PORTS 32
+
+/** \brief SGPIO output mode */
+typedef enum
+{
+    VTSS_SGPIO_MODE_OFF,            /**< Off */
+    VTSS_SGPIO_MODE_ON,             /**< On */
+    VTSS_SGPIO_MODE_0,              /**< Mode 0 */
+    VTSS_SGPIO_MODE_1,              /**< Mode 1 */
+    VTSS_SGPIO_MODE_0_ACTIVITY,     /**< Mode 0 when link activity */
+    VTSS_SGPIO_MODE_1_ACTIVITY,     /**< Mode 1 when link activity */
+    VTSS_SGPIO_MODE_0_ACTIVITY_INV, /**< Mode 0 when link activity, inversed polarity */
+    VTSS_SGPIO_MODE_1_ACTIVITY_INV, /**< Mode 1 when link activity, inversed polarity */
+    VTSS_SGPIO_MODE_NO_CHANGE       /**< Do not change the SGPIO mode (the mode is controlled elsewhere) */
+} vtss_sgpio_mode_t;
+
+/** \brief SGPIO blink mode */
+typedef enum
+{
+    VTSS_SGPIO_BMODE_TOGGLE, /**< Burst toggle (mode 1 only) */
+    VTSS_SGPIO_BMODE_0_625,  /**< 0.625 Hz (mode 0 only) */
+    VTSS_SGPIO_BMODE_1_25,   /**< 1.25 Hz */
+    VTSS_SGPIO_BMODE_2_5,    /**< 2.5 Hz */
+    VTSS_SGPIO_BMODE_5       /**< 5 Hz */
+} vtss_sgpio_bmode_t;
+
+/** \brief SGPIO port configuration */
+typedef struct
+{
+    BOOL              enabled; /**< Port enabled/disabled */
+    vtss_sgpio_mode_t mode[4]; /**< Mode for each bit */
+    BOOL              int_pol_high[4];  /**< SGPIO interrupt polarity for each bit - TRUE - Interrupt when SGPIO pin high, FALSE - Interrupt when SGPIO pin low. */
+} vtss_sgpio_port_conf_t;
+
+/** \brief SGPIO configuration for a group */
+typedef struct
+{
+    vtss_sgpio_bmode_t     bmode[2];                     /**< Blink mode 0 and 1 */
+    u8                     bit_count;                    /**< Bits enabled per port, 1-4 */
+    vtss_sgpio_port_conf_t port_conf[VTSS_SGPIO_PORTS];  /**< Port configuration */
+} vtss_sgpio_conf_t;
+
+/**
+ * \brief Get SGPIO configuration
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param group [IN]    SGPIO group.
+ * \param conf [OUT]    SGPIO configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_sgpio_conf_get(const vtss_inst_t        inst,
+                            const vtss_chip_no_t     chip_no,
+                            const vtss_sgpio_group_t group,
+                            vtss_sgpio_conf_t        *const conf);
+
+/**
+ * \brief Set SGPIO configuration
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param group [IN]    SGPIO group.
+ * \param conf [IN]     SGPIO configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_sgpio_conf_set(const vtss_inst_t        inst,
+                            const vtss_chip_no_t     chip_no,
+                            const vtss_sgpio_group_t group,
+                            const vtss_sgpio_conf_t  *const conf);
+
+/** \brief SGPIO read data for a port */
+typedef struct
+{
+    BOOL value[4]; /**< Data for each and bit */
+} vtss_sgpio_port_data_t;
+
+/**
+ * \brief Read SGPIO data
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param chip_no [IN]  Chip number (if multi-chip instance).
+ * \param group [IN]    SGPIO group.
+ * \param data [OUT]    SGPIO data.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_sgpio_read(const vtss_inst_t        inst,
+                        const vtss_chip_no_t     chip_no,
+                        const vtss_sgpio_group_t group,
+                        vtss_sgpio_port_data_t   data[VTSS_SGPIO_PORTS]);
+/**
+ * \brief Get SGPIO event indication
+ *
+ * \param inst [IN]          Target instance reference.
+ * \param chip_no [IN]       Chip number (if multi-chip instance).
+ * \param group [IN]         SGPIO group.
+ * \param bit [IN]           SGPIO port bit (0-3).
+ * \param events [OUT]       Event indication for each port for the selected bit - must point to VTSS_SGPIO_PORTS of BOOL.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_sgpio_event_poll(const vtss_inst_t        inst,
+                              const vtss_chip_no_t     chip_no,
+                              const vtss_sgpio_group_t group,
+                              const u32                bit,
+                              BOOL                     *const events);
+
+/**
+ * \brief Get SGPIO event enable
+ *
+ * \param inst [IN]          Target instance reference.
+ * \param chip_no [IN]       Chip number (if multi-chip instance).
+ * \param group [IN]         SGPIO group.
+ * \param port [IN]          SGPIO port (0-31).
+ * \param bit [IN]           SGPIO port bit (0-3).
+ * \param enable [IN]        Event for each port for the selected bit is enabled or disabled.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_sgpio_event_enable(const vtss_inst_t        inst,
+                                const vtss_chip_no_t     chip_no,
+                                const vtss_sgpio_group_t group,
+                                const vtss_port_no_t     port,
+                                const u32                bit,
+                                BOOL                     enable);
+
+#endif /* VTSS_FEATURE_SERIAL_GPIO */
+
+
+#if defined(VTSS_FEATURE_INTERRUPTS)
+
+/**
+ * \brief Configure interrupt.
+ * \param inst [IN] Target instance reference.
+ * \param mask [IN] Interrupt mask - Configures the interrupts for the bits set in the mask.
+ * \param polarity [IN] Polarity - Interrupt polarity.
+ * \param enable [IN] Enable   - 1 = enable, 0 = disable.
+ *
+ * \return Return code.
+**/
+vtss_rc vtss_intr_cfg(const vtss_inst_t       inst,
+                      const u32               mask,
+                      const BOOL              polarity,
+                      const BOOL              enable);
+
+
+/**
+\brief Interrupt source structure.
+*/
+typedef struct {
+    BOOL  link_change[VTSS_PORT_ARRAY_SIZE]; /**< Applies to XAUI, 100FX and 1000X ports */
+} vtss_intr_t;
+
+/**
+ * \brief Set the interrupt mask.
+ * \param inst [IN] Target instance reference.
+ * \param mask [IN] Pointer to mask structure.
+ *
+ * \return Return code.
+**/
+vtss_rc vtss_intr_mask_set(const vtss_inst_t             inst,
+                           vtss_intr_t *mask);
+
+/**
+ * \brief Get the interrupt status for all enabled sources.
+ *        The interrupt status bit is cleared by the function
+ *
+ * \param inst [IN] Target instance reference.
+ * \param status [OUT] Pointer to a structure with status of all enabled interrupt sources.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_intr_status_get(const vtss_inst_t             inst,
+                             vtss_intr_t *status);
+
+/**
+ * \brief This vil negate polarity on fast link fail detection signals when active
+ *        This is only intended to be used on Luton26 RevB as a work around for the
+ *        Atom PHY interrupt always active problem
+ *
+ * \param inst [IN] Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc  vtss_intr_pol_negation(const vtss_inst_t   inst);
+
+#endif /* VTSS_FEATURE_INTERRUPTS */
+
+#ifdef VTSS_FEATURE_IRQ_CONTROL
+
+/**
+ * \brief Interrupt sources.
+ */
+typedef enum
+{
+    VTSS_IRQ_XTR,               /**< Frame Extraction Ready (register-based) */
+    VTSS_IRQ_FDMA_XTR,          /**< Frame Extraction Ready (manual DMA-based) */
+    VTSS_IRQ_SOFTWARE,          /**< Software IRQ */
+    VTSS_IRQ_PTP_RDY,           /**< PTP Timestamp Ready */
+    VTSS_IRQ_PTP_SYNC,          /**< PTP Synchronization IRQ */
+    VTSS_IRQ_EXT0,              /**< EXT0 IRQ */
+    VTSS_IRQ_EXT1,              /**< EXT1 IRQ */
+    VTSS_IRQ_OAM,               /**< OAM IRQ */
+    VTSS_IRQ_SGPIO,             /**< Serial GPIO IRQ */
+    VTSS_IRQ_SGPIO2,            /**< Serial GPIO2 IRQ */
+    VTSS_IRQ_DPLL,              /**< DPLL */
+    VTSS_IRQ_GPIO,              /**< GPIO */
+    VTSS_IRQ_DEV_ALL,           /**< Device (port) IRQ */
+    VTSS_IRQ_CU_PHY_0,          /**< LAN966X internal PHY 0 */
+    VTSS_IRQ_CU_PHY_1,          /**< LAN966X internal PHY 1 */
+    VTSS_IRQ_KR_SD10G_0,        /**< KR IRQ 0 */
+    VTSS_IRQ_KR_SD10G_1,        /**< KR IRQ 1 */
+    VTSS_IRQ_KR_SD10G_2,        /**< KR IRQ 2 */
+    VTSS_IRQ_KR_SD10G_3,        /**< KR IRQ 3 */
+    VTSS_IRQ_KR_SD10G_4,        /**< KR IRQ 4 */
+    VTSS_IRQ_KR_SD10G_5,        /**< KR IRQ 5 */
+    VTSS_IRQ_KR_SD10G_6,        /**< KR IRQ 6 */
+    VTSS_IRQ_KR_SD10G_7,        /**< KR IRQ 7 */
+    VTSS_IRQ_KR_SD10G_8,        /**< KR IRQ 8 */
+    VTSS_IRQ_KR_SD10G_9,        /**< KR IRQ 9 */
+    VTSS_IRQ_KR_SD10G_10,       /**< KR IRQ 10 */
+    VTSS_IRQ_KR_SD10G_11,       /**< KR IRQ 11 */
+    VTSS_IRQ_KR_SD10G_12,       /**< KR IRQ 12 */
+    VTSS_IRQ_KR_SD10G_13,       /**< KR IRQ 13 */
+    VTSS_IRQ_KR_SD10G_14,       /**< KR IRQ 14 */
+    VTSS_IRQ_KR_SD10G_15,       /**< KR IRQ 15 */
+    VTSS_IRQ_KR_SD10G_16,       /**< KR IRQ 16 */
+    VTSS_IRQ_KR_SD10G_17,       /**< KR IRQ 17 */
+    VTSS_IRQ_KR_SD10G_18,       /**< KR IRQ 18 */
+    VTSS_IRQ_KR_SD10G_19,       /**< KR IRQ 19 */
+
+    VTSS_IRQ_MAX,               /**< Maximum IRQ Source - MUST be the last in this enum*/
+} vtss_irq_t;
+
+/**
+ * \brief Interrupt configuration options.
+ */
+typedef struct {
+    BOOL external;               /**< Redirect to external IRQ */
+    u8   destination;            /**< IRQ destination index */
+} vtss_irq_conf_t;
+
+/**
+ * \brief Interrupt status structure.
+ */
+typedef struct {
+    u32 active;         /**< Bitmap for pending IRQs (VTSS_IRQ_xxx) */
+    u32 raw_ident;      /**< RAW (target dependentant) bitmap for active pending IRQs */
+    u32 raw_status;     /**< RAW (target dependentant) bitmap for all pending IRQs */
+    u32 raw_mask;       /**< RAW (target dependentant) bitmap for IRQs mask */
+} vtss_irq_status_t;
+
+/**
+ * \brief Get IRQ configuration
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param irq  [IN]     Interrupt source.
+ * \param conf [OUT]    IRQ configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc  vtss_irq_conf_get(const vtss_inst_t inst,
+                           const vtss_irq_t irq,
+                           vtss_irq_conf_t *conf);
+
+/**
+ * \brief Set IRQ configuration
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param irq  [IN]     Interrupt source.
+ * \param conf [IN]     IRQ configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc  vtss_irq_conf_set(const vtss_inst_t inst,
+                           const vtss_irq_t irq,
+                           const vtss_irq_conf_t *const conf);
+
+/**
+ * \brief Get IRQ status (active sources), mask current sources
+ *
+ * \param inst   [IN]   Target instance reference.
+ * \param status [OUT]  IRQ status.
+ *
+ * \return Return code.
+ **/
+vtss_rc  vtss_irq_status_get_and_mask(const vtss_inst_t inst,
+                                      vtss_irq_status_t *status);
+
+/**
+ * \brief Control a specific interrupt source
+ *
+ * \param inst   [IN]   Target instance reference.
+ * \param irq    [IN]   Interrupt source.
+ * \param enable [IN]   Enable or disable source.
+ *
+ * \return Return code.
+ **/
+vtss_rc  vtss_irq_enable(const vtss_inst_t inst,
+                         const vtss_irq_t irq,
+                         BOOL enable);
+
+#endif /* VTSS_FEATURE_IRQ_CONTROL */
+
+
+/* - API tod functions -------------------------------------- */
+
+/**
+ * \brief Get the current hw nanosec time
+ *  This function is called from interrupt
+ * \returns actual ns counter
+ */
+u32 vtss_tod_get_ns_cnt(void);
+
+/**
+ * \brief If the actual HW does not support time stamping, an external callback
+ * function can be set up to do the work.
+ * \returns actual ns counter.
+ */
+typedef u32 (*tod_get_ns_cnt_cb_t)(void);  /* Get ns Counter callback  */
+
+/**
+ * \brief Set an external hw nanosec read function.
+ *
+ * \param cb pointer to callback function
+ */
+void vtss_tod_set_ns_cnt_cb(tod_get_ns_cnt_cb_t cb);
+
+/**
+ * vtss_os_timestamp_t
+ * VTSS_OS_TIMESTAMP()
+ *   These two provides a mean to have the API timestamp events for use
+ *   by the application. It is up to the platform specific code to
+ *   implement the actual functions to obtain the timestamp.
+ *   The implementation *must* be callable from interrupt context, so no
+ *   implicit waits or sleeps are allowed.
+ */
+typedef struct {
+    u32 hw_cnt; /**< hardware counter */
+} vtss_os_timestamp_t;
+#define VTSS_OS_TIMESTAMP(timestamp)                                    \
+  do {                                                                  \
+    /* Currently no need to lock scheduler, since it's only          */ \
+    /* called from a function, where the sceduler is already locked. */ \
+    /* cyg_scheduler_lock(__FILE__, __LINE__); */                                         \
+    (timestamp)->hw_cnt = vtss_tod_get_ns_cnt();                        \
+    /* cyg_scheduler_unlock(__FILE__, __LINE__); */                                       \
+  } while(0); /**< VTSS_OS_TIMESTAMP() provides the implementation that will fill in the timestamp. */
+
+
+/* - Fan control functions -------------------------------------- */
+#if defined(VTSS_FEATURE_FAN)
+
+#if defined(VTSS_FEATURE_TEMP_SENSOR)
+/**
+ * \brief Initialize the temperature sensor
+ *
+ * \param inst [IN]        Target instance reference
+ * \param enable [IN]       Set to true if sensor shall be active else false
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_temp_sensor_init(const vtss_inst_t inst,
+                              const BOOL enable);
+
+/**
+ * \brief Read temperature sensor value
+ *
+ * \param inst [IN]        Target instance reference
+ * \param temperature [OUT]      Temperature from sensor (range from -46 to 135 degC)
+ *
+ * \return Return code.
+ **/
+
+vtss_rc vtss_temp_sensor_get(const vtss_inst_t     inst,
+                             i16                   *temperature);
+#endif
+
+/** \brief FAN PWM frequency */
+typedef enum
+{
+    VTSS_FAN_PWM_FREQ_25KHZ,
+    VTSS_FAN_PWM_FREQ_120HZ,
+    VTSS_FAN_PWM_FREQ_100HZ,
+    VTSS_FAN_PWM_FREQ_80HZ,
+    VTSS_FAN_PWM_FREQ_60HZ,
+    VTSS_FAN_PWM_FREQ_40HZ,
+    VTSS_FAN_PWM_FREQ_20HZ,
+    VTSS_FAN_PWM_FREQ_10HZ
+} vtss_fan_pwd_freq_t;
+
+/** \brief FAN Types  */
+typedef enum
+{
+    VTSS_FAN_2_WIRE_TYPE,
+    VTSS_FAN_3_WIRE_TYPE,
+    VTSS_FAN_4_WIRE_TYPE
+} vtss_fan_type_t;
+
+
+/** \brief Maximum fan speed level (Fan runs at full speed) */
+#define VTSS_FAN_SPEED_MAX 0x255
+/** \brief Minimum fan speed level (Fan is OFF) */
+#define VTSS_FAN_SPEED_MIN 0x0
+
+
+/** \brief Fan specifications */
+typedef struct
+{
+    vtss_fan_pwd_freq_t fan_pwm_freq;      /**< Fan PWM frequency*/
+    BOOL                fan_low_pol;       /**< Fan polarity of the PWM output. TRUE = PWM is logic 0 when on. FALSE = PWM is logic 1 when on */
+    BOOL                fan_open_col;      /**< PWM output is open collector if TRUE.*/
+    vtss_fan_type_t     type;              /**< 2,3 or 4 wire fan type*/
+    u32                 ppr;               /**< Pulses per rotation. Only valid for 3 and 4 wire fans */
+} vtss_fan_conf_t;
+
+
+/**
+ * \brief Get the number of fan rotations
+ *
+ * \param inst [IN]       Target instance reference
+ * \param fan_spec [IN]   Fan specification
+ * \param rotation_count [OUT] Number of fan rotation countered for the last second.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_fan_rotation_get(const vtss_inst_t inst,
+                              vtss_fan_conf_t   *const fan_spec,
+                              u32               *rotation_count);
+
+
+
+/**
+ * \brief Set fan cool level (Duty cycle)
+ *
+ * \param inst [IN]       Target instance reference
+ * \param lvl  [IN]       Level. 0 = Fan off, 255 = fan fully on
+ *
+ * \return Return code.
+**/
+vtss_rc vtss_fan_cool_lvl_set(const vtss_inst_t     inst,
+                              u8 lvl);
+
+
+/**
+ * \brief Initialise fan controller)
+ *
+ * \param inst [IN]    Target instance reference
+ * \param spec [IN]    Fan specifications
+ *
+ * \return Return code.
+**/
+vtss_rc vtss_fan_controller_init(const vtss_inst_t     inst,
+                                 const vtss_fan_conf_t *const spec);
+
+
+
+/**
+ * \brief Get fan cool level (Duty cycle)
+ *
+ * \param inst [IN]       Target instance reference
+ * \param lvl  [IN]       Level. 0 = Fan off, 255 = fan fully on
+ *
+ * \return Return code.
+**/
+vtss_rc vtss_fan_cool_lvl_get(const vtss_inst_t     inst,
+                              u8 * lvl);
+
+
+#endif /* VTSS_FEATURE_FAN */
+
+/* - EEE functions -------------------------------------- */
+#ifdef VTSS_FEATURE_EEE
+/** \brief EEE port configuration */
+typedef struct
+{
+    BOOL eee_ena;          /**< Enable EEE                                                                                                                                                       */
+    u8   eee_fast_queues;  /**< Queues set in this mask will activate egress path as soon as any data is available. Vector for enabling fast queues. bit 0 = queue 0, bit 1 = queue 1 and so on. */
+    u16  tx_tw;            /**< Time from path is activated until frame transmission restarted.                                                                                                  */
+    u8   lp_advertisement; /**< Link partner EEE advertisement. Bit 0 = Link partner advertises 100BASE-T capability. Bit 1 = Link partner advertises 1000BASE-T capability.                     */
+
+    BOOL optimized_for_power; /**< EEE can be optimized for either most power savings or least traffic latency */
+} vtss_eee_port_conf_t;
+
+/**
+ * \brief Set EEE configuration
+ *
+ * \param inst     [IN] Target instance reference
+ * \param port_no  [IN] Port number
+ * \param eee_conf [IN] EEE configuration
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_eee_port_conf_set(const vtss_inst_t          inst,
+                               const vtss_port_no_t       port_no,
+                               const vtss_eee_port_conf_t *const eee_conf);
+
+#endif /* VTSS_FEATURE_EEE */
+
+/**
+ * \brief Get general purpose data pointer
+ *
+ * \param inst       [IN]  Target instance reference.
+ * \param data       [OUT] Pointer data
+
+ * \return Return code.
+ *
+ **/
+vtss_rc vtss_misc_appdata_get(const vtss_inst_t        inst,
+                              void **data);
+
+
+/**
+ * \brief Set general purpose data pointer
+ *
+ * \param inst       [IN]  Target instance reference.
+ * \param data       [IN]  Pointer data
+
+ * \return Return code.
+ *
+ **/
+vtss_rc vtss_misc_appdata_set(const vtss_inst_t        inst,
+                              void *data);
+
+/**
+ * ============================================================================
+ * Symreg
+ * ============================================================================
+ **/
+
+/** \brief Symbolic descriptiopn of a register. */
+typedef struct {
+    const char      *name;       /**< Name of register */
+    unsigned long   addr;        /**< Address of register */
+    unsigned long   repl_cnt;    /**< Replication count of register */
+    unsigned long   repl_width;  /**< Replication width of register */
+} vtss_symreg_reg_t;
+
+/** \brief Symbolic descriptiopn of a register group. */
+typedef struct {
+    const char         *name;       /**< Name of register group */
+    unsigned long      base_addr;   /**< Base address of register group */
+    unsigned long      repl_cnt;    /**< Replication count of register group */
+    unsigned long      repl_width;  /**< Replication width of register group */
+    vtss_symreg_reg_t const *regs;  /**< Pointer to symbolic registers (null terminated) */
+} vtss_symreg_reggrp_t;
+
+/** \brief Symbolic descriptiopn of a register target. */
+typedef struct {
+    const char            *name;          /**< Name of register target */
+    int                   repl_number;    /**< Target instance number */
+    unsigned long         tgt_id;         /**< Target ID */
+    unsigned long         base_addr;      /**< Base address */
+    vtss_symreg_reggrp_t const *reggrps;  /**< Pointer to symbolic register groups (null terminated) */
+} vtss_symreg_target_t;
+
+/** \brief Symbolic register base data. */
+typedef struct {
+    const vtss_symreg_target_t *targets;           /**< Pointer to targets (not null terminated) */
+    unsigned long               targets_cnt;       /**< Number of targets */
+    unsigned long               io_origin1_offset; /**< IO register offset */
+    unsigned long               repl_cnt_max;      /**< Highest number of replications */
+    unsigned long               name_len_max;      /**< Max name length */
+} vtss_symreg_data_t;
+
+/**
+ * \brief Get symbolic register data.
+ *
+ * \param inst       [IN]  Target instance reference.
+ * \param data       [OUT] data
+
+ * \return Return code.
+ *
+ **/
+vtss_rc vtss_symreg_data_get(const vtss_inst_t   inst,
+                             vtss_symreg_data_t *const data);
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* VTSS_MISC_API_H_ */
+:@byteposiﬁ:	@str"#ifndef _VTSS_MISC_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[iPipiqiriviiñiŸi›iﬁi¯iii/iJi]ijiqiriíiüi°i·iiiPifigiÇièiëi—i
+iBi}i≠iÏi iTiâi“iiNiåiΩi˝iIiÑiµiÂiiNiÜiºiΩi iii2i?iAiniûi‘i	i?	i@	i{	ië	ií	i∫	i…	iÀ	i
+i4
+i5
+i9
+i[
+i^
+iÄ
+i±
+i¥
+iÃ
+i—
+iiRiSiTiXizi}iüi–i”iÎii-iqiriäi≤iˆi¸ii"i#i$i(iIiLiqiñiªiÂii@imipiÑiâi…i	iIiâi»iiNiäiãièiπiºi·ii+ioi≥i˚i6ihikiiÑi∆iiJiåiÕiiWiùiûi∑i∏i“i‰iÛi i^iïi´i¨iœiﬁiiHi~iπiÔiiHivi∞i‹iiAiÅi∑iÈiiBini™i·iiLiçi¿iiPiÅiøii.idi¨iÂi!iii´iﬂi iWiéi«i¯i˘i(iaiwixiyi»iÏiÌi i( ix i— i;!iè!iÔ!iH"i´"i#i~#i›#iÚ#iÛ#i$i$ie$iä$ié$iﬂ$i‡$i‰$i%i%iA%iD%i\%ia%iù%iû%i¢%i∆%i…%i˙%i'&iO&iR&ij&io&i≠&iÏ&i2'iQ'iR'iö'iõ'iº'iÕ'i	(i9(ie(iì(i¶(iß(i´(i≈(i»(iÓ(iÒ(i,)i-)i1)iM)iP)iv)iy)i∂)i∑)iﬁ)iÔ)i9*iN*iO*iS*is*iv*i¶*iÃ*iœ*iÁ*iÍ*i +i^+i_+ic+iÖ+ià+i∏+iﬁ+i·+i˘+i¸+i.,ih,ii,ià,i–,i—,i’,i -i-i6-it-i∑-iﬂ-i‚-i˙-iˇ-i0.id.iï.iœ.i–.i—.i’.iˇ.i/i5/is/i∂/iﬁ/i·/i˘/i˛/i00ie0ió0iÀ0iÃ0iÕ0i—0i1i1iB1iÄ1i√1iÎ1i12i42iL2iQ2iä2i∆2iˇ2i93is3it3i¢3i£3iß3iÁ3iÍ3i4iE4iH4i`4ie4iü4iŸ4i⁄4i"5i#5i95iH5iJ5iÇ5i∞5i¬5i√5i«5iÎ5iÓ5i!6iW6iZ6ir6iw6i©6iÊ6iÁ6iË6i+7i,7i07i`7ic7iì7iñ7iÆ7i≥7i‰7iÂ7iÈ7i68i98i>8iM8iõ8i˛8iH9i°9i :i^:iº:i;ix;ië;ií;iñ;i⁄;i›;i<iO<iR<iô<i⁄<i=iB=iE=i]=ib=iõ=iﬂ=i‡=i‰=i$>i'>iZ>iã>i√>i∆>iﬁ>i„>i$?ih?i¨?i≠?i±?iÊ?iÈ?iÓ?i˝?iB@iÜ@i£@i§@i®@i”@i÷@i€@iÍ@i&AifAi®Ai≈Ai∆Ai AiBiBiKBiqBiÁBiÍBi1CirCi∑Ci⁄Ci›CiıCi˙CiBDièDi‚Di„DiÁDi+Ei.EiaEiÜEi∏EiÒEiÙEiFiFiZFi¶FiÚFi>Gi?Gi^Gi_GißGi®Gi‰GiHiHi2HiXHiYHiyHióHi©Hi«HiÁHiËHiIi$Ii6IiTIirIisIiíIi∞Ii¬Ii‡IiˇIi JiJi6Ji7JiOJioJiåJiçJi´JiÊJiÁJiÎJi
+KiKiKiKiKKiwKiÆKi·KiLiGLizLi≠Li‡LiÙLiıLi˘LiMiMiHMiÜMiØMi“Mi’MiÌMiÚMi*NieNi†NiŸNi⁄NiﬁNiOiOiEOiÉOi¨Oi‰OiÁOiˇOiPi7Pi<PixPi∑PiˆPi5Qi6Qi7Qi8Qi<Qi`QicQiñQi‘Qi˝Qi>RiARiYRi^RiëRi«Ri˝Ri9Si:Si;Si<Si@SidSigSiöSiÿSiTiETiHTi`TieTiôTi–TiUi=Ui>UiBUifUiiUi†Ui‚UiEViHVi`VieVi°Vi‡Vi&Wi'Wi+WiKWiNWiÖWi«WiÙWi)Xi,XiDXiIXiÜXi∆XiYiFYiGYilYi{Yi≥YiÎYi#Zi[ZiìZißZi®Zi«Zi‘Zi÷Zi	[i<[io[iá[ià[i™[iª[iÙ[i/\iH\iI\iM\i£\i¶\i·\i!]i$]i<]iA]iå]i‹]i/^i0^iC^iD^iï^iñ^iº^iΩ^i6_ia_i}_i¨_i≠_i_i`i7`i[`i\`iz`i•`i¬`i‡`i·`iai!ai"aiLaihaiiaiâaiñaiòai»ai˜ai*bi]bi£biÈbiBciõcidididi<diIdiKdiãdi«diÙdi eiJei`eiaeiàeióeiôei÷eifi≥fiÕfiŒfi¸figigiagiΩgihi&hi'hi+hiMhiPhiÉhi¡hiÊhiiiii.ii3iinii¨iiËii+ji,ji0jiRjiUjiàji∆jiÎjikiki3ki8kiski±kiÌki0li1liZliilikliúli∂li∑liªli’liÿlimiIminmiímiïmi≠mi≤miÈmi#ni[ni•ni©niŒni—ni	oiLoivoi©oi$pi'pi?piDpiÅpi¡piˇpi;qiÇqiÉqiáqi®qi´qi„qi&riPriÄri≥risisi,si1sipsi≤siÚsi1tioti±ti≤tiÿtiŸti⁄tiˇti uiui#uiRuiØuiÊui vi#vi;vi?visvißviﬂviwiwiwiwi?wiBwiSwiØwiæwiøwi√wiÂwixiCxiFxi^xibxi°xi–xi—xi’xiyiOyiRyiÅyi›yi‡yi¯yi˝yi>ziqzirzivzi…zi{iP{iS{iÇ{iÖ{iù{i¢{i›{iﬁ{i|i|i$|i%|i)|iF|iJ|iW|iY|i©|i˚|i0}il}i¨}i›}i~i>~iv~iØ~i‹~i	iCiÇi¡iÚi#ÄiTÄiÖÄi∂ÄiÁÄiÅiIÅizÅi´Åi›ÅiÇiAÇisÇi•Çi◊Çi	Éi;ÉimÉiüÉi†Éi˙ÉiÑi	ÑiÑi8Ñi<ÑiMÑièÑiŒÑi·Ñi‚ÑiÊÑiÖiÖi!ÖihÖi¡ÖiÜifÜi{Üi|ÜiÄÜi†Üi£Üi÷Üi ái+ái.áiFáiKái~áiØái‚ái„áiÁáiài
+ài=àigàiíàiïài≠ài≤àiÂàiâiUâiVâiZâiöâiùâi–âiÙâi˜âiäiäiRäiîäiïäiôäi«äi äi˝äi'ãiYãi\ãitãiyãi™ãiŸãi åiåi'åi(åi)åijåikåioåiôåiƒåi‚åiÊåiçiçi
+çiZçiÑçi£çißçiÒçiÚçiˆçi*éi-éiWéi[éiêéiëéiïéi¨éi√éièiNèiãèi‘èiˇèiêiêi=êiTêiûêiËêi2ëi|ëiÿëi"íi~íiÂíiÊíiÁíi,ìiJìiKìiqìiuìi°ìi§ìiŸìi&îi)îiAîiFîi|îiÆîiØîi≥îi€îiﬁîiïiiïilïiÑïiâïiäïi√ïiñiñiñi-ñi:ñi<ñiYñivñiìñiØñiÀñiÁñióiói5ói6óiOói\ói^óixóiíói´óiæóiøói¿óiˇói òiSòiròisòitòiïòi§òi¶òiÍòi{ôi”ôiöiÖöiòöiôöiööiûöi»öiÀöiˇöi+õiÄõiÉõiõõi†õi÷õiúiYúiZúi[úi\úi`úiäúiçúi¡úiùiùiùi!ùi[ùiÇùiÉùiÑùiàùi≠ùi∞ùi·ùiûiûi&ûi*ûigûi¨ûi≠ûiÆûiØûi≥ûi›ûi‡ûiüiUüiXüipüitüiÆüi◊üiÿüiŸüi˜üi¯üi5†iM†ir†iÅ†iÉ†iG°i¢iœ¢iì£iî£i§i§i§i#§iC§iF§ix§iú§i∆§i…§i·§iÊ§i&•ii•iµ•i∂•i‘•i’•iŸ•i¶i¶i=¶ie¶if¶i~¶iÅ¶iÜ¶i√¶iÔ¶i¶iÒ¶iı¶i ßi#ßiYßiÅßiÇßiößiùßi¢ßiﬂßi
+®i®i®i_®ii®iπ®iæ®iø®iÚ®i©i=©iz©i¡©i™i™i™iW™ih™i´™iˆ™iF´iñ´iÚ´i
+¨i¨iE¨iV¨i†¨iÈ¨i%≠id≠iÃ≠i‰≠iÂ≠iÆi!ÆiÖÆi“Æi ØizØi≈Øi€Øi‹Øi‡Øi∞i	∞i?∞i_∞i`∞ix∞i{∞iÄ∞i∑∞iı∞iˆ∞i	±i±i±i0±:@last_line_endi0±{;o;;o;	;
+@
+;i¯;" #define _VTSS_MISC_API_H_
+
+;@{;o;;o;	;
+@
+;i;"!#include <vtss/api/types.h>
+;@{;o;;o;	;
+@
+;i/;" #include "vtss_init_api.h"
+;@{;o;;o;	;
+@
+;iJ;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;i];"extern;@:stringo;;o;	;
+@
+;id;""C";@; [î{;o;;o;	;
+@
+;ij;"#endif
+
+;@{
+;o;;o;	;
+@
+;ií;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iö;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i•;"VTSS_TRACE_LAYER_AIL;@:cap0{;{;o;;o;	;
+@
+;iÂ;"VTSS_TRACE_LAYER_CIL;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_LAYER_COUNT  ;@;0:typedef_nameo;;o;	;
+@
+;iR;"vtss_trace_layer_t;@:
+array[ ;0{
+;o;;o;	;
+@
+;iÇ;"typedef;@;{;o;;o;	;
+@
+;iä;"	enum;@;[{;{;o;;o;	;
+@
+;iï;"VTSS_TRACE_GROUP_DEFAULT;@;0{;{;o;;o;	;
+@
+;i’;"VTSS_TRACE_GROUP_PORT;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_GROUP_PHY;@;0{;{;o;;o;	;
+@
+;iF;"VTSS_TRACE_GROUP_PACKET;@;0{;{;o;;o;	;
+@
+;iÅ;"VTSS_TRACE_GROUP_AFI;@;0{;{;o;;o;	;
+@
+;i±;"VTSS_TRACE_GROUP_QOS;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_GROUP_L2;@;0{;{;o;;o;	;
+@
+;i$;"VTSS_TRACE_GROUP_L3;@;0{;{;o;;o;	;
+@
+;iX;"VTSS_TRACE_GROUP_SECURITY;@;0{;{;o;;o;	;
+@
+;iç;"VTSS_TRACE_GROUP_EVC;@;0{;{;o;;o;	;
+@
+;i÷;"!VTSS_TRACE_GROUP_FDMA_NORMAL;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_GROUP_FDMA_IRQ;@;0{;{;o;;o;	;
+@
+;iR;"VTSS_TRACE_GROUP_REG_CHECK;@;0{;{;o;;o;	;
+@
+;iê;"VTSS_TRACE_GROUP_MPLS;@;0{;{;o;;o;	;
+@
+;i¡;"VTSS_TRACE_GROUP_HW_PROT;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_GROUP_HQOS;@;0{;{;o;;o;	;
+@
+;iM;"VTSS_TRACE_GROUP_MACSEC;@;0{;{;o;;o;	;
+@
+;ià;"VTSS_TRACE_GROUP_VCAP;@;0{;{;o;;o;	;
+@
+;iπ;"VTSS_TRACE_GROUP_OAM;@;0{;{;o;;o;	;
+@
+;iÈ;"VTSS_TRACE_GROUP_MRP;@;0{;{;o;;o;	;
+@
+;i;"VTSS_TRACE_GROUP_TS;@;0{;{;o;;o;	;
+@
+;iR;"VTSS_TRACE_GROUP_CLOCK;@;0{;{;o;;o;	;
+@
+;iä;"VTSS_TRACE_GROUP_EMUL;@;0{;{;o;;o;	;
+@
+;i¡;"%VTSS_TRACE_GROUP_COUNT          ;@;0;o;;o;	;
+@
+;i;"vtss_trace_group_t;@;[ ;0{
+;o;;o;	;
+@
+;i2;"typedef;@;{;o;;o;	;
+@
+;i:;"	enum;@;[{;{;o;;o;	;
+@
+;iE;"VTSS_TRACE_LEVEL_NONE;@;0{;{;o;;o;	;
+@
+;ir;"VTSS_TRACE_LEVEL_ERROR;@;0{;{;o;;o;	;
+@
+;i¢;"VTSS_TRACE_LEVEL_INFO;@;0{;{;o;;o;	;
+@
+;iÿ;"VTSS_TRACE_LEVEL_DEBUG;@;0{;{;o;;o;	;
+@
+;i	;"VTSS_TRACE_LEVEL_NOISE;@;0{;{;o;;o;	;
+@
+;iD	;"VTSS_TRACE_LEVEL_COUNT  ;@;0;o;;o;	;
+@
+;i}	;"vtss_trace_level_t;@;[ ;0{
+;o;;o;	;
+@
+;i∫	;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;iœ	;"vtss_trace_level_t ;@:	nameo;;o;	;
+@
+;i‚	;"
+level;@;[{:	expro;;o;	;
+@
+;iË	;"VTSS_TRACE_LAYER_COUNT;@;0;o;;o;	;
+@
+;i!
+;"vtss_trace_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;i—
+;"vtss_rc ;@; o;;o;	;
+@
+;iŸ
+;"vtss_trace_conf_get;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;iÌ
+;"const vtss_trace_group_t  ;@; o;;o;	;
+@
+;i;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i*;"&vtss_trace_conf_t         *const ;@; o;;o;	;
+@
+;iK;"	conf;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i;"vtss_rc ;@; o;;o;	;
+@
+;i¯;"vtss_trace_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i;"const vtss_trace_group_t  ;@; o;;o;	;
+@
+;i&;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iI;"&const vtss_trace_conf_t   *const ;@; o;;o;	;
+@
+;ij;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iä;"-#if defined(__GNUC__) && (__GNUC__ > 2)
+;@{;o;;o;	;
+@
+;i≤;"I#define VTSS_ATTR_PRINTF(X, Y) __attribute__ ((format(printf,X,Y)))
+;@{;o;;o;	;
+@
+;iˆ;"#else
+;@{;o;;o;	;
+@
+;i¸;"$#define VTSS_ATTR_PRINTF(X, Y)
+;@{;o;;o;	;
+@
+;i;"#endif
+
+
+;@{;"{;{	;o;;o;	;
+@
+;iâ;"
+void ;@; o;;o;	;
+@
+;ié;"vtss_callout_trace_printf;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i®;"const vtss_trace_layer_t  ;@; o;;o;	;
+@
+;i¬;"
+layer;@;[ ;0{;{	;o;;o;	;
+@
+;iË;"const vtss_trace_group_t  ;@; o;;o;	;
+@
+;i;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i(;"const vtss_trace_level_t  ;@; o;;o;	;
+@
+;iB;"
+level;@;[ ;0{;{	;o;;o;	;
+@
+;ih;" const char                *;@; o;;o;	;
+@
+;iÉ;"	file;@;[ ;0{;{	;o;;o;	;
+@
+;i®;"const int                 ;@; o;;o;	;
+@
+;i¬;"	line;@;[ ;0{;{	;o;;o;	;
+@
+;iÁ;" const char                *;@; o;;o;	;
+@
+;i;"function;@;[ ;0{;{	;o;;o;	;
+@
+;i+;" const char                *;@; o;;o;	;
+@
+;iF;"format;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iÑ;"
+void ;@; o;;o;	;
+@
+;iâ;" vtss_callout_trace_hex_dump;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i•;"const vtss_trace_layer_t  ;@; o;;o;	;
+@
+;iø;"
+layer;@;[ ;0{;{	;o;;o;	;
+@
+;iÁ;"const vtss_trace_group_t  ;@; o;;o;	;
+@
+;i;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i);"const vtss_trace_level_t  ;@; o;;o;	;
+@
+;iC;"
+level;@;[ ;0{;{	;o;;o;	;
+@
+;ik;" const char                *;@; o;;o;	;
+@
+;iÜ;"	file;@;[ ;0{;{	;o;;o;	;
+@
+;i≠;"const int                 ;@; o;;o;	;
+@
+;i«;"	line;@;[ ;0{;{	;o;;o;	;
+@
+;iÓ;" const char                *;@; o;;o;	;
+@
+;i	;"function;@;[ ;0{;{	;o;;o;	;
+@
+;i4;" const u8                  *;@; o;;o;	;
+@
+;iO;"byte_p;@;[ ;0{;{	;o;;o;	;
+@
+;ix;"const int                 ;@; o;;o;	;
+@
+;ií;"byte_cnt;@;[ ;0;0{;o;;o;	;
+@
+;iû;"#if VTSS_OPT_DEBUG_PRINT
+
+;@{
+;o;;o;	;
+@
+;i‰;"typedef;@;{;o;;o;	;
+@
+;iÏ;"	enum;@;[{;{;o;;o;	;
+@
+;i˜;"VTSS_DEBUG_LAYER_ALL;@;0{;{;o;;o;	;
+@
+;i$;"VTSS_DEBUG_LAYER_AIL;@;0{;{;o;;o;	;
+@
+;ib;"VTSS_DEBUG_LAYER_CIL  ;@;0;o;;o;	;
+@
+;ió;"vtss_debug_layer_t;@;[ ;0{
+;o;;o;	;
+@
+;iœ;"typedef;@;{;o;;o;	;
+@
+;i◊;"	enum;@;[0{;{;o;;o;	;
+@
+;i‚;"VTSS_DEBUG_GROUP_ALL;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_INIT;@;0{;{;o;;o;	;
+@
+;iL;"VTSS_DEBUG_GROUP_MISC;@;0{;{;o;;o;	;
+@
+;iÇ;"VTSS_DEBUG_GROUP_PORT;@;0{;{;o;;o;	;
+@
+;iΩ;"VTSS_DEBUG_GROUP_PORT_CNT;@;0{;{;o;;o;	;
+@
+;iÛ;"VTSS_DEBUG_GROUP_PHY;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_VLAN;@;0{;{;o;;o;	;
+@
+;iL;"VTSS_DEBUG_GROUP_PVLAN;@;0{;{;o;;o;	;
+@
+;iz;"VTSS_DEBUG_GROUP_MAC_TABLE;@;0{;{;o;;o;	;
+@
+;i¥;"VTSS_DEBUG_GROUP_ACL;@;0{;{;o;;o;	;
+@
+;i‡;"VTSS_DEBUG_GROUP_QOS;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_AGGR;@;0{;{;o;;o;	;
+@
+;iE;"VTSS_DEBUG_GROUP_GLAG;@;0{;{;o;;o;	;
+@
+;iÖ;"VTSS_DEBUG_GROUP_STP;@;0{;{;o;;o;	;
+@
+;iª;"VTSS_DEBUG_GROUP_MIRROR;@;0{;{;o;;o;	;
+@
+;iÌ;"VTSS_DEBUG_GROUP_EVC;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_ERPS;@;0{;{;o;;o;	;
+@
+;iF;"VTSS_DEBUG_GROUP_EPS;@;0{;{;o;;o;	;
+@
+;ir;"VTSS_DEBUG_GROUP_SR;@;0{;{;o;;o;	;
+@
+;iÆ;"VTSS_DEBUG_GROUP_PACKET;@;0{;{;o;;o;	;
+@
+;iÂ;"VTSS_DEBUG_GROUP_FDMA;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_TS;@;0{;{;o;;o;	;
+@
+;iP;"VTSS_DEBUG_GROUP_PHY_TS;@;0{;{;o;;o;	;
+@
+;ië;"VTSS_DEBUG_GROUP_WM;@;0{;{;o;;o;	;
+@
+;iƒ;"VTSS_DEBUG_GROUP_LRN;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_IPMC;@;0{;{;o;;o;	;
+@
+;iT;"VTSS_DEBUG_GROUP_STACK;@;0{;{;o;;o;	;
+@
+;iÖ;"VTSS_DEBUG_GROUP_CMEF;@;0{;{;o;;o;	;
+@
+;i√;"VTSS_DEBUG_GROUP_HOST;@;0{;{;o;;o;	;
+@
+;i;"VTSS_DEBUG_GROUP_MPLS;@;0{;{;o;;o;	;
+@
+;i2;"VTSS_DEBUG_GROUP_HW_PROT;@;0{;{;o;;o;	;
+@
+;ih;"VTSS_DEBUG_GROUP_HQOS;@;0{;{;o;;o;	;
+@
+;i∞;"VTSS_DEBUG_GROUP_VXLAT;@;0{;{;o;;o;	;
+@
+;iÈ;"VTSS_DEBUG_GROUP_OAM;@;0{;{;o;;o;	;
+@
+;i%;"VTSS_DEBUG_GROUP_MRP;@;0{;{;o;;o;	;
+@
+;im;"VTSS_DEBUG_GROUP_SER_GPIO;@;0{;{;o;;o;	;
+@
+;iØ;"VTSS_DEBUG_GROUP_L3;@;0{;{;o;;o;	;
+@
+;i„;"VTSS_DEBUG_GROUP_AFI;@;0{;{;o;;o;	;
+@
+;i$;"VTSS_DEBUG_GROUP_MACSEC;@;0{;{;o;;o;	;
+@
+;i[;"VTSS_DEBUG_GROUP_SERDES;@;0{;{;o;;o;	;
+@
+;ií;"VTSS_DEBUG_GROUP_KR;@;0{;{;o;;o;	;
+@
+;iÀ;"VTSS_DEBUG_GROUP_MUX;@;0{;{;o;;o;	;
+@
+;i,;"!VTSS_DEBUG_GROUP_COUNT      ;@;0;o;;o;	;
+@
+;ic;"vtss_debug_group_t;@;[ ;0{;o;;o;	;
+@
+;i»;"*#define VTSS_CHIP_NO_ALL 0xffffffff
+
+;@{
+;o;;o;	;
+@
+;i ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i, ;""vtss_debug_layer_t           ;@; o;;o;	;
+@
+;iI ;"
+layer;@;[ ;0{;{;{	;o;;o;	;
+@
+;i| ;""vtss_debug_group_t           ;@; o;;o;	;
+@
+;iô ;"
+group;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’ ;""vtss_chip_no_t               ;@; o;;o;	;
+@
+;iÚ ;"chip_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?!;""BOOL                         ;@; o;;o;	;
+@
+;i\!;"port_list;@;[{;!o;;o;	;
+@
+;if!;"VTSS_PORT_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;iì!;""BOOL                         ;@; o;;o;	;
+@
+;i∞!;"	full;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÛ!;""BOOL                         ;@; o;;o;	;
+@
+;i";"
+clear;@;[ ;0{;{;{	;o;;o;	;
+@
+;iL";""BOOL                         ;@; o;;o;	;
+@
+;ii";"vml_format;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØ";""BOOL                         ;@; o;;o;	;
+@
+;iÃ";"has_action;@;[ ;0{;{;{	;o;;o;	;
+@
+;i#;""u32                          ;@; o;;o;	;
+@
+;i2#;"action;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ#;""u32                          ;@; o;;o;	;
+@
+;iü#;"prm;@;[{;!o;;o;	;
+@
+;i£#;"10;@;0;o;;o;	;
+@
+;iﬂ#;"vtss_debug_info_t;@;[ ;0{;o;;o;	;
+@
+;ié$;"typedef;@:typedef_fptr{	:return_typeo;;o;	;
+@
+;iñ$;"	int ;@:fptr_nameo;;o;	;
+@
+;iú$;"vtss_debug_printf_t;@;#[{;{	;o;;o;	;
+@
+;i±$;"const char *;@; o;;o;	;
+@
+;iΩ$;"fmt;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;ia%;"vtss_rc ;@; o;;o;	;
+@
+;ii%;"vtss_debug_info_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i}%;"vtss_debug_info_t *const ;@; o;;o;	;
+@
+;iñ%;"	info;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;io&;"vtss_rc ;@; o;;o;	;
+@
+;iw&;"vtss_debug_info_print;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iç&;"const vtss_inst_t         ;@; o;;o;	;
+@
+;iß&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÀ&;"const vtss_debug_printf_t ;@; o;;o;	;
+@
+;iÂ&;"
+prntf;@;[ ;0{;{	;o;;o;	;
+@
+;i
+';"&const vtss_debug_info_t   *const ;@; o;;o;	;
+@
+;i+';"	info;@;[ ;0;0{;o;;o;	;
+@
+;i2';"%#endif // VTSS_OPT_DEBUG_PRINT
+
+;@{
+;o;;o;	;
+@
+;iº';"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i—';"vtss_inst_t ;@; o;;o;	;
+@
+;i›';"	inst;@;[ ;0{;{;{	;o;;o;	;
+@
+;i(;"const char *;@; o;;o;	;
+@
+;i(;"function;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=(;"const char *;@; o;;o;	;
+@
+;iI(;"	file;@;[ ;0{;{;{	;o;;o;	;
+@
+;ii(;"int        ;@; o;;o;	;
+@
+;it(;"	line;@;[ ;0;o;;o;	;
+@
+;iï(;"vtss_api_lock_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iÒ(;"
+void ;@; o;;o;	;
+@
+;iˆ(;"vtss_callout_lock;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i);""const vtss_api_lock_t *const ;@; o;;o;	;
+@
+;i%);"	lock;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iy);"
+void ;@; o;;o;	;
+@
+;i~);"vtss_callout_unlock;@;[ ;0;#[{;{	;o;;o;	;
+@
+;ií);""const vtss_api_lock_t *const ;@; o;;o;	;
+@
+;iØ);"	lock;@;[ ;0;0{
+;o;;o;	;
+@
+;iﬁ);"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÛ);"vtss_chip_no_t ;@; o;;o;	;
+@
+;i*;"chip_no;@;[ ;0;o;;o;	;
+@
+;i;*;"vtss_debug_lock_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iÍ*;"vtss_rc ;@; o;;o;	;
+@
+;iÚ*;"vtss_debug_lock;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i+;"const vtss_inst_t       ;@; o;;o;	;
+@
+;i+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i8+;"$const vtss_debug_lock_t *const ;@; o;;o;	;
+@
+;iW+;"	lock;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i¸+;"vtss_rc ;@; o;;o;	;
+@
+;i,;"vtss_debug_unlock;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i,;"const vtss_inst_t ;@; o;;o;	;
+@
+;i(,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iH,;"vtss_debug_lock_t *const ;@; o;;o;	;
+@
+;ia,;"	lock;@;[ ;0;0{;o;;o;	;
+@
+;ii,;"$#if defined(VTSS_FEATURE_MISC)
+;@{;"{;{	;o;;o;	;
+@
+;iˇ-;"vtss_rc ;@; o;;o;	;
+@
+;i.;"vtss_reg_read;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i.;"const vtss_inst_t    ;@; o;;o;	;
+@
+;i*.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iF.;"const vtss_chip_no_t ;@; o;;o;	;
+@
+;i[.;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iz.;"const u32            ;@; o;;o;	;
+@
+;iè.;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i´.;"!u32                  *const ;@; o;;o;	;
+@
+;i«.;"
+value;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i˛/;"vtss_rc ;@; o;;o;	;
+@
+;i0;"vtss_reg_write;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i0;"const vtss_inst_t    ;@; o;;o;	;
+@
+;i*0;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iG0;"const vtss_chip_no_t ;@; o;;o;	;
+@
+;i\0;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i|0;"const u32            ;@; o;;o;	;
+@
+;ië0;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ0;"const u32            ;@; o;;o;	;
+@
+;i√0;"
+value;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iQ2;"vtss_rc ;@; o;;o;	;
+@
+;iY2;"vtss_reg_write_masked;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;io2;"const vtss_inst_t    ;@; o;;o;	;
+@
+;iÑ2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i®2;"const vtss_chip_no_t ;@; o;;o;	;
+@
+;iΩ2;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i‰2;"const u32            ;@; o;;o;	;
+@
+;i˘2;"	addr;@;[ ;0{;{	;o;;o;	;
+@
+;i3;"const u32            ;@; o;;o;	;
+@
+;i23;"
+value;@;[ ;0{;{	;o;;o;	;
+@
+;iW3;"const u32            ;@; o;;o;	;
+@
+;il3;"	mask;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;ie4;"vtss_rc ;@; o;;o;	;
+@
+;im4;"vtss_intr_sticky_clear;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÑ4;"const vtss_inst_t    ;@; o;;o;	;
+@
+;iô4;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iæ4;"u32                  ;@; o;;o;	;
+@
+;i”4;"ext;@;[ ;0;0{
+;o;;o;	;
+@
+;i95;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iN5;"
+u16  ;@; o;;o;	;
+@
+;iS5;"part_number;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜ5;"
+u16  ;@; o;;o;	;
+@
+;iã5;"revision;@;[ ;0;o;;o;	;
+@
+;i≤5;"vtss_chip_id_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iw6;"vtss_rc ;@; o;;o;	;
+@
+;i6;"vtss_chip_id_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iê6;"const vtss_inst_t  ;@; o;;o;	;
+@
+;i£6;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¬6;"vtss_chip_id_t     *const ;@; o;;o;	;
+@
+;i‹6;"chip_id;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i≥7;"vtss_rc ;@; o;;o;	;
+@
+;iª7;"vtss_poll_1sec;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i 7;"const vtss_inst_t  ;@; o;;o;	;
+@
+;i›7;"	inst;@;[ ;0;0{
+;o;;o;	;
+@
+;i>8;"typedef;@;{;o;;o;	;
+@
+;iF8;"	enum;@;[{;{	;o;;o;	;
+@
+;iQ8;"VTSS_PTP_SYNC_EV ;@:operatoro;;o;	;
+@
+;ib8;"=;@;!o;;o;	;
+@
+;ii8;"(1 << 0);@;0{;{	;o;;o;	;
+@
+;iü8;"VTSS_PTP_EXT_SYNC_EV ;@;'o;;o;	;
+@
+;i¥8;"=;@;!o;;o;	;
+@
+;i∑8;"(1 << 1);@;0{;{	;o;;o;	;
+@
+;i9;"VTSS_PTP_CLK_ADJ_EV ;@;'o;;o;	;
+@
+;i9;"=;@;!o;;o;	;
+@
+;i9;"(1 << 2);@;0{;{	;o;;o;	;
+@
+;iL9;"VTSS_PTP_TX_TSTAMP_EV ;@;'o;;o;	;
+@
+;ib9;"=;@;!o;;o;	;
+@
+;id9;"(1 << 3);@;0{;{	;o;;o;	;
+@
+;i•9;"VTSS_PTP_EXT_1_SYNC_EV ;@;'o;;o;	;
+@
+;iº9;"=;@;!o;;o;	;
+@
+;iΩ9;"(1 << 4);@;0{;{	;o;;o;	;
+@
+;i:;"VTSS_PTP_PIN_0_SYNC_EV ;@;'o;;o;	;
+@
+;i:;"=;@;!o;;o;	;
+@
+;i:;"(1 << 5);@;0{;{	;o;;o;	;
+@
+;ib:;"VTSS_PTP_PIN_1_SYNC_EV ;@;'o;;o;	;
+@
+;iy:;"=;@;!o;;o;	;
+@
+;iz:;"(1 << 6);@;0{;{	;o;;o;	;
+@
+;i¿:;"VTSS_PTP_PIN_2_SYNC_EV ;@;'o;;o;	;
+@
+;i◊:;"=;@;!o;;o;	;
+@
+;iÿ:;"(1 << 7);@;0{;{	;o;;o;	;
+@
+;i;;"VTSS_PTP_PIN_3_SYNC_EV ;@;'o;;o;	;
+@
+;i5;;"=;@;!o;;o;	;
+@
+;i6;;"(1 << 8);@;0;o;;o;	;
+@
+;iz;;"vtss_ptp_event_type_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;ib=;"vtss_rc ;@; o;;o;	;
+@
+;ij=;"vtss_ptp_event_poll;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i~=;"const vtss_inst_t      ;@; o;;o;	;
+@
+;iï=;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∑=;"#vtss_ptp_event_type_t  *const ;@; o;;o;	;
+@
+;i’=;"ev_mask;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i„>;"vtss_rc ;@; o;;o;	;
+@
+;iÎ>;"vtss_ptp_event_enable;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i?;""const vtss_inst_t            ;@; o;;o;	;
+@
+;i?;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iB?;""const vtss_ptp_event_type_t  ;@; o;;o;	;
+@
+;i_?;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;iÜ?;""const BOOL                   ;@; o;;o;	;
+@
+;i£?;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;iÓ?;"typedef;@;{;o;;o;	;
+@
+;iˆ?;"	enum;@;[{;{	;o;;o;	;
+@
+;i@;"VTSS_DEV_ALL_TX_TSTAMP_EV ;@;'o;;o;	;
+@
+;i@;"=;@;!o;;o;	;
+@
+;i@;"(1 << 0);@;0{;{	;o;;o;	;
+@
+;iF@;"VTSS_DEV_ALL_LINK_EV ;@;'o;;o;	;
+@
+;i[@;"=;@;!o;;o;	;
+@
+;ib@;"(1 << 1);@;0;o;;o;	;
+@
+;ià@;"vtss_dev_all_event_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i€@;"typedef;@;{;o;;o;	;
+@
+;i„@;"	enum;@;[{;{;o;;o;	;
+@
+;iÓ@;"VTSS_DEV_ALL_POLL_ALL;@;0{;{;o;;o;	;
+@
+;i*A;"VTSS_DEV_ALL_POLL_PRIMARY;@;0{;{;o;;o;	;
+@
+;ijA;" VTSS_DEV_ALL_POLL_SECONDARY;@;0;o;;o;	;
+@
+;i™A;"vtss_dev_all_event_poll_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i˙C;"vtss_rc ;@; o;;o;	;
+@
+;iD;"vtss_dev_all_event_poll;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iD;"'const vtss_inst_t                 ;@; o;;o;	;
+@
+;i<D;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ibD;"'const vtss_dev_all_event_poll_t   ;@; o;;o;	;
+@
+;iÑD;"poll_type;@;[ ;0{;{	;o;;o;	;
+@
+;iØD;".vtss_dev_all_event_type_t         *const ;@; o;;o;	;
+@
+;iÿD;"ev_mask;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iF;"vtss_rc ;@; o;;o;	;
+@
+;iF;"vtss_dev_all_event_enable;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i3F;"&const vtss_inst_t                ;@; o;;o;	;
+@
+;iTF;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i|F;"&const vtss_port_no_t             ;@; o;;o;	;
+@
+;iùF;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i»F;"&const vtss_dev_all_event_type_t  ;@; o;;o;	;
+@
+;iÈF;"ev_mask;@;[ ;0{;{	;o;;o;	;
+@
+;iG;"&const BOOL                       ;@; o;;o;	;
+@
+;i5G;"enable;@;[ ;0;0{;o;;o;	;
+@
+;i?G;"%#endif /* VTSS_FEATURE_MISC */
+
+;@{;o;;o;	;
+@
+;i®G;"A#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;iH;"#undef VTSS_GPIOS
+;@{;o;;o;	;
+@
+;iH;"##define VTSS_GPIOS         32
+;@{;o;;o;	;
+@
+;i2H;",#endif /* VTSS_ARCH_LUTON26/SERVAL */
+
+;@{;o;;o;	;
+@
+;iYH;"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;o;;o;	;
+@
+;ióH;"#undef VTSS_GPIOS
+;@{;o;;o;	;
+@
+;i©H;"##define VTSS_GPIOS         64
+;@{;o;;o;	;
+@
+;i«H;"&#endif /* VTSS_ARCH_JAGUAR_2 */
+
+;@{;o;;o;	;
+@
+;iËH;"##if defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i$I;"#undef VTSS_GPIOS
+;@{;o;;o;	;
+@
+;i6I;"##define VTSS_GPIOS         64
+;@{;o;;o;	;
+@
+;iTI;"$#endif /* VTSS_ARCH_SPARX5 */
+
+;@{;o;;o;	;
+@
+;isI;"$#if defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;i∞I;"#undef VTSS_GPIOS
+;@{;o;;o;	;
+@
+;i¬I;"##define VTSS_GPIOS         78
+;@{;o;;o;	;
+@
+;i‡I;"%#endif /* VTSS_ARCH_LAN966X */
+
+;@{
+;o;;o;	;
+@
+;iJ;"typedef;@:type_aliaso;;o;	;
+@
+;i"J;"	u32 ;@;o;;o;	;
+@
+;i&J;"vtss_gpio_no_t;@;[ ;0{;o;;o;	;
+@
+;i7J;"#if defined(VTSS_GPIOS)
+;@{;o;;o;	;
+@
+;ioJ;"##define VTSS_GPIO_NO_START 0
+
+;@{;o;;o;	;
+@
+;i´J;"A#define VTSS_GPIO_NO_END   (VTSS_GPIO_NO_START+VTSS_GPIOS)
+
+;@{
+;o;;o;	;
+@
+;iK;"typedef;@;{;o;;o;	;
+@
+;iK;"	enum;@;[{;{;o;;o;	;
+@
+;i"K;"VTSS_GPIO_OUT;@;0{;{;o;;o;	;
+@
+;iOK;"VTSS_GPIO_IN;@;0{;{;o;;o;	;
+@
+;i{K;"VTSS_GPIO_IN_INT;@;0{;{;o;;o;	;
+@
+;i≤K;"VTSS_GPIO_ALT_0;@;0{;{;o;;o;	;
+@
+;iÂK;"VTSS_GPIO_ALT_1;@;0{;{;o;;o;	;
+@
+;iL;"VTSS_GPIO_ALT_2;@;0{;{;o;;o;	;
+@
+;iKL;"VTSS_GPIO_ALT_3;@;0{;{;o;;o;	;
+@
+;i~L;"VTSS_GPIO_ALT_4;@;0{;{;o;;o;	;
+@
+;i±L;"VTSS_GPIO_ALT_5;@;0;o;;o;	;
+@
+;i‚L;"vtss_gpio_mode_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iÚM;"vtss_rc ;@; o;;o;	;
+@
+;i˙M;"vtss_gpio_mode_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iN;"const vtss_inst_t      ;@; o;;o;	;
+@
+;i$N;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iEN;"const vtss_chip_no_t   ;@; o;;o;	;
+@
+;i\N;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÄN;"const vtss_gpio_no_t   ;@; o;;o;	;
+@
+;ióN;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iªN;"const vtss_gpio_mode_t ;@; o;;o;	;
+@
+;i“N;"	mode;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i<P;"vtss_rc ;@; o;;o;	;
+@
+;iDP;"vtss_gpio_direction_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i\P;"const vtss_inst_t     ;@; o;;o;	;
+@
+;irP;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iòP;"const vtss_chip_no_t  ;@; o;;o;	;
+@
+;iÆP;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i◊P;"const vtss_gpio_no_t  ;@; o;;o;	;
+@
+;iÌP;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iQ;"const BOOL            ;@; o;;o;	;
+@
+;i,Q;"output;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i^R;"vtss_rc ;@; o;;o;	;
+@
+;ifR;"vtss_gpio_read;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iuR;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iãR;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i®R;"const vtss_chip_no_t  ;@; o;;o;	;
+@
+;iæR;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁR;"const vtss_gpio_no_t  ;@; o;;o;	;
+@
+;iÙR;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iS;""BOOL                  *const ;@; o;;o;	;
+@
+;i1S;"
+value;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;ieT;"vtss_rc ;@; o;;o;	;
+@
+;imT;"vtss_gpio_write;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i}T;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iìT;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i±T;"const vtss_chip_no_t  ;@; o;;o;	;
+@
+;i«T;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iËT;"const vtss_gpio_no_t  ;@; o;;o;	;
+@
+;i˛T;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;iU;"const BOOL            ;@; o;;o;	;
+@
+;i5U;"
+value;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;ieV;"vtss_rc ;@; o;;o;	;
+@
+;imV;"vtss_gpio_event_poll;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÇV;"const vtss_inst_t        ;@; o;;o;	;
+@
+;iõV;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iæV;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;i◊V;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˝V;"%BOOL                     *const ;@; o;;o;	;
+@
+;iW;"events;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iIX;"vtss_rc ;@; o;;o;	;
+@
+;iQX;"vtss_gpio_event_enable;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;ihX;"const vtss_inst_t       ;@; o;;o;	;
+@
+;iÄX;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i•X;"const vtss_chip_no_t    ;@; o;;o;	;
+@
+;iΩX;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÂX;"const vtss_gpio_no_t    ;@; o;;o;	;
+@
+;i˝X;"gpio_no;@;[ ;0{;{	;o;;o;	;
+@
+;i%Y;"BOOL                    ;@; o;;o;	;
+@
+;i=Y;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;ilY;"typedef;@;{;o;;o;	;
+@
+;itY;"	enum;@;[
+{;{;o;;o;	;
+@
+;iY;"VTSS_GPIO_FUNC_PTP_0;@;0{;{;o;;o;	;
+@
+;i∑Y;"VTSS_GPIO_FUNC_PTP_1;@;0{;{;o;;o;	;
+@
+;iÔY;"VTSS_GPIO_FUNC_PTP_2;@;0{;{;o;;o;	;
+@
+;i'Z;"VTSS_GPIO_FUNC_PTP_3;@;0{;{;o;;o;	;
+@
+;i_Z;"VTSS_GPIO_FUNC_PTP_4    ;@;0;o;;o;	;
+@
+;iïZ;"vtss_gpio_func_t;@;[ ;0{
+;o;;o;	;
+@
+;i«Z;"typedef;@;{;o;;o;	;
+@
+;iœZ;"	enum;@;[{;{;o;;o;	;
+@
+;i⁄Z;"VTSS_GPIO_FUNC_ALT_0;@;0{;{;o;;o;	;
+@
+;i[;"VTSS_GPIO_FUNC_ALT_1;@;0{;{;o;;o;	;
+@
+;i@[;"VTSS_GPIO_FUNC_ALT_2   ;@;0;o;;o;	;
+@
+;iq[;"vtss_gpio_func_alt_t;@;[ ;0{
+;o;;o;	;
+@
+;i™[;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iø[;"vtss_gpio_no_t       ;@; o;;o;	;
+@
+;i‘[;"gpio_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¯[;"vtss_gpio_func_alt_t ;@; o;;o;	;
+@
+;i\;"alt;@;[ ;0;o;;o;	;
+@
+;i1\;"vtss_gpio_func_info_t;@;[ ;0{;o;;o;	;
+@
+;iA];"typedef;@;${	;%o;;o;	;
+@
+;iI];"vtss_rc ;@;&o;;o;	;
+@
+;iS];"vtss_gpio_func_info_get_t;@;#[{;{	;o;;o;	;
+@
+;in];"const vtss_inst_t       ;@; o;;o;	;
+@
+;iÜ];"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iπ];"const vtss_gpio_func_t  ;@; o;;o;	;
+@
+;i—];"gpio_func;@;[ ;0{;{	;o;;o;	;
+@
+;i	^;"$vtss_gpio_func_info_t   *const ;@; o;;o;	;
+@
+;i(^;"	info;@;[ ;0;0{;o;;o;	;
+@
+;i0^;"#endif /* GPIOS */
+
+;@{;o;;o;	;
+@
+;iñ^;",#if defined(VTSS_FEATURE_SERIAL_GPIO)
+
+;@{;o;;o;	;
+@
+;iΩ^;"~#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_SERVAL_T) || defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;ia_;"!#define VTSS_SGPIO_GROUPS 1
+;@{;o;;o;	;
+@
+;i}_;"5#endif /* VTSS_ARCH_LUTON26/SERVAL/SERVAL_T */
+
+;@{;o;;o;	;
+@
+;i≠_;"H#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C)
+;@{;o;;o;	;
+@
+;i`;"!#define VTSS_SGPIO_GROUPS 3
+;@{;o;;o;	;
+@
+;i7`;"*#endif /* VTSS_ARCH_JAGUAR_2_B/C */
+
+;@{;o;;o;	;
+@
+;i\`;"##if defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i•`;""#define VTSS_SGPIO_GROUPS  3
+;@{;o;;o;	;
+@
+;i¬`;"$#endif /* VTSS_ARCH_SPARX5 */
+
+;@{
+;o;;o;	;
+@
+;ia;"typedef;@;(o;;o;	;
+@
+;i	a;"	u32 ;@;o;;o;	;
+@
+;ia;"vtss_sgpio_group_t;@;[ ;0{;o;;o;	;
+@
+;iLa;""#define VTSS_SGPIO_PORTS 32
+
+;@{
+;o;;o;	;
+@
+;iâa;"typedef;@;{;o;;o;	;
+@
+;iëa;"	enum;@;[{;{;o;;o;	;
+@
+;iúa;"VTSS_SGPIO_MODE_OFF;@;0{;{;o;;o;	;
+@
+;iÃa;"VTSS_SGPIO_MODE_ON;@;0{;{;o;;o;	;
+@
+;i˚a;"VTSS_SGPIO_MODE_0;@;0{;{;o;;o;	;
+@
+;i.b;"VTSS_SGPIO_MODE_1;@;0{;{;o;;o;	;
+@
+;iab;"VTSS_SGPIO_MODE_0_ACTIVITY;@;0{;{;o;;o;	;
+@
+;ißb;"VTSS_SGPIO_MODE_1_ACTIVITY;@;0{;{;o;;o;	;
+@
+;iÌb;"#VTSS_SGPIO_MODE_0_ACTIVITY_INV;@;0{;{;o;;o;	;
+@
+;iFc;"#VTSS_SGPIO_MODE_1_ACTIVITY_INV;@;0{;{;o;;o;	;
+@
+;iüc;"%VTSS_SGPIO_MODE_NO_CHANGE       ;@;0;o;;o;	;
+@
+;i	d;"vtss_sgpio_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i<d;"typedef;@;{;o;;o;	;
+@
+;iDd;"	enum;@;[
+{;{;o;;o;	;
+@
+;iOd;"VTSS_SGPIO_BMODE_TOGGLE;@;0{;{;o;;o;	;
+@
+;ièd;"VTSS_SGPIO_BMODE_0_625;@;0{;{;o;;o;	;
+@
+;iÀd;"VTSS_SGPIO_BMODE_1_25;@;0{;{;o;;o;	;
+@
+;i¯d;"VTSS_SGPIO_BMODE_2_5;@;0{;{;o;;o;	;
+@
+;i$e;"VTSS_SGPIO_BMODE_5       ;@;0;o;;o;	;
+@
+;iLe;"vtss_sgpio_bmode_t;@;[ ;0{
+;o;;o;	;
+@
+;iàe;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iùe;"BOOL              ;@; o;;o;	;
+@
+;iØe;"enabled;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄e;"vtss_sgpio_mode_t ;@; o;;o;	;
+@
+;iÏe;"	mode;@;[{;!o;;o;	;
+@
+;iÒe;"4;@;0{;{;{	;o;;o;	;
+@
+;if;"BOOL              ;@; o;;o;	;
+@
+;i%f;"int_pol_high;@;[{;!o;;o;	;
+@
+;i2f;"4;@;0;o;;o;	;
+@
+;iµf;"vtss_sgpio_port_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i¸f;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ig;"vtss_sgpio_bmode_t     ;@; o;;o;	;
+@
+;i(g;"
+bmode;@;[{;!o;;o;	;
+@
+;i.g;"2;@;0{;{;{	;o;;o;	;
+@
+;ieg;"u8                     ;@; o;;o;	;
+@
+;i|g;"bit_count;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¡g;"vtss_sgpio_port_conf_t ;@; o;;o;	;
+@
+;iÿg;"port_conf;@;[{;!o;;o;	;
+@
+;i‚g;"VTSS_SGPIO_PORTS;@;0;o;;o;	;
+@
+;ih;"vtss_sgpio_conf_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i3i;"vtss_rc ;@; o;;o;	;
+@
+;i;i;"vtss_sgpio_conf_get;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iOi;"const vtss_inst_t        ;@; o;;o;	;
+@
+;ihi;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iäi;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;i£i;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i»i;"const vtss_sgpio_group_t ;@; o;;o;	;
+@
+;i·i;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;ij;"%vtss_sgpio_conf_t        *const ;@; o;;o;	;
+@
+;i$j;"	conf;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i8k;"vtss_rc ;@; o;;o;	;
+@
+;i@k;"vtss_sgpio_conf_set;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iTk;"const vtss_inst_t        ;@; o;;o;	;
+@
+;imk;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ièk;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;i®k;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iÕk;"const vtss_sgpio_group_t ;@; o;;o;	;
+@
+;iÊk;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;i	l;"%const vtss_sgpio_conf_t  *const ;@; o;;o;	;
+@
+;i)l;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iZl;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iol;"
+BOOL ;@; o;;o;	;
+@
+;itl;"
+value;@;[{;!o;;o;	;
+@
+;izl;"4;@;0;o;;o;	;
+@
+;iûl;"vtss_sgpio_port_data_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i≤m;"vtss_rc ;@; o;;o;	;
+@
+;i∫m;"vtss_sgpio_read;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;i m;"const vtss_inst_t        ;@; o;;o;	;
+@
+;i„m;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;in;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;in;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i;n;"const vtss_sgpio_group_t ;@; o;;o;	;
+@
+;iTn;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;isn;"vtss_sgpio_port_data_t   ;@; o;;o;	;
+@
+;iån;"	data;@;[{;!o;;o;	;
+@
+;iën;"VTSS_SGPIO_PORTS;@;0;0{;"{;{	;o;;o;	;
+@
+;iDp;"vtss_rc ;@; o;;o;	;
+@
+;iLp;"vtss_sgpio_event_poll;@;[ ;0;#[
+{;{	;o;;o;	;
+@
+;ibp;"const vtss_inst_t        ;@; o;;o;	;
+@
+;i{p;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iüp;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;i∏p;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;iﬂp;"const vtss_sgpio_group_t ;@; o;;o;	;
+@
+;i¯p;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;iq;"const u32                ;@; o;;o;	;
+@
+;i6q;"bit;@;[ ;0{;{	;o;;o;	;
+@
+;iYq;"%BOOL                     *const ;@; o;;o;	;
+@
+;iyq;"events;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i1s;"vtss_rc ;@; o;;o;	;
+@
+;i9s;"vtss_sgpio_event_enable;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iQs;"const vtss_inst_t        ;@; o;;o;	;
+@
+;ijs;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iês;"const vtss_chip_no_t     ;@; o;;o;	;
+@
+;i©s;"chip_no;@;[ ;0{;{	;o;;o;	;
+@
+;i“s;"const vtss_sgpio_group_t ;@; o;;o;	;
+@
+;iÎs;"
+group;@;[ ;0{;{	;o;;o;	;
+@
+;it;"const vtss_port_no_t     ;@; o;;o;	;
+@
+;i+t;"	port;@;[ ;0{;{	;o;;o;	;
+@
+;iQt;"const u32                ;@; o;;o;	;
+@
+;ijt;"bit;@;[ ;0{;{	;o;;o;	;
+@
+;ièt;"BOOL                     ;@; o;;o;	;
+@
+;i®t;"enable;@;[ ;0;0{;o;;o;	;
+@
+;i≤t;"-#endif /* VTSS_FEATURE_SERIAL_GPIO */
+
+
+;@{;o;;o;	;
+@
+;i⁄t;"+#if defined(VTSS_FEATURE_INTERRUPTS)
+
+;@{;"{;{	;o;;o;	;
+@
+;i?v;"vtss_rc ;@; o;;o;	;
+@
+;iGv;"vtss_intr_cfg;@;[ ;0;#[	{;{	;o;;o;	;
+@
+;iUv;"const vtss_inst_t       ;@; o;;o;	;
+@
+;imv;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iâv;"const u32               ;@; o;;o;	;
+@
+;i°v;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;iΩv;"const BOOL              ;@; o;;o;	;
+@
+;i’v;"polarity;@;[ ;0{;{	;o;;o;	;
+@
+;iıv;"const BOOL              ;@; o;;o;	;
+@
+;iw;"enable;@;[ ;0;0{
+;o;;o;	;
+@
+;iBw;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iWw;"BOOL  ;@; o;;o;	;
+@
+;i]w;"link_change;@;[{;!o;;o;	;
+@
+;iiw;"VTSS_PORT_ARRAY_SIZE;@;0;o;;o;	;
+@
+;i±w;"vtss_intr_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;ibx;"vtss_rc ;@; o;;o;	;
+@
+;ijx;"vtss_intr_mask_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i}x;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;iõx;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iºx;"vtss_intr_t *;@; o;;o;	;
+@
+;i…x;"	mask;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i˝y;"vtss_rc ;@; o;;o;	;
+@
+;iz;"vtss_intr_status_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iz;"#const vtss_inst_t             ;@; o;;o;	;
+@
+;i8z;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i[z;"vtss_intr_t *;@; o;;o;	;
+@
+;ihz;"status;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i¢{;"vtss_rc  ;@; o;;o;	;
+@
+;i´{;"vtss_intr_pol_negation;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i¬{;"const vtss_inst_t   ;@; o;;o;	;
+@
+;i÷{;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;iﬁ{;"+#endif /* VTSS_FEATURE_INTERRUPTS */
+
+;@{;o;;o;	;
+@
+;i|;"&#ifdef VTSS_FEATURE_IRQ_CONTROL
+
+;@{
+;o;;o;	;
+@
+;iJ|;"typedef;@;{;o;;o;	;
+@
+;iR|;"	enum;@;[){;{;o;;o;	;
+@
+;i]|;"VTSS_IRQ_XTR;@;0{;{;o;;o;	;
+@
+;i≠|;"VTSS_IRQ_FDMA_XTR;@;0{;{;o;;o;	;
+@
+;iˇ|;"VTSS_IRQ_SOFTWARE;@;0{;{;o;;o;	;
+@
+;i4};"VTSS_IRQ_PTP_RDY;@;0{;{;o;;o;	;
+@
+;ip};"VTSS_IRQ_PTP_SYNC;@;0{;{;o;;o;	;
+@
+;i∞};"VTSS_IRQ_EXT0;@;0{;{;o;;o;	;
+@
+;i·};"VTSS_IRQ_EXT1;@;0{;{;o;;o;	;
+@
+;i~;"VTSS_IRQ_OAM;@;0{;{;o;;o;	;
+@
+;iB~;"VTSS_IRQ_SGPIO;@;0{;{;o;;o;	;
+@
+;iz~;"VTSS_IRQ_SGPIO2;@;0{;{;o;;o;	;
+@
+;i≥~;"VTSS_IRQ_DPLL;@;0{;{;o;;o;	;
+@
+;i‡~;"VTSS_IRQ_GPIO;@;0{;{;o;;o;	;
+@
+;i;"VTSS_IRQ_DEV_ALL;@;0{;{;o;;o;	;
+@
+;iG;"VTSS_IRQ_CU_PHY_0;@;0{;{;o;;o;	;
+@
+;iÜ;"VTSS_IRQ_CU_PHY_1;@;0{;{;o;;o;	;
+@
+;i≈;"VTSS_IRQ_KR_SD10G_0;@;0{;{;o;;o;	;
+@
+;iˆ;"VTSS_IRQ_KR_SD10G_1;@;0{;{;o;;o;	;
+@
+;i'Ä;"VTSS_IRQ_KR_SD10G_2;@;0{;{;o;;o;	;
+@
+;iXÄ;"VTSS_IRQ_KR_SD10G_3;@;0{;{;o;;o;	;
+@
+;iâÄ;"VTSS_IRQ_KR_SD10G_4;@;0{;{;o;;o;	;
+@
+;i∫Ä;"VTSS_IRQ_KR_SD10G_5;@;0{;{;o;;o;	;
+@
+;iÎÄ;"VTSS_IRQ_KR_SD10G_6;@;0{;{;o;;o;	;
+@
+;iÅ;"VTSS_IRQ_KR_SD10G_7;@;0{;{;o;;o;	;
+@
+;iMÅ;"VTSS_IRQ_KR_SD10G_8;@;0{;{;o;;o;	;
+@
+;i~Å;"VTSS_IRQ_KR_SD10G_9;@;0{;{;o;;o;	;
+@
+;iØÅ;"VTSS_IRQ_KR_SD10G_10;@;0{;{;o;;o;	;
+@
+;i·Å;"VTSS_IRQ_KR_SD10G_11;@;0{;{;o;;o;	;
+@
+;iÇ;"VTSS_IRQ_KR_SD10G_12;@;0{;{;o;;o;	;
+@
+;iEÇ;"VTSS_IRQ_KR_SD10G_13;@;0{;{;o;;o;	;
+@
+;iwÇ;"VTSS_IRQ_KR_SD10G_14;@;0{;{;o;;o;	;
+@
+;i©Ç;"VTSS_IRQ_KR_SD10G_15;@;0{;{;o;;o;	;
+@
+;i€Ç;"VTSS_IRQ_KR_SD10G_16;@;0{;{;o;;o;	;
+@
+;iÉ;"VTSS_IRQ_KR_SD10G_17;@;0{;{;o;;o;	;
+@
+;i?É;"VTSS_IRQ_KR_SD10G_18;@;0{;{;o;;o;	;
+@
+;iqÉ;"VTSS_IRQ_KR_SD10G_19;@;0{;{;o;;o;	;
+@
+;i§É;"VTSS_IRQ_MAX;@;0;o;;o;	;
+@
+;i¸É;"vtss_irq_t;@;[ ;0{
+;o;;o;	;
+@
+;i<Ñ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iQÑ;"
+BOOL ;@; o;;o;	;
+@
+;iVÑ;"external;@;[ ;0{;{;{	;o;;o;	;
+@
+;iìÑ;"
+u8   ;@; o;;o;	;
+@
+;iòÑ;"destination;@;[ ;0;o;;o;	;
+@
+;i–Ñ;"vtss_irq_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iÖ;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i%Ö;"	u32 ;@; o;;o;	;
+@
+;i)Ö;"active;@;[ ;0{;{;{	;o;;o;	;
+@
+;ilÖ;"	u32 ;@; o;;o;	;
+@
+;ipÖ;"raw_ident;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≈Ö;"	u32 ;@; o;;o;	;
+@
+;i…Ö;"raw_status;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜ;"	u32 ;@; o;;o;	;
+@
+;iÜ;"raw_mask;@;[ ;0;o;;o;	;
+@
+;ihÜ;"vtss_irq_status_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iKá;"vtss_rc  ;@; o;;o;	;
+@
+;iTá;"vtss_irq_conf_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;ifá;"const vtss_inst_t ;@; o;;o;	;
+@
+;ixá;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iôá;"const vtss_irq_t ;@; o;;o;	;
+@
+;i™á;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;i á;"vtss_irq_conf_t *;@; o;;o;	;
+@
+;i€á;"	conf;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i≤à;"vtss_rc  ;@; o;;o;	;
+@
+;iªà;"vtss_irq_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iÕà;"const vtss_inst_t ;@; o;;o;	;
+@
+;iﬂà;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i â;"const vtss_irq_t ;@; o;;o;	;
+@
+;iâ;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;i1â;""const vtss_irq_conf_t *const ;@; o;;o;	;
+@
+;iNâ;"	conf;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iä;"vtss_rc  ;@; o;;o;	;
+@
+;iä;"!vtss_irq_status_get_and_mask;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i:ä;"const vtss_inst_t ;@; o;;o;	;
+@
+;iLä;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ixä;"vtss_irq_status_t *;@; o;;o;	;
+@
+;iãä;"status;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iyã;"vtss_rc  ;@; o;;o;	;
+@
+;iÇã;"vtss_irq_enable;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iíã;"const vtss_inst_t ;@; o;;o;	;
+@
+;i§ã;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i√ã;"const vtss_irq_t ;@; o;;o;	;
+@
+;i‘ã;"irq;@;[ ;0{;{	;o;;o;	;
+@
+;iÚã;"
+BOOL ;@; o;;o;	;
+@
+;i˜ã;"enable;@;[ ;0;0{;o;;o;	;
+@
+;iå;"-#endif /* VTSS_FEATURE_IRQ_CONTROL */
+
+
+;@{;"{;{	;o;;o;	;
+@
+;iÊå;"	u32 ;@; o;;o;	;
+@
+;iÍå;"vtss_tod_get_ns_cnt;@;[ ;0;#[{;o;;o;	;
+@
+;i˛å;"	void;@;0{;o;;o;	;
+@
+;ißç;"typedef;@;${	;%o;;o;	;
+@
+;iØç;"	u32 ;@;&o;;o;	;
+@
+;iµç;"tod_get_ns_cnt_cb_t;@;#[{;o;;o;	;
+@
+;i ç;"	void;@;0{;"{;{	;o;;o;	;
+@
+;i[é;"
+void ;@; o;;o;	;
+@
+;i`é;"vtss_tod_set_ns_cnt_cb;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iwé;"tod_get_ns_cnt_cb_t ;@; o;;o;	;
+@
+;iãé;"cb;@;[ ;0;0{
+;o;;o;	;
+@
+;iê;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iê;"	u32 ;@; o;;o;	;
+@
+;iê;"hw_cnt;@;[ ;0;o;;o;	;
+@
+;i?ê;"vtss_os_timestamp_t;@;[ ;0{;o;;o;	;
+@
+;iTê;"ì#define VTSS_OS_TIMESTAMP(timestamp)                                    \
+  do {                                                                  \
+    /* Currently no need to lock scheduler, since it's only          */ \
+    /* called from a function, where the sceduler is already locked. */ \
+    /* cyg_scheduler_lock(__FILE__, __LINE__); */                                         \
+    (timestamp)->hw_cnt = vtss_tod_get_ns_cnt();                        \
+    /* cyg_scheduler_unlock(__FILE__, __LINE__); */                                       \
+  } while(0); /**< VTSS_OS_TIMESTAMP() provides the implementation that will fill in the timestamp. */
+
+
+;@{;o;;o;	;
+@
+;i,ì;"$#if defined(VTSS_FEATURE_FAN)
+
+;@{;o;;o;	;
+@
+;iKì;"+#if defined(VTSS_FEATURE_TEMP_SENSOR)
+;@{;"{;{	;o;;o;	;
+@
+;iFî;"vtss_rc ;@; o;;o;	;
+@
+;iNî;"vtss_temp_sensor_init;@;[ ;0;#[{;{	;o;;o;	;
+@
+;idî;"const vtss_inst_t ;@; o;;o;	;
+@
+;ivî;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iöî;"const BOOL ;@; o;;o;	;
+@
+;i•î;"enable;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;iäï;"vtss_rc ;@; o;;o;	;
+@
+;iíï;"vtss_temp_sensor_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;ißï;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iΩï;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‡ï;"i16                   *;@; o;;o;	;
+@
+;i˜ï;"temperature;@;[ ;0;0{;o;;o;	;
+@
+;iñ;"#endif
+
+;@{
+;o;;o;	;
+@
+;i-ñ;"typedef;@;{;o;;o;	;
+@
+;i5ñ;"	enum;@;[{;{;o;;o;	;
+@
+;i@ñ;"VTSS_FAN_PWM_FREQ_25KHZ;@;0{;{;o;;o;	;
+@
+;i]ñ;"VTSS_FAN_PWM_FREQ_120HZ;@;0{;{;o;;o;	;
+@
+;izñ;"VTSS_FAN_PWM_FREQ_100HZ;@;0{;{;o;;o;	;
+@
+;ióñ;"VTSS_FAN_PWM_FREQ_80HZ;@;0{;{;o;;o;	;
+@
+;i≥ñ;"VTSS_FAN_PWM_FREQ_60HZ;@;0{;{;o;;o;	;
+@
+;iœñ;"VTSS_FAN_PWM_FREQ_40HZ;@;0{;{;o;;o;	;
+@
+;iÎñ;"VTSS_FAN_PWM_FREQ_20HZ;@;0{;{;o;;o;	;
+@
+;ió;"VTSS_FAN_PWM_FREQ_10HZ
+;@;0;o;;o;	;
+@
+;i ó;"vtss_fan_pwd_freq_t;@;[ ;0{
+;o;;o;	;
+@
+;iOó;"typedef;@;{;o;;o;	;
+@
+;iWó;"	enum;@;[{;{;o;;o;	;
+@
+;ibó;"VTSS_FAN_2_WIRE_TYPE;@;0{;{;o;;o;	;
+@
+;i|ó;"VTSS_FAN_3_WIRE_TYPE;@;0{;{;o;;o;	;
+@
+;iñó;"VTSS_FAN_4_WIRE_TYPE
+;@;0;o;;o;	;
+@
+;i≠ó;"vtss_fan_type_t;@;[ ;0{;o;;o;	;
+@
+;iˇó;"&#define VTSS_FAN_SPEED_MAX 0x255
+;@{;o;;o;	;
+@
+;iSò;"&#define VTSS_FAN_SPEED_MIN 0x0
+
+
+;@{
+;o;;o;	;
+@
+;iïò;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i™ò;"vtss_fan_pwd_freq_t ;@; o;;o;	;
+@
+;iæò;"fan_pwm_freq;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÓò;"BOOL                ;@; o;;o;	;
+@
+;iô;"fan_low_pol;@;[ ;0{;{;{	;o;;o;	;
+@
+;iô;"BOOL                ;@; o;;o;	;
+@
+;iìô;"fan_open_col;@;[ ;0{;{;{	;o;;o;	;
+@
+;i◊ô;"vtss_fan_type_t     ;@; o;;o;	;
+@
+;iÎô;"	type;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ö;"u32                 ;@; o;;o;	;
+@
+;i4ö;"ppr;@;[ ;0;o;;o;	;
+@
+;iáö;"vtss_fan_conf_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;i†õ;"vtss_rc ;@; o;;o;	;
+@
+;i®õ;"vtss_fan_rotation_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iæõ;"const vtss_inst_t ;@; o;;o;	;
+@
+;i–õ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÙõ;"vtss_fan_conf_t   *const ;@; o;;o;	;
+@
+;iú;"fan_spec;@;[ ;0{;{	;o;;o;	;
+@
+;i5ú;"u32               *;@; o;;o;	;
+@
+;iHú;"rotation_count;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i!ù;"vtss_rc ;@; o;;o;	;
+@
+;i)ù;"vtss_fan_cool_lvl_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i?ù;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iUù;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iyù;"u8 ;@; o;;o;	;
+@
+;i|ù;"lvl;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i*û;"vtss_rc ;@; o;;o;	;
+@
+;i2û;"vtss_fan_controller_init;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iKû;"const vtss_inst_t     ;@; o;;o;	;
+@
+;iaû;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iàû;""const vtss_fan_conf_t *const ;@; o;;o;	;
+@
+;i•û;"	spec;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;itü;"vtss_rc ;@; o;;o;	;
+@
+;i|ü;"vtss_fan_cool_lvl_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iíü;"const vtss_inst_t     ;@; o;;o;	;
+@
+;i®ü;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÃü;"
+u8 * ;@; o;;o;	;
+@
+;i—ü;"lvl;@;[ ;0;0{;o;;o;	;
+@
+;iŸü;"$#endif /* VTSS_FEATURE_FAN */
+
+;@{;o;;o;	;
+@
+;i5†;"#ifdef VTSS_FEATURE_EEE
+;@{
+;o;;o;	;
+@
+;ir†;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iá†;"
+BOOL ;@; o;;o;	;
+@
+;iå†;"eee_ena;@;[ ;0{;{;{	;o;;o;	;
+@
+;iK°;"
+u8   ;@; o;;o;	;
+@
+;iP°;"eee_fast_queues;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢;"
+u16  ;@; o;;o;	;
+@
+;i¢;"
+tx_tw;@;[ ;0{;{;{	;o;;o;	;
+@
+;i”¢;"
+u8   ;@; o;;o;	;
+@
+;iÿ¢;"lp_advertisement;@;[ ;0{;{;{	;o;;o;	;
+@
+;iò£;"
+BOOL ;@; o;;o;	;
+@
+;iù£;"optimized_for_power;@;[ ;0;o;;o;	;
+@
+;i§;"vtss_eee_port_conf_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iÊ§;"vtss_rc ;@; o;;o;	;
+@
+;iÓ§;"vtss_eee_port_conf_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i•;" const vtss_inst_t          ;@; o;;o;	;
+@
+;i •;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iE•;" const vtss_port_no_t       ;@; o;;o;	;
+@
+;i`•;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;ià•;"'const vtss_eee_port_conf_t *const ;@; o;;o;	;
+@
+;i™•;"eee_conf;@;[ ;0;0{;o;;o;	;
+@
+;i∂•;"$#endif /* VTSS_FEATURE_EEE */
+
+;@{;"{;{	;o;;o;	;
+@
+;iÜ¶;"vtss_rc ;@; o;;o;	;
+@
+;ié¶;"vtss_misc_appdata_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i§¶;"const vtss_inst_t        ;@; o;;o;	;
+@
+;iΩ¶;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i·¶;"void **;@; o;;o;	;
+@
+;iË¶;"	data;@;[ ;0;0{;"{;{	;o;;o;	;
+@
+;i¢ß;"vtss_rc ;@; o;;o;	;
+@
+;i™ß;"vtss_misc_appdata_set;@;[ ;0;#[{;{	;o;;o;	;
+@
+;i¿ß;"const vtss_inst_t        ;@; o;;o;	;
+@
+;iŸß;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˝ß;"void *;@; o;;o;	;
+@
+;i®;"	data;@;[ ;0;0{
+;o;;o;	;
+@
+;iÚ®;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i©;"const char      *;@; o;;o;	;
+@
+;i©;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;iA©;"unsigned long   ;@; o;;o;	;
+@
+;iQ©;"	addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;i~©;"unsigned long   ;@; o;;o;	;
+@
+;ié©;"repl_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≈©;"unsigned long   ;@; o;;o;	;
+@
+;i’©;"repl_width;@;[ ;0;o;;o;	;
+@
+;i
+™;"vtss_symreg_reg_t;@;[ ;0{
+;o;;o;	;
+@
+;iW™;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;il™;"const char         *;@; o;;o;	;
+@
+;iÄ™;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;iØ™;"unsigned long      ;@; o;;o;	;
+@
+;i¬™;"base_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˙™;"unsigned long      ;@; o;;o;	;
+@
+;i´;"repl_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;iJ´;"unsigned long      ;@; o;;o;	;
+@
+;i]´;"repl_width;@;[ ;0{;{;{	;o;;o;	;
+@
+;iö´;"vtss_symreg_reg_t const *;@; o;;o;	;
+@
+;i≥´;"	regs;@;[ ;0;o;;o;	;
+@
+;iÙ´;"vtss_symreg_reggrp_t;@;[ ;0{
+;o;;o;	;
+@
+;iE¨;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iZ¨;"const char            *;@; o;;o;	;
+@
+;iq¨;"	name;@;[ ;0{;{;{	;o;;o;	;
+@
+;i§¨;"int                   ;@; o;;o;	;
+@
+;i∫¨;"repl_number;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÌ¨;"unsigned long         ;@; o;;o;	;
+@
+;i≠;"tgt_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;i)≠;"unsigned long         ;@; o;;o;	;
+@
+;i?≠;"base_addr;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih≠;"!vtss_symreg_reggrp_t const *;@; o;;o;	;
+@
+;iÑ≠;"reggrps;@;[ ;0;o;;o;	;
+@
+;iŒ≠;"vtss_symreg_target_t;@;[ ;0{
+;o;;o;	;
+@
+;iÆ;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i%Æ;"!const vtss_symreg_target_t *;@; o;;o;	;
+@
+;iAÆ;"targets;@;[ ;0{;{;{	;o;;o;	;
+@
+;iâÆ;"!unsigned long               ;@; o;;o;	;
+@
+;i•Æ;"targets_cnt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i÷Æ;"!unsigned long               ;@; o;;o;	;
+@
+;iÚÆ;"io_origin1_offset;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$Ø;"!unsigned long               ;@; o;;o;	;
+@
+;i@Ø;"repl_cnt_max;@;[ ;0{;{;{	;o;;o;	;
+@
+;i~Ø;"!unsigned long               ;@; o;;o;	;
+@
+;iöØ;"name_len_max;@;[ ;0;o;;o;	;
+@
+;i«Ø;"vtss_symreg_data_t;@;[ ;0{;"{;{	;o;;o;	;
+@
+;iÄ∞;"vtss_rc ;@; o;;o;	;
+@
+;ià∞;"vtss_symreg_data_get;@;[ ;0;#[{;{	;o;;o;	;
+@
+;iù∞;"const vtss_inst_t   ;@; o;;o;	;
+@
+;i±∞;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‘∞;"vtss_symreg_data_t *const ;@; o;;o;	;
+@
+;iÓ∞;"	data;@;[ ;0;0{;o;;o;	;
+@
+;iˆ∞;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;i±;"#endif
+;@{;o;;o;	;
+@
+;i±;"##endif /* VTSS_MISC_API_H_ */
+;@

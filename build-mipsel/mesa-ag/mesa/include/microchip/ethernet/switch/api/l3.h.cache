@@ -1,0 +1,823 @@
+{:	root['{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"”#// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_L3_
+#define _MICROCHIP_ETHERNET_SWITCH_API_L3_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// Virtual router identifier
+typedef uint8_t  mesa_l3_vrid_t;
+
+// MAC addressing mode for routing legs
+typedef enum
+{
+    // The addressing mode has still not been configured
+    MESA_ROUTING_RLEG_MAC_MODE_INVALID = 0,
+
+    // One common MAC address is used for all legs
+    MESA_ROUTING_RLEG_MAC_MODE_SINGLE = 1,
+} mesa_l3_rleg_common_mode_t CAP(L3);
+
+// Common configurations for all routing legs
+typedef struct
+{
+    // Common rleg-mode for all routing legs.
+    mesa_l3_rleg_common_mode_t rleg_mode;
+
+    // Base mac address used to derive addresses for all routing legs.
+    mesa_mac_t                 base_address;
+
+    // Globally enable/disable unicast routing.
+    mesa_bool_t                routing_enable;
+
+    // Globally enable/disable multicast routing.
+    mesa_bool_t                mc_routing_enable;
+} mesa_l3_common_conf_t CAP(L3);
+
+// Router leg control structure
+typedef struct
+{
+    // Enable router leg ID
+    mesa_bool_t rleg_enable;
+
+    // Router leg ID
+    mesa_l3_rleg_id_t rleg_id;
+
+    // Enable IPv4 unicast routing
+    mesa_bool_t ipv4_unicast_enable;
+
+    // Enable IPv6 unicast routing
+    mesa_bool_t ipv6_unicast_enable;
+
+    // Enable IPv4 multicast routing
+    mesa_bool_t ipv4_multicast_enable;
+
+    // Enable IPv6 multicast routing
+    mesa_bool_t ipv6_multicast_enable;
+
+    // Enable IPv4 icmp redirect
+    mesa_bool_t ipv4_icmp_redirect_enable;
+
+    // Enable IPv6 icmp redirect
+    mesa_bool_t ipv6_icmp_redirect_enable;
+
+    // Vlan for which the router leg is instantiated
+    mesa_vid_t          vlan;
+
+    // Enable/disable VRRP for a given router leg.
+    //
+    // The hardware has support for enabling 0-2 VRID's for a given router leg.
+    // This is activated by configured vrid0_enable and vrid1_enable. The actual
+    // VRID the route is assigned to is configured in vrid0/vrid1.
+    mesa_bool_t         vrid0_enable;
+
+    // The VRID value assigned to this router leg.
+    mesa_l3_vrid_t      vrid0;
+
+    // Enable/disable vrid1 for this router leg.
+    mesa_bool_t         vrid1_enable;
+
+    // The VRID value assigned to this router leg.
+    mesa_l3_vrid_t      vrid1;
+
+    // Enable/disable non-default multicast TTL limit for this router leg.
+    mesa_bool_t         mc_ttl_limit_enable;
+
+    // The TTL in the frame must be equal or higher than this value (must be >= 2).
+    uint32_t            mc_ttl_limit;
+
+} mesa_l3_rleg_conf_t CAP(L3);
+
+// Neighbour type
+typedef enum
+{
+    // Invalid entry.
+    MESA_L3_NEIGHBOUR_TYPE_INVALID = 0,
+
+    // IPv4 Neighbour entry (ARP).
+    MESA_L3_NEIGHBOUR_TYPE_ARP = 1,
+
+    // IPv6 Neighbour entry (NDP).
+    MESA_L3_NEIGHBOUR_TYPE_NDP = 2,
+} mesa_l3_neighbour_type_t CAP(L3);
+
+// Neighbour entry
+typedef struct
+{
+    // MAC address of destination
+    mesa_mac_t         dmac;
+
+    // VLAN of destination
+    mesa_vid_t         vlan;
+
+    // IP address of destination
+    mesa_ip_addr_t     dip;
+} mesa_l3_neighbour_t CAP(L3);
+
+// Flush all L3 configurations
+mesa_rc mesa_l3_flush(const mesa_inst_t inst)
+    CAP(L3);
+
+// Get common router configuration.
+// conf [OUT]    Common routing configurations.
+mesa_rc mesa_l3_common_get(const mesa_inst_t     inst,
+                           mesa_l3_common_conf_t *const conf)
+    CAP(L3);
+
+// Set common router configuration.
+// conf [OUT]    Common routing configurations.
+mesa_rc mesa_l3_common_set(const mesa_inst_t           inst,
+                           const mesa_l3_common_conf_t *const conf)
+    CAP(L3);
+
+// Get a specific configured router leg
+// vid  [IN]     VLAN ID of the router leg to get
+// conf [OUT]    Output buffer where the configuration is written
+mesa_rc mesa_l3_rleg_get_specific(const mesa_inst_t   inst,
+                                  mesa_vid_t          vid,
+                                  mesa_l3_rleg_conf_t *conf)
+    CAP(L3);
+
+// Add a router leg on the given VLAN
+// conf [IN] Routing leg configuration.
+mesa_rc mesa_l3_rleg_add(const mesa_inst_t          inst,
+                         const mesa_l3_rleg_conf_t *const conf)
+    CAP(L3);
+
+// Update an existing router leg.
+// Will fail if an existing router leg with the same VLAN does not exists.
+// conf [IN] Routing leg configuration.
+mesa_rc mesa_l3_rleg_update(const mesa_inst_t         inst,
+                            const mesa_l3_rleg_conf_t *const conf)
+    CAP(L3);
+
+// Delete a router leg associated with VLAN
+// vlan [IN]     VLAN to delete router leg from
+mesa_rc mesa_l3_rleg_del(const mesa_inst_t inst,
+                         const mesa_vid_t  vlan)
+    CAP(L3);
+
+// Add an entry to the routing table
+// entry [IN]    Route to add
+mesa_rc mesa_l3_route_add(const mesa_inst_t          inst,
+                          const mesa_routing_entry_t *const entry)
+    CAP(L3);
+
+// Add a list of routes
+// cnt  [IN]      Length of 'entry'
+// entry [IN]     List of routes to add
+// rt_added [OUT] Number of routes added
+mesa_rc mesa_l3_route_bulk_add(const mesa_inst_t             inst,
+                               const uint32_t                cnt,
+                               const mesa_routing_entry_t    *entry,
+                               uint32_t                      *const rt_added)
+    CAP(L3);
+
+// Delete an entry from the routing table
+// entry [IN]    Entry to delete.
+mesa_rc mesa_l3_route_del(const mesa_inst_t          inst,
+                          const mesa_routing_entry_t *const entry)
+    CAP(L3);
+
+// Delete a list of routes
+// cnt  [IN]        Length of 'entry'
+// entry [IN]       List of routes to add
+// rt_deleted [OUT] Number of routes deleted
+mesa_rc mesa_l3_route_bulk_del(const mesa_inst_t             inst,
+                               const uint32_t                cnt,
+                               const mesa_routing_entry_t    *entry,
+                               uint32_t                      *const rt_deleted)
+    CAP(L3);
+
+// Add a new entry to the neighbour cache.
+// entry [IN]    Entry to add.
+mesa_rc mesa_l3_neighbour_add(const mesa_inst_t         inst,
+                              const mesa_l3_neighbour_t *const entry)
+    CAP(L3);
+
+// Delete an entry from the neighbour  cache.
+// entry [IN]    Entry to delete.
+mesa_rc mesa_l3_neighbour_del(const mesa_inst_t         inst,
+                              const mesa_l3_neighbour_t *const entry)
+    CAP(L3);
+
+// Add an multicast entry to the routing table
+// entry [IN]    MC entry to add
+mesa_rc mesa_l3_mc_route_add(const mesa_inst_t              inst,
+                             const mesa_routing_mc_entry_t  *const entry)
+    CAP(L3);
+
+// Delete an entry from the multicast routing table
+// entry [IN]    MC entry to delete.
+mesa_rc mesa_l3_mc_route_del(const mesa_inst_t              inst,
+                             const mesa_routing_mc_entry_t  *const entry)
+     CAP(L3);
+
+// Add an router leg to an existing routing entry
+// entry [IN]       MC route entry
+// dest_rleg [IN]   Destination router leg to add to route
+mesa_rc mesa_l3_mc_route_rleg_add(const mesa_inst_t              inst,
+                                  const mesa_routing_mc_entry_t  *const entry,
+                                  const mesa_vid_t               dest_rleg)
+    CAP(L3);
+
+// Remove an router leg from an routing entry
+// entry [IN]      MC route entry
+// dest_rleg [IN]  Destination router leg to remove from route
+mesa_rc mesa_l3_mc_route_rleg_del(const mesa_inst_t              inst,
+                                  const mesa_routing_mc_entry_t  *const entry,
+                                  const mesa_vid_t               dest_rleg)
+    CAP(L3);
+
+// Get activity status on a mc route, i.e. if it has been used by mc transmitter.
+// Clear on read.
+// entry [IN]     MC entry to check for activity
+// active [OUT]   True (active) / False (not active) since last read.
+mesa_rc mesa_l3_mc_route_active_get(const mesa_inst_t              inst,
+                                    const mesa_routing_mc_entry_t  *const entry,
+                                    mesa_bool_t *const active)
+    CAP(L3);
+
+// Reset all router leg statistics counters
+mesa_rc mesa_l3_counters_reset(const mesa_inst_t inst)
+    CAP(L3);
+
+// Get routing system counters
+// counters [OUT] Counters
+mesa_rc mesa_l3_counters_system_get(const mesa_inst_t  inst,
+                                    mesa_l3_counters_t *const counters)
+    CAP(L3);
+
+// Get routing legs counters
+// vlan [IN]      Routing leg
+// counters [OUT] Counters
+mesa_rc mesa_l3_counters_rleg_get(const mesa_inst_t  inst,
+                                  const mesa_vid_t   vlan,
+                                  mesa_l3_counters_t *const counters)
+    CAP(L3);
+
+// Clear routing legs counters
+// vlan [IN]      Routing leg
+mesa_rc mesa_l3_counters_rleg_clear(const mesa_inst_t inst,
+                                    const mesa_vid_t  vlan) CAP(L3);
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_L3_
+:@byteposir:	@str"0#ifndef _MICROCHIP_ETHERNET_SWITCH_API_L3_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[iPipiqiriòi√iƒiıi?i@i]i~iißi¥i∂iÔiiiOizi†i°iœiﬁi‡ii8i9iÄi≠iÆiﬁiii@iriìiîi¥i√i≈i·i˛iˇii3i4iWi|i}i†i≈i∆iÎiii8i_i`iÅi¨i≠iŒi˘i˙i/iMiNiÅiàiÿi)iliíiìi∆iÂiÊi	i=	i>	iq	iê	ië	i‹	i	
+i
+
+i^
+iÑ
+iÖ
+i§
+i•
+i∑
+iƒ
+i∆
+i‹
+iii(iLiMipiîi∏iπiÃi€i›iˇiii8iUiViwiìi≤i≥i“i iii2ibiôi◊i‰iÂi	i9ivi∫i«i»ii"idi†i€ii%i&iLitiÆiÓi˚i¸iiiiëiÕiiiiJizi´i‹iÈiÍii-ihi´i∏iπi—iıiiFiâiÀii^ikiliñi∏iÛi6iCiDi_iÖiØi‹iiai¶iˆiii/iNiåi“iﬂi‡ii0ini¥i¡i¬iÒiiTiûi´i¨i‡iiGiëiüi†i“iıi0iwi∆iii iNipiØiˆiEiëiûiüiÒii4izi√i iS i` ia iç iƒ i— i“ iÒ i!iI!ië!iû!iü!iº!i⁄!iı!i0"ik"i±"iæ"iø"iﬁ"i¸"i8#i}#i~#i¶#i”#:@last_line_endi”#{;o;;o;	;
+@
+;iò;"1#define _MICROCHIP_ETHERNET_SWITCH_API_L3_
+
+;@{;o;;o;	;
+@
+;iƒ;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;iı;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;i];"typedef;@:type_aliaso;;o;	;
+@
+;ie;"uint8_t  ;@:typedef_nameo;;o;	;
+@
+;in;"mesa_l3_vrid_t;@:
+array[ :cap0{
+;o;;o;	;
+@
+;iß;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iØ;"	enum;@:
+enums[{:	enum{	:enum_nameo;;o;	;
+@
+;iÛ;"(MESA_ROUTING_RLEG_MAC_MODE_INVALID ;@:operatoro;;o;	;
+@
+;i;"=;@:	expro;;o;	;
+@
+;i;"0;@;0{;{	;o;;o;	;
+@
+;iS;"'MESA_ROUTING_RLEG_MAC_MODE_SINGLE ;@;o;;o;	;
+@
+;iu;"=;@;o;;o;	;
+@
+;iw;"1;@;0;o;;o;	;
+@
+;i|;" mesa_l3_rleg_common_mode_t ;@;[ ;o;;o;	;
+@
+;ió;"CAP(L3);@{
+;o;;o;	;
+@
+;iœ;"typedef;@:struct_type_declare{:struct_members[	{:member{:normal{	:	typeo;;o;	;
+@
+;i;" mesa_l3_rleg_common_mode_t ;@:	nameo;;o;	;
+@
+;i-;"rleg_mode;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÑ;" mesa_mac_t                 ;@;"o;;o;	;
+@
+;iü;"base_address;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i‚;" mesa_bool_t                ;@;"o;;o;	;
+@
+;i˝;"routing_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iD;" mesa_bool_t                ;@;"o;;o;	;
+@
+;i_;"mc_routing_enable;@;[ ;0;o;;o;	;
+@
+;it;"mesa_l3_common_conf_t ;@;[ ;o;;o;	;
+@
+;iä;"CAP(L3);@{
+;o;;o;	;
+@
+;i¥;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;iÂ;"mesa_bool_t ;@;"o;;o;	;
+@
+;iÒ;"rleg_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i;"mesa_l3_rleg_id_t ;@;"o;;o;	;
+@
+;i*;"rleg_id;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i[;"mesa_bool_t ;@;"o;;o;	;
+@
+;ig;"ipv4_unicast_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i§;"mesa_bool_t ;@;"o;;o;	;
+@
+;i∞;"ipv6_unicast_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÔ;"mesa_bool_t ;@;"o;;o;	;
+@
+;i˚;"ipv4_multicast_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<;"mesa_bool_t ;@;"o;;o;	;
+@
+;iH;"ipv6_multicast_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iÖ;"mesa_bool_t ;@;"o;;o;	;
+@
+;ië;"ipv4_icmp_redirect_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i“;"mesa_bool_t ;@;"o;;o;	;
+@
+;iﬁ;"ipv6_icmp_redirect_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i3;"mesa_vid_t          ;@;"o;;o;	;
+@
+;iG;"	vlan;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ip;"mesa_bool_t         ;@;"o;;o;	;
+@
+;iÑ;"vrid0_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i ;"mesa_l3_vrid_t      ;@;"o;;o;	;
+@
+;iﬁ;"
+vrid0;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i	;"mesa_bool_t         ;@;"o;;o;	;
+@
+;i/	;"vrid1_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;iu	;"mesa_l3_vrid_t      ;@;"o;;o;	;
+@
+;iâ	;"
+vrid1;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i‡	;"mesa_bool_t         ;@;"o;;o;	;
+@
+;iÙ	;"mc_ttl_limit_enable;@;[ ;0{;{; {	;!o;;o;	;
+@
+;ib
+;"uint32_t            ;@;"o;;o;	;
+@
+;iv
+;"mc_ttl_limit;@;[ ;0;o;;o;	;
+@
+;iá
+;"mesa_l3_rleg_conf_t ;@;[ ;o;;o;	;
+@
+;iõ
+;"CAP(L3);@{
+;o;;o;	;
+@
+;i∑
+;"typedef;@;{;o;;o;	;
+@
+;iø
+;"	enum;@;[{;{	;o;;o;	;
+@
+;i‡
+;"$MESA_L3_NEIGHBOUR_TYPE_INVALID ;@;o;;o;	;
+@
+;iˇ
+;"=;@;o;;o;	;
+@
+;i;"0;@;0{;{	;o;;o;	;
+@
+;i,;" MESA_L3_NEIGHBOUR_TYPE_ARP ;@;o;;o;	;
+@
+;iG;"=;@;o;;o;	;
+@
+;iI;"1;@;0{;{	;o;;o;	;
+@
+;it;" MESA_L3_NEIGHBOUR_TYPE_NDP ;@;o;;o;	;
+@
+;iè;"=;@;o;;o;	;
+@
+;ië;"2;@;0;o;;o;	;
+@
+;iñ;"mesa_l3_neighbour_type_t ;@;[ ;o;;o;	;
+@
+;iØ;"CAP(L3);@{
+;o;;o;	;
+@
+;iÃ;"typedef;@;{;[{;{; {	;!o;;o;	;
+@
+;i;"mesa_mac_t         ;@;"o;;o;	;
+@
+;i;"	dmac;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i<;"mesa_vid_t         ;@;"o;;o;	;
+@
+;iO;"	vlan;@;[ ;0{;{; {	;!o;;o;	;
+@
+;i{;"mesa_ip_addr_t     ;@;"o;;o;	;
+@
+;ié;"dip;@;[ ;0;o;;o;	;
+@
+;iï;"mesa_l3_neighbour_t ;@;[ ;o;;o;	;
+@
+;i©;"CAP(L3);@{:func_proto{; {	;!o;;o;	;
+@
+;i“;"mesa_rc ;@;"o;;o;	;
+@
+;i⁄;"mesa_l3_flush;@;[ ;0:	args[{; {	;!o;;o;	;
+@
+;iË;"const mesa_inst_t ;@;"o;;o;	;
+@
+;i˙;"	inst;@;[ ;0;o;;o;	;
+@
+;i;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;ib;"mesa_rc ;@;"o;;o;	;
+@
+;ij;"mesa_l3_common_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i};"const mesa_inst_t     ;@;"o;;o;	;
+@
+;iì;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i¥;""mesa_l3_common_conf_t *const ;@;"o;;o;	;
+@
+;i—;"	conf;@;[ ;0;o;;o;	;
+@
+;i€;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i9;"mesa_rc ;@;"o;;o;	;
+@
+;iA;"mesa_l3_common_set;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iT;"!const mesa_inst_t           ;@;"o;;o;	;
+@
+;ip;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;ië;"(const mesa_l3_common_conf_t *const ;@;"o;;o;	;
+@
+;i¥;"	conf;@;[ ;0;o;;o;	;
+@
+;iæ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;id;"mesa_rc ;@;"o;;o;	;
+@
+;il;"mesa_l3_rleg_get_specific;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iÜ;"const mesa_inst_t   ;@;"o;;o;	;
+@
+;iö;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i¬;"mesa_vid_t          ;@;"o;;o;	;
+@
+;i÷;"vid;@;[ ;0{; {	;!o;;o;	;
+@
+;i˝;"mesa_l3_rleg_conf_t *;@;"o;;o;	;
+@
+;i;"	conf;@;[ ;0;o;;o;	;
+@
+;i;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;it;"mesa_rc ;@;"o;;o;	;
+@
+;i|;"mesa_l3_rleg_add;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iç;" const mesa_inst_t          ;@;"o;;o;	;
+@
+;i®;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i«;"&const mesa_l3_rleg_conf_t *const ;@;"o;;o;	;
+@
+;iË;"	conf;@;[ ;0;o;;o;	;
+@
+;iÚ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;ië;"mesa_rc ;@;"o;;o;	;
+@
+;iô;"mesa_l3_rleg_update;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i≠;"const mesa_inst_t         ;@;"o;;o;	;
+@
+;i«;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÈ;"&const mesa_l3_rleg_conf_t *const ;@;"o;;o;	;
+@
+;i
+;"	conf;@;[ ;0;o;;o;	;
+@
+;i;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iz;"mesa_rc ;@;"o;;o;	;
+@
+;iÇ;"mesa_l3_rleg_del;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iì;"const mesa_inst_t ;@;"o;;o;	;
+@
+;i•;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iƒ;"const mesa_vid_t  ;@;"o;;o;	;
+@
+;i÷;"	vlan;@;[ ;0;o;;o;	;
+@
+;i‡;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i-;"mesa_rc ;@;"o;;o;	;
+@
+;i5;"mesa_l3_route_add;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iG;" const mesa_inst_t          ;@;"o;;o;	;
+@
+;ib;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÇ;"'const mesa_routing_entry_t *const ;@;"o;;o;	;
+@
+;i§;"
+entry;@;[ ;0;o;;o;	;
+@
+;iØ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iF;"mesa_rc ;@;"o;;o;	;
+@
+;iN;"mesa_l3_route_bulk_add;@;[ ;0;$[	{; {	;!o;;o;	;
+@
+;ie;"#const mesa_inst_t             ;@;"o;;o;	;
+@
+;iÉ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i®;"#const uint32_t                ;@;"o;;o;	;
+@
+;i∆;"cnt;@;[ ;0{; {	;!o;;o;	;
+@
+;iÍ;"$const mesa_routing_entry_t    *;@;"o;;o;	;
+@
+;i	;"
+entry;@;[ ;0{; {	;!o;;o;	;
+@
+;i/;"*uint32_t                      *const ;@;"o;;o;	;
+@
+;iT;"rt_added;@;[ ;0;o;;o;	;
+@
+;ib;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i∏;"mesa_rc ;@;"o;;o;	;
+@
+;i¿;"mesa_l3_route_del;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i“;" const mesa_inst_t          ;@;"o;;o;	;
+@
+;iÌ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"'const mesa_routing_entry_t *const ;@;"o;;o;	;
+@
+;i/;"
+entry;@;[ ;0;o;;o;	;
+@
+;i:;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i‹;"mesa_rc ;@;"o;;o;	;
+@
+;i‰;"mesa_l3_route_bulk_del;@;[ ;0;$[	{; {	;!o;;o;	;
+@
+;i˚;"#const mesa_inst_t             ;@;"o;;o;	;
+@
+;i;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i>;"#const uint32_t                ;@;"o;;o;	;
+@
+;i\;"cnt;@;[ ;0{; {	;!o;;o;	;
+@
+;iÄ;"$const mesa_routing_entry_t    *;@;"o;;o;	;
+@
+;iü;"
+entry;@;[ ;0{; {	;!o;;o;	;
+@
+;i≈;"*uint32_t                      *const ;@;"o;;o;	;
+@
+;iÍ;"rt_deleted;@;[ ;0;o;;o;	;
+@
+;i˙;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iN;"mesa_rc ;@;"o;;o;	;
+@
+;iV;"mesa_l3_neighbour_add;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;il;"const mesa_inst_t         ;@;"o;;o;	;
+@
+;iÜ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i™;"&const mesa_l3_neighbour_t *const ;@;"o;;o;	;
+@
+;iÀ;"
+entry;@;[ ;0;o;;o;	;
+@
+;i÷;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i0;"mesa_rc ;@;"o;;o;	;
+@
+;i8;"mesa_l3_neighbour_del;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iN;"const mesa_inst_t         ;@;"o;;o;	;
+@
+;ih;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iå;"&const mesa_l3_neighbour_t *const ;@;"o;;o;	;
+@
+;i≠;"
+entry;@;[ ;0;o;;o;	;
+@
+;i∏;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i;"mesa_rc ;@;"o;;o;	;
+@
+;i;"mesa_l3_mc_route_add;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i/;"$const mesa_inst_t              ;@;"o;;o;	;
+@
+;iN;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iq;"+const mesa_routing_mc_entry_t  *const ;@;"o;;o;	;
+@
+;ió;"
+entry;@;[ ;0;o;;o;	;
+@
+;i¢;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i;"mesa_rc ;@;"o;;o;	;
+@
+;i;"mesa_l3_mc_route_del;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i";"$const mesa_inst_t              ;@;"o;;o;	;
+@
+;iA;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;id;"+const mesa_routing_mc_entry_t  *const ;@;"o;;o;	;
+@
+;iä;"
+entry;@;[ ;0;o;;o;	;
+@
+;iñ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i0;"mesa_rc ;@;"o;;o;	;
+@
+;i8;"mesa_l3_mc_route_rleg_add;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iR;"$const mesa_inst_t              ;@;"o;;o;	;
+@
+;iq;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iô;"+const mesa_routing_mc_entry_t  *const ;@;"o;;o;	;
+@
+;iø;"
+entry;@;[ ;0{; {	;!o;;o;	;
+@
+;iË;"$const mesa_vid_t               ;@;"o;;o;	;
+@
+;i;"dest_rleg;@;[ ;0;o;;o;	;
+@
+;i;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iØ;"mesa_rc ;@;"o;;o;	;
+@
+;i∑;"mesa_l3_mc_route_rleg_del;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i—;"$const mesa_inst_t              ;@;"o;;o;	;
+@
+;i;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i;"+const mesa_routing_mc_entry_t  *const ;@;"o;;o;	;
+@
+;i>;"
+entry;@;[ ;0{; {	;!o;;o;	;
+@
+;ig;"$const mesa_vid_t               ;@;"o;;o;	;
+@
+;iÜ;"dest_rleg;@;[ ;0;o;;o;	;
+@
+;iï;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iz;"mesa_rc ;@;"o;;o;	;
+@
+;iÇ;" mesa_l3_mc_route_active_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;iû;"$const mesa_inst_t              ;@;"o;;o;	;
+@
+;iΩ;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iÁ;"+const mesa_routing_mc_entry_t  *const ;@;"o;;o;	;
+@
+;i ;"
+entry;@;[ ;0{; {	;!o;;o;	;
+@
+;i8 ;"mesa_bool_t *const ;@;"o;;o;	;
+@
+;iK ;"active;@;[ ;0;o;;o;	;
+@
+;iW ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iç ;"mesa_rc ;@;"o;;o;	;
+@
+;iï ;"mesa_l3_counters_reset;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i¨ ;"const mesa_inst_t ;@;"o;;o;	;
+@
+;iæ ;"	inst;@;[ ;0;o;;o;	;
+@
+;i» ;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i!;"mesa_rc ;@;"o;;o;	;
+@
+;i!;" mesa_l3_counters_system_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i0!;"const mesa_inst_t  ;@;"o;;o;	;
+@
+;iC!;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;im!;"mesa_l3_counters_t *const ;@;"o;;o;	;
+@
+;iá!;"counters;@;[ ;0;o;;o;	;
+@
+;iï!;"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;iı!;"mesa_rc ;@;"o;;o;	;
+@
+;i˝!;"mesa_l3_counters_rleg_get;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i";"const mesa_inst_t  ;@;"o;;o;	;
+@
+;i*";"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;iR";"const mesa_vid_t   ;@;"o;;o;	;
+@
+;ie";"	vlan;@;[ ;0{; {	;!o;;o;	;
+@
+;iç";"mesa_l3_counters_t *const ;@;"o;;o;	;
+@
+;iß";"counters;@;[ ;0;o;;o;	;
+@
+;iµ";"CAP(L3);@{;#{; {	;!o;;o;	;
+@
+;i¸";"mesa_rc ;@;"o;;o;	;
+@
+;i#;" mesa_l3_counters_rleg_clear;@;[ ;0;$[{; {	;!o;;o;	;
+@
+;i #;"const mesa_inst_t ;@;"o;;o;	;
+@
+;i2#;"	inst;@;[ ;0{; {	;!o;;o;	;
+@
+;i\#;"const mesa_vid_t  ;@;"o;;o;	;
+@
+;in#;"	vlan;@;[ ;0;o;;o;	;
+@
+;it#;"CAP(L3);@{;o;;o;	;
+@
+;i~#;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;i¶#;"2#endif // _MICROCHIP_ETHERNET_SWITCH_API_L3_
+;@

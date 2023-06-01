@@ -1,0 +1,2251 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"¬r// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _VTSS_VOP_API_H_
+#define _VTSS_VOP_API_H_
+
+#include <vtss/api/types.h>
+
+#if defined(VTSS_FEATURE_VOP)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(VTSS_FEATURE_VOP_V0)     /* VOP V0 */
+
+#  define VTSS_DOWN_VOI_CNT           (0)                         // No VOIs (MIPs) in HW
+#  define VTSS_UP_VOI_CNT             (0)                         // No VOIs (MIPs) in HW.
+#  if defined(VTSS_ARCH_LAN966X)   /* Maserati */
+#    define VTSS_PORT_VOE_CNT           (8)                        // Number of port VOEs in HW
+#    define VTSS_PATH_SERVICE_VOE_CNT   (0)                        // Number of path/service VOEs in HW
+#    define VTSS_PORT_VOE_BASE_IDX      (0)                        // Index of first port VOE
+#  else
+#    error "not defined expected architure for VOP V0"
+#  endif
+
+#elif defined(VTSS_FEATURE_VOP_V1)     /* VOP V1 */
+
+#  define VTSS_DOWN_VOI_CNT           (0)                         // No VOIs (MIPs) in HW
+#  define VTSS_UP_VOI_CNT             (0)                         // No VOIs (MIPs) in HW.
+#  if defined(VTSS_ARCH_OCELOT)   /* Ocelot */
+#    define VTSS_PORT_VOE_CNT           (11)                        // Number of port VOEs in HW
+#    define VTSS_PATH_SERVICE_VOE_CNT   (32)                        // Number of path/service VOEs in HW
+#    define VTSS_PORT_VOE_BASE_IDX      (32)                        // Index of first port VOE
+#  elif defined(VTSS_ARCH_LAN966X)   /* Maserati */
+#    define VTSS_PORT_VOE_CNT           (8)                        // Number of port VOEs in HW
+#    define VTSS_PATH_SERVICE_VOE_CNT   (0)                        // Number of path/service VOEs in HW
+#    define VTSS_PORT_VOE_BASE_IDX      (0)                        // Index of first port VOE
+#  else
+#    error "not defined expected architure for VOP V1"
+#  endif
+
+#elif defined(VTSS_FEATURE_VOP_V2)  /* End VOP V1 */
+                                    /* Begin VOP V2*/
+#  if defined(VTSS_ARCH_SERVAL_T)     /* ServalT */
+
+#    define VTSS_PATH_SERVICE_VOE_CNT   (192)                       // Number of path/service VOEs in HW
+#    define VTSS_PORT_VOE_BASE_IDX      (192)                       // Index of first port VOE
+#    define VTSS_PORT_VOE_CNT           (11)                        // Number of port VOEs in HW
+
+#    define VTSS_DOWN_VOI_CNT           (128)                       // Number of down VOI (MIP) in HW
+#    define VTSS_UP_VOI_CNT             (127)                       // Number of up VOI (MIP) in HW. Up MIP instance 0 is not used as it cannot be addressed by ES0 action - 0 has the meaning of no MIB
+
+#  else                               /* End ServalT */
+
+#    define VTSS_PATH_SERVICE_VOE_CNT   (1024)                      // Number of path/service VOEs in HW
+#    define VTSS_PORT_VOE_BASE_IDX      (1024)                      // Index of first port VOE
+
+#    if defined(VTSS_ARCH_JAGUAR_2)     /* Jaguar2 */
+#      define VTSS_PORT_VOE_CNT           (53)                        // Number of port VOEs in HW
+#    elif defined(VTSS_ARCH_SPARX5)     /* SparX-5 */
+#      define VTSS_PORT_VOE_CNT           (65)                        // Number of port VOEs in HW
+#    else
+#      error "not defined expected architure for VOP V2"
+#    endif
+
+#    define VTSS_DOWN_VOI_CNT           (1024)                      // Number of down VOI (MIP) in HW
+#    define VTSS_UP_VOI_CNT             (1023)                      // Number of up VOI (MIP) in HW. Up MIP instance 0 is not used as it cannot be addressed by ES0 action - 0 has the meaning of no MIB
+#  endif
+
+#else                               /* End VOP V2 */
+#  error "VOP V1 or V2 must be defined"
+#endif
+
+
+#define VTSS_VOE_CNT                ((VTSS_PATH_SERVICE_VOE_CNT) + (VTSS_PORT_VOE_CNT))   // Total count of port + path/service VOEs
+#define VTSS_VOI_CNT                ((VTSS_DOWN_VOI_CNT) + (VTSS_UP_VOI_CNT))             // Total count of down and up VOIs
+#define VTSS_EVENT_MASK_ARRAY_SIZE  ((VTSS_VOE_CNT+31)/32)                                // Size in u32's of event mask array used by vtss_voe_event_active_get()
+
+
+// -------------------------------------------------------------------------
+// --- VOP - Vitesse OAM Processor -----------------------------------------
+// -------------------------------------------------------------------------
+
+// VOP configuration. Once the VOP is configured, VOEs can be configured.
+typedef struct {
+    vtss_mac_t  multicast_dmac;      // Common MC DMAC for all VOEs
+
+#if defined(VTSS_FEATURE_VOP_V2)
+    u32         auto_copy_period[2]; // Timer period values in microseconds, used for auto copy to CPU (auto "hit me once").
+                                     // A value of 0 disables the timer.
+    u8          auto_copy_ccm_valid; // #auto_copy_period timer (0 or 1) to use for auto copy next valid CCM to CPU.
+    u8          auto_copy_ccm_tlv;   // #auto_copy_period timer (0 or 1) to use for auto copy to CPU if CCM has more TLVs than port and
+                                     // interface status.
+    u8          auto_copy_ccm_err;   // #auto_copy_period timer (0 or 1) to use for auto copy to CPU if CCM validation fails
+                                     // (including MEG level too low).
+    u8          auto_copy_lbr;       // #auto_copy_period timer (0 or 1) to use for auto copy next or LBR (or non-OAM message) to CPU.
+#endif
+
+    // CPU extraction queues to use for the various packet types
+    vtss_packet_rx_queue_t  voe_queue_ccm;
+#if defined(VTSS_FEATURE_VOP_CFM)
+    vtss_packet_rx_queue_t  voe_queue_lt;   // LTM, LTR common settings
+    vtss_packet_rx_queue_t  voe_queue_lbm;
+    vtss_packet_rx_queue_t  voe_queue_lbr;
+    vtss_packet_rx_queue_t  voe_queue_aps;  // LAPS and RAPS
+#endif
+    vtss_packet_rx_queue_t  voe_queue_err;
+#if defined(VTSS_FEATURE_VOP_V2)
+    vtss_packet_rx_queue_t  voi_queue;
+#endif
+#if defined(VTSS_FEATURE_MRP)
+    vtss_packet_rx_queue_t  mrp_queue;
+#endif
+} vtss_vop_conf_t;
+
+// Set VOP configuration.
+// inst  [IN]  Target instance reference.
+// conf  [IN] New configuration for the VOP.
+vtss_rc vtss_vop_conf_set(const vtss_inst_t       inst,
+                          const vtss_vop_conf_t   *const conf);
+
+vtss_rc vtss_vop_conf_get(const vtss_inst_t  inst,
+                          vtss_vop_conf_t    *const cfg);
+
+
+
+
+// -------------------------------------------------------------------------
+// --- VOE - Versatile OAM End point ---------------------------------------
+// -------------------------------------------------------------------------
+
+// VOE type -- Service/Path or Port
+typedef enum {
+    VTSS_VOE_TYPE_SERVICE,
+    VTSS_VOE_TYPE_PORT,
+} vtss_voe_type_t;
+
+// VOE/VOI direction
+typedef enum {
+    VTSS_OAM_DIRECTION_DOWN,
+    VTSS_OAM_DIRECTION_UP,
+} vtss_oam_direction_t;
+
+// VOE Allocation structure.
+typedef struct {
+#if defined(VTSS_FEATURE_VOP_CFM)
+    vtss_voe_type_t       type;
+#endif
+    vtss_port_no_t        port;
+#if defined(VTSS_FEATURE_VOP_CFM)
+    vtss_oam_direction_t  direction;
+#endif
+} vtss_voe_allocation_t;
+
+// Allocate a VOE.
+// inst      [IN]  Target instance reference.
+// param     [IN]  Allocation parameters
+// voe_idx   [OUT] Index of allocated VOE instance.
+vtss_rc vtss_voe_alloc(const vtss_inst_t            inst,
+                       const vtss_voe_allocation_t  *const param,
+                       vtss_voe_idx_t               *const voe_idx);
+
+// Free a VOE. If it's still enabled, it will also be disabled.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of previously allocated VOE instance.
+vtss_rc vtss_voe_free(const vtss_inst_t     inst,
+                      const vtss_voe_idx_t  voe_idx);
+
+// Kind of DMAC check to perform on incoming OAM PDUs
+typedef enum {
+    VTSS_VOE_DMAC_CHECK_UNICAST,    // Check unicast DMAC
+    VTSS_VOE_DMAC_CHECK_MULTICAST,  // Check multicast DMAC
+    VTSS_VOE_DMAC_CHECK_BOTH,       // Check both uni and multicast DMAC
+    VTSS_VOE_DMAC_CHECK_NONE        // No Check of DMAC
+} vtss_voe_dmac_check_t;
+
+// VOE Basic configuration structure.
+typedef struct {
+    BOOL                   enable;          // Enable the VOE
+    vtss_mac_t             unicast_mac;     // This VOE's unicast MAC
+    u8                     meg_level;       // MEG Level (MEL)
+    vtss_voe_dmac_check_t  dmac_check_type; // Kind of DMAC check to perform
+#if defined(VTSS_FEATURE_VOP_CFM)
+    vtss_iflow_id_t        loop_iflow_id;   // Loop ingress flow id
+#endif
+#if defined(VTSS_FEATURE_VOP_V2)
+    // Block OAM PDUs with MEG level higher than the VOE MEG level
+    BOOL                   block_mel_high;
+#endif
+#if defined(VTSS_FEATURE_VOP_TAGGING)
+    vtss_port_max_tags_t   tagging;         // OAM PDU is behind this many tags
+#endif
+} vtss_voe_conf_t;
+
+// Set VOE configuration.
+// Note that RDI and hitme configuration must be (re-)applied after
+// a call to this function.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of VOE configuration to get.
+// conf     [IN] New configuration for the VOE.
+vtss_rc vtss_voe_conf_set(const vtss_inst_t      inst,
+                          const vtss_voe_idx_t   voe_idx,
+                          const vtss_voe_conf_t  *const conf);
+
+vtss_rc vtss_voe_conf_get(const vtss_inst_t      inst,
+                          const vtss_voe_idx_t   voe_idx,
+                          vtss_voe_conf_t        *const conf);
+
+
+// Supported OAM periods for CCM
+typedef enum {
+    VTSS_VOE_CCM_PERIOD_3_3_MS,
+    VTSS_VOE_CCM_PERIOD_10_MS,
+    VTSS_VOE_CCM_PERIOD_100_MS,
+    VTSS_VOE_CCM_PERIOD_1_SEC,
+#if defined(VTSS_FEATURE_VOP_V2)
+    VTSS_VOE_CCM_PERIOD_10_SEC
+#endif
+} vtss_voe_ccm_period_t;
+
+// VOE/VOI CPU copy selection.
+typedef enum {
+    VTSS_OAM_CPU_COPY_NONE,
+    VTSS_OAM_CPU_COPY_ALL,
+
+#if defined(VTSS_FEATURE_VOP_V2)
+    // The PDUs are auto-copied to CPU based on 'vtss_vop_conf_t.auto_copy_xxx'
+    // period selector.
+    VTSS_OAM_CPU_COPY_AUTO
+#endif
+} vtss_oam_cpu_copy_t;
+
+// VOE CC configuration.
+#define VTSS_OAM_MEG_ID_LENGTH  48     // The MEG-ID length
+typedef struct {
+    BOOL                   enable;         // Enable CCM PDU handling in HW
+    vtss_oam_cpu_copy_t    cpu_copy;       // Control copy of CCM PDUs to CPU
+    BOOL                   seq_no_update;  // Update TX CCM sequence number
+
+    // Count PDU as selected.
+    // There is one counter in vtss_voe_counters_t that counts any
+    // OAM PDU type that is configured to 'count_as_selected'.
+    BOOL                   count_as_selected;
+
+    // Expected received CCM PDU period.
+    vtss_voe_ccm_period_t  expected_period;
+
+    // Expected received CCM PDU Priority
+    u8                     expected_priority;
+
+    // Expected received CCM PDU MEG-ID.
+    u8                     expected_megid[VTSS_OAM_MEG_ID_LENGTH];
+
+    // Expected received CCM_PDU peer MEP-ID.
+    u16                    expected_peer_mepid;
+} vtss_voe_cc_conf_t;
+
+// VOE Continuity Check configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for CC.
+vtss_rc vtss_voe_cc_conf_set(const vtss_inst_t         inst,
+                             const vtss_voe_idx_t      voe_idx,
+                             const vtss_voe_cc_conf_t  *const conf);
+
+vtss_rc vtss_voe_cc_conf_get(const vtss_inst_t      inst,
+                             const vtss_voe_idx_t   voe_idx,
+                             vtss_voe_cc_conf_t     *const conf);
+
+// VOE Continuity Check RDI status set.
+// This RDI is inserted in transmitted CCM if CC is enabled.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+// rdi      [IN] The CCM RDI status.
+vtss_rc vtss_voe_cc_rdi_set(const vtss_inst_t     inst,
+                            const vtss_voe_idx_t  voe_idx,
+                            const BOOL            rdi);
+
+vtss_rc vtss_voe_cc_rdi_get(const vtss_inst_t     inst,
+                            const vtss_voe_idx_t  voe_idx,
+                            BOOL                  *const rdi);
+
+// VOE Continuity Check copy next received CC PDU to CPU set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+vtss_rc vtss_voe_cc_cpu_copy_next_set(const vtss_inst_t     inst,
+                                      const vtss_voe_idx_t  voe_idx);
+#if defined(VTSS_FEATURE_VOP_CFM)
+// VOE LT configuration.
+typedef struct {
+    BOOL   enable;   // Enable LT PDU handling in HW
+
+    // Count PDU as selected. */
+    // There is one counter in vtss_voe_counters_t that counts any
+    // OAM PDU type that is configured to 'count_as_selected'. */
+    BOOL   count_as_selected;
+
+    BOOL   ltm_cpu_copy;   // Copy all LTM PDUs to CPU
+    BOOL   ltr_cpu_copy;   // Copy all LTR PDUs to CPU
+} vtss_voe_lt_conf_t;
+
+// VOE Link Trace configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LT.
+vtss_rc vtss_voe_lt_conf_set(const vtss_inst_t          inst,
+                             const vtss_voe_idx_t       voe_idx,
+                             const vtss_voe_lt_conf_t   *const conf);
+
+vtss_rc vtss_voe_lt_conf_get(const vtss_inst_t      inst,
+                             const vtss_voe_idx_t   voe_idx,
+                             vtss_voe_lt_conf_t     *const conf);
+
+// VOE LB configuration.
+#define VTSS_VOE_LBM_TRANSACTION_ID_NONE    0xFFFFFFFF
+typedef struct {
+    BOOL   enable;   // Enable LBM/LBR PDU handling in HW
+
+    // Count PDU as selected. */
+    // There is one counter in vtss_voe_counters_t that counts any
+    // OAM PDU type that is configured to 'count_as_selected'.
+    BOOL   count_as_selected;
+
+    BOOL                 lbm_cpu_copy;  // Copy all LBM PDUs to CPU
+    vtss_oam_cpu_copy_t  lbr_cpu_copy;  // Control copy of LBR PDUs to CPU
+
+    // LBM Transaction ID to use on Tx. VTSS_VOE_LBM_TRANSACTION_ID_NONE means unchanged.
+    // Auto increment of Tx LBM transaction ID is always enabled
+    u32                  trans_id;
+} vtss_voe_lb_conf_t;
+
+// VOE Loop Back configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LB.
+vtss_rc vtss_voe_lb_conf_set(const vtss_inst_t          inst,
+                             const vtss_voe_idx_t       voe_idx,
+                             const vtss_voe_lb_conf_t   *const conf);
+
+vtss_rc vtss_voe_lb_conf_get(const vtss_inst_t      inst,
+                             const vtss_voe_idx_t   voe_idx,
+                             vtss_voe_lb_conf_t     *const conf);
+
+// VOE LAPS configuration.
+typedef struct {
+    BOOL   enable;   // Enable LAPS PDU handling in HW
+
+    // Count PDU as selected.
+    // There is one counter in vtss_voe_counters_t that counts any
+    // OAM PDU type that is configured to 'count_as_selected'.
+    BOOL   count_as_selected;
+
+    BOOL   cpu_copy;   // Copy all LAPS PDUs to CPU
+} vtss_voe_laps_conf_t;
+
+// VOE Linear Automatic Protection Switch configuration set.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// conf     [IN] Configuration parameters for LAPS.
+vtss_rc vtss_voe_laps_conf_set(const vtss_inst_t            inst,
+                               const vtss_voe_idx_t         voe_idx,
+                               const vtss_voe_laps_conf_t   *const conf);
+
+vtss_rc vtss_voe_laps_conf_get(const vtss_inst_t      inst,
+                               const vtss_voe_idx_t   voe_idx,
+                               vtss_voe_laps_conf_t   *const conf);
+#endif
+
+// VOE status.
+typedef struct {
+    // Indications that a OAM PDU has been seen.
+    // Are cleared during call to vtss_voe_status_get().
+    BOOL  opcode_unexp_seen;
+    BOOL  dmac_unexp_seen;
+#if defined(VTSS_FEATURE_VOP_CFM)
+    BOOL  tx_level_low_seen;   // TX with level low
+#endif
+#if defined(VTSS_FEATURE_VOP_V2)
+    BOOL  version_unexp_seen;
+    BOOL  rx_level_low_seen;   // RX with level low
+    BOOL  rx_level_high_seen;  // Only if 'block_mel_high' is configured
+#endif
+} vtss_voe_status_t;
+
+// VOE status information get.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// status   [IN] Status information for VOE instance.
+vtss_rc vtss_voe_status_get(const vtss_inst_t     inst,
+                            const vtss_voe_idx_t  voe_idx,
+                            vtss_voe_status_t     *const status);
+
+// VOE counters
+typedef struct {
+    // All the following counters are cleared
+    // during call to vtss_voe_counters_clear().
+
+    // OAM PDU RX and TX counters.
+    u64   rx_counter;
+#if defined(VTSS_FEATURE_VOP_CFM)
+    u64   tx_counter;
+#endif
+    // Counters named '_selected_' is counting any OAM PDU type
+    // that is configured to 'count_as_selected'.
+    u64   rx_selected_counter;
+#if defined(VTSS_FEATURE_VOP_CFM)
+    u64   tx_selected_counter;
+#endif
+#if defined(VTSS_FEATURE_VOP_V2)
+    // Rx/Tx PDUs that are discarded due to filtering
+    u64   rx_discard_counter;  // Check of MEL or DMAC or Version or CCM
+    u64   tx_discard_counter;  // Check of MEL
+#endif
+} vtss_voe_counters_t;
+
+// Get VOE counters.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the configured VOE instance.
+// counters [OUT] VOE counters.
+vtss_rc vtss_voe_counters_get(const vtss_inst_t    inst,
+                              const vtss_voe_idx_t voe_idx,
+                              vtss_voe_counters_t  *counters);
+
+// VOE counters clear.
+// Clear counters in vtss_voe_counters_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+vtss_rc vtss_voe_counters_clear(const vtss_inst_t     inst,
+                                const vtss_voe_idx_t  voe_idx);
+
+// VOE CC status
+typedef struct {
+    // (period == 0) for last received CCM PDU
+    BOOL  zero_period;
+
+    // (RDI == 1) for last received CCM PDU
+    BOOL  rdi;
+
+    // dLOC as described in G.8021 6.1.2
+    BOOL  loc;
+
+    // If VTSS_ARCH_SPARX5 is TRUE then the following status
+    // is a defect as described in G.8021 6.1.2.
+
+    // (period != expected) for last received CCM PDU or
+    // dUNP as described in G.8021 6.1.2
+    BOOL  period_unexp;
+
+    // (priority != expected) for last received CCM PDU or
+    // dUNPr as described in G.8021 6.1.2
+    BOOL  priority_unexp;
+
+    // (MEP-ID != expected) for last received CCM PDU or
+    // dUNM as described in G.8021 6.1.2
+    BOOL  mep_id_unexp;
+
+    // (MEG-ID != expected) for last received CCM PDU or
+    // dMMG as described in G.8021 6.1.2
+    BOOL  meg_id_unexp;
+#if defined(VTSS_FEATURE_VOP_V2)
+    // (MEL != expected) for last received CCM PDU or
+    // dUNL as described in G.8021 6.1.2
+    BOOL  mel_unexp;
+
+    // This CCM related status is based on the latest received CCM PDU.
+    vtss_port_no_t  rx_port;          // The ingress port
+    u8              port_status_tlv;  // Port Status TLV value
+    u8              if_status_tlv;    // Interface Status TLV value
+#endif
+    // Indications that a CCM PDU has been seen.
+    // Are cleared during call to vtss_voe_cc_status_get()
+    BOOL  seen;
+#if defined(VTSS_FEATURE_VOP_V2)
+    BOOL  tlv_seen;        // With TLV
+    BOOL  seq_unexp_seen;  // With unexpected sequence number
+#endif
+} vtss_voe_cc_status_t;
+
+// VOE Continuity Check status get.
+//
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] CCM status information.
+vtss_rc vtss_voe_cc_status_get(const vtss_inst_t     inst,
+                               const vtss_voe_idx_t  voe_idx,
+                               vtss_voe_cc_status_t  *status);
+
+// VOE CC Counters
+typedef struct {
+    // CCM PDU RX and TX counters
+    // Are cleared during call to vtss_voe_cc_counters_clear()
+    u64  rx_valid_counter;
+    u64  rx_invalid_counter;
+    u64  rx_oo_counter;  // Out of Order sequence numbers counter
+    u64  tx_counter;
+} vtss_voe_cc_counters_t;
+
+// Get VOE Continuity Check counters.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+// counters [OUT] CC counters.
+vtss_rc vtss_voe_cc_counters_get(const vtss_inst_t      inst,
+                                 const vtss_voe_idx_t   voe_idx,
+                                 vtss_voe_cc_counters_t *counters);
+
+// VOE Continuity Check counter clear.
+// Clear CC counters in vtss_voe_cc_counters_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+vtss_rc vtss_voe_cc_counters_clear(const vtss_inst_t     inst,
+                                   const vtss_voe_idx_t  voe_idx);
+
+#if defined(VTSS_FEATURE_VOP_CFM)
+// VOE LT status
+typedef struct {
+    // Indications that a LT PDU has been seen.
+    // Are cleared during call to vtss_voe_lt_status_get()
+    BOOL   ltm_seen;
+    BOOL   ltr_seen;
+} vtss_voe_lt_status_t;
+
+// VOE Link Trace status get.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] LT status.
+vtss_rc vtss_voe_lt_status_get(const vtss_inst_t      inst,
+                               const vtss_voe_idx_t   voe_idx,
+                               vtss_voe_lt_status_t   *status);
+
+// VOE LB status.
+typedef struct {
+    // Indications that a LB PDU has been seen.
+    // Are cleared during call to vtss_voe_lb_status_get()
+    BOOL   lbm_seen;
+    BOOL   lbr_seen;
+#if defined(VTSS_FEATURE_VOP_V2)
+    BOOL   trans_unexp_seen;  // LBR PDU with unexpected transaction id
+#endif
+    u32    tx_trans_id;         // The next transmitted transaction id
+    u32    rx_trans_id;         // The last received transaction id
+} vtss_voe_lb_status_t;
+
+/* VOE Loop Back status get.
+ * inst     [IN]  Target instance reference.
+ * voe_idx  [IN]  Index of the VOE instance.
+ * status   [OUT] LB status. */
+vtss_rc vtss_voe_lb_status_get(const vtss_inst_t      inst,
+                               const vtss_voe_idx_t   voe_idx,
+                               vtss_voe_lb_status_t   *status);
+
+// VOE LB counters
+typedef struct {
+    // LB PDU RX and TX counters
+    // Are cleared during call to vtss_voe_lb_counters_clear()
+    u64    rx_lbr_counter;
+    u64    tx_lbm_counter;
+    u64    rx_lbr_oo_counter;   // Out of Order sequence numbers counter
+#if defined(VTSS_FEATURE_VOP_V2)
+    u64    rx_lbr_crc_counter;  // Test TLV that has CRC error counter
+    u64    tx_lbr_counter;
+#endif
+} vtss_voe_lb_counters_t;
+
+// Get VOE Loop Back counters.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// counters [OUT] LB counters.
+vtss_rc vtss_voe_lb_counters_get(const vtss_inst_t      inst,
+                                 const vtss_voe_idx_t   voe_idx,
+                                 vtss_voe_lb_counters_t *counters);
+
+// VOE Loop Back counters clear.
+// Clear LB counters in vtss_voe_lb_counters_t
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the VOE instance.
+vtss_rc vtss_voe_lb_counters_clear(const vtss_inst_t     inst,
+                                   const vtss_voe_idx_t  voe_idx);
+
+// VOE LAPS status
+typedef struct {
+    // Indications that a LAPS PDU has been seen.
+    // Are cleared during call to vtss_voe_laps_status_get()
+    BOOL  seen;
+} vtss_voe_laps_status_t;
+
+// VOE Linear Automatic Protection Switch status get.
+// inst     [IN]  Target instance reference.
+// voe_idx  [IN]  Index of the VOE instance.
+// status   [OUT] LAPS status.
+vtss_rc vtss_voe_laps_status_get(const vtss_inst_t        inst,
+                                 const vtss_voe_idx_t     voe_idx,
+                                 vtss_voe_laps_status_t   *status);
+#endif
+
+// VOE event active state get
+// Get bit mask array indicating VOEs with active events.
+// Function called by interrupt or periodically.
+// inst        [IN]  Target instance reference.
+// active_size [IN]  The size of the active event mask array.
+//                   Must be VTSS_EVENT_MASK_ARRAY_SIZE.
+// active      [OUT] Active event mask array. The LSB of active[0] is VOE index 0.
+vtss_rc vtss_voe_event_active_get(const vtss_inst_t   inst,
+                                  const u32           active_size,
+                                  u32                 *const active);
+
+// VOE Event indication flags.
+// Different events can be enabled/disabled and polled.
+// The events are represented by a bit in an event mask.
+#define VTSS_VOE_EVENT_MASK_NONE                0x000
+// Period check state changed
+#define VTSS_VOE_EVENT_MASK_CCM_PERIOD          0x001
+// Period zero check state changed
+#define VTSS_VOE_EVENT_MASK_CCM_ZERO_PERIOD     0x002
+// Priority check state changed
+#define VTSS_VOE_EVENT_MASK_CCM_PRIORITY        0x004
+// Loss Of Continuity state changed
+#define VTSS_VOE_EVENT_MASK_CCM_LOC             0x008
+// MEP ID state changed
+#define VTSS_VOE_EVENT_MASK_CCM_MEP_ID          0x010
+// MEG ID state changed
+#define VTSS_VOE_EVENT_MASK_CCM_MEG_ID          0x020
+// MEG Level state changed
+#define VTSS_VOE_EVENT_MASK_CCM_MEG_LEVEL       0x040
+// RDI flag value changed
+#define VTSS_VOE_EVENT_MASK_CCM_RX_RDI          0x080
+#if defined(VTSS_FEATURE_VOP_V2)
+// Rx source port move detected
+#define VTSS_VOE_EVENT_MASK_CCM_SRC_PORT_MOVE   0x100
+// Port status TLV value changed
+#define VTSS_VOE_EVENT_MASK_CCM_TLV_PORT_STATUS 0x200
+// Interface status TLV value changed
+#define VTSS_VOE_EVENT_MASK_CCM_TLV_IF_STATUS   0x400
+#define VTSS_VOE_EVENT_MASK_ALL                 0x7FF
+#else
+#define VTSS_VOE_EVENT_MASK_ALL                 0x0FF
+#endif
+
+// VOE event generation enable/disable.
+// inst     [IN] Target instance reference.
+// voe_idx  [IN] Index of the configured VOE instance.
+// mask     [IN] Mask of events to either enable or disable.
+// enable   [IN] Whether to enable or disable the events specified in the mask.
+vtss_rc vtss_voe_event_mask_set(const vtss_inst_t     inst,
+                                const vtss_voe_idx_t  voe_idx,
+                                const u32             mask,
+                                const BOOL            enable);
+
+vtss_rc vtss_voe_event_mask_get(const vtss_inst_t     inst,
+                                const vtss_voe_idx_t  voe_idx,
+                                u32                   *const mask);
+
+// VOE event polling.
+// Mask is returned indicating pending events. Pending event are cleared after get.
+// inst      [IN]  Target instance reference.
+// voe_idx   [IN]  Index of polled VOE instance.
+// mask      [OUT] Mask of detected pending events during get.
+vtss_rc vtss_voe_event_get(const vtss_inst_t     inst,
+                           const vtss_voe_idx_t  voe_idx,
+                           u32                   *const mask);
+
+
+
+
+#if defined(VTSS_FEATURE_VOP_V2)
+// -------------------------------------------------------------------------
+// --- VOI - Versatile OAM Intermediate point     --------------------------
+// --- Note that in registers this is called MIP  --------------------------
+// -------------------------------------------------------------------------
+
+// VOI Allocation structure.
+typedef struct {
+    vtss_port_no_t        port;
+    vtss_oam_direction_t  direction;
+} vtss_voi_allocation_t;
+
+// Allocate a VOI.
+// inst      [IN]  Target instance reference.
+// param     [IN]  Allocation parameters
+// voi_idx   [OUT] Index of allocated VOI instance.
+//                 this index can be used when creating VCE or TCE entries */
+vtss_rc vtss_voi_alloc(const vtss_inst_t            inst,
+                       const vtss_voi_allocation_t  *const param,
+                       vtss_voi_idx_t               *const voi_idx);
+
+// Free a VOI.
+// inst      [IN] Target instance reference.
+// voi_idx   [IN] Index of previously allocated VOI instance.
+vtss_rc vtss_voi_free(const vtss_inst_t       inst,
+                      const vtss_voi_idx_t    voi_idx);
+
+// VOI APS PDU handling.
+typedef enum {
+    VTSS_OAM_RAPS_HANDLING_NONE,        // RAPS PDUs are not handled
+    VTSS_OAM_RAPS_HANDLING_COPY_CPU,    // RAPS PDUs are copied to CPU
+    VTSS_OAM_RAPS_HANDLING_REDIR_CPU,   // RAPS PDUs are redirected to CPU
+    VTSS_OAM_RAPS_HANDLING_DISCARD,     // RAPS PDUs are discarded
+} vtss_oam_raps_handling_t;
+
+// VOI configuration.
+typedef struct {
+    BOOL                      enable;         // Enable the VOI
+    vtss_mac_t                unicast_mac;    // The VOI unicast MAC
+    u32                       meg_level;      // MEG Level (MEL)
+    BOOL                      lbm_cpu_redir;  // Enable LBM redirect to CPU
+    BOOL                      ltm_cpu_redir;  // Enable LTM redirect to CPU
+    vtss_oam_raps_handling_t  raps_handling;  // Control handling of RAPS PDUs
+} vtss_voi_conf_t;
+
+// VOI configuration set.
+// inst      [IN] Target instance reference.
+// voi_idx   [IN] Index of the configured VOI instance.
+// conf      [IN] Configuration parameters for VOI. */
+vtss_rc vtss_voi_conf_set(const vtss_inst_t       inst,
+                          const vtss_voi_idx_t    voi_idx,
+                          const vtss_voi_conf_t   *const conf);
+
+vtss_rc vtss_voi_conf_get(const vtss_inst_t      inst,
+                          const vtss_voi_idx_t   voi_idx,
+                          vtss_voi_conf_t        *const conf);
+#endif /* VTSS_FEATURE_VOP_V2 */
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* VTSS_FEATURE_VOP */
+#endif /* _VTSS_VOP_API_H_ */
+:@byteposir:	@str"#ifndef _VTSS_VOP_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[◊iPipiqiriÜiüi†iºiΩi€iÓi˚iii5i6iêiÎii}iÂiCiKiÇiãiåi¿i¡iivi•iioiŒiibi i(i0igipiqi¶i‹iiiziŸi:	i;	i°	ij
+ik
+i£
+i§
+iilimi£ii<iüi©i‚iÌiÓiTii&i'i\iÑiãiåiçiièi2i3i4iÅiŒiiifiwiªiºi›iZi£ii†i⁄iWiûi%i,i-iniôiªii.iYiñiùi»iÈiii5i\iciviwiëiªiËi i`iaiîiŒiœi–i—i“iiliπi∫iﬁiÌii i3i4iIiXiuiêi®i©i∆i◊i˘ii i@ibiáiéißi®iªiÈiiFiÄi¬iiiHiti±i„iiiPi_iôi’iiVioipiñißiÂi+ ij i∑ iŸ i!i$!iE!ià!i≥!i∫!i‡!i0"i7"iJ"iK"ie"i©"i≈"iÚ"i'#iW#ié#i»#i$i$i?$iy$i∏$iπ$i∫$i€$iÍ$i
+%i)%iI%ih%iâ%i®%iØ%i»%i…%iË%i˜%i&i.&i/&iP&i†&i∏&i”&i⁄&iÒ&iÚ&i'iG'iX'i§'iÚ'i>(i?(i](i†(iﬂ(i)i)i7)ic)id)ié)iº)iΩ)iÊ)i)*i**iX*ià*iû*iü*i *iˆ*i-+i_+iú+i‹+i!,i",i\,iô,i€,i‹,i-iA-im-iô-iæ-iˆ-i1.ii.ij.i¢.i›.i/i/i[/iá/i≥/iı/i;0i]0iv0iá0iº0iΩ0iﬁ0i!1ic1iÅ1iÇ1iπ1i1i2i2i,2iX2iè2i¡2iˇ2i@3iÜ3iá3i¡3i˛3i@4iA4iZ4ië4i¢4i‹4i›4i˛4iA5iÄ5iû5iü5i„5i.6i/6iâ6i 6iÌ6i7i7i(7iT7iã7iΩ7i˚7i<8iÇ8iÉ8iΩ8i˙8i<9i=9iX9ii9i†9i°9iø9i:iA:i_:i`:iî:i¨:i≠:iÍ:i;iM;iÅ;i√;i<iR<iS<iè<iŒ<i=i=i=i)=i:=ik=i§=i¡=i‹=i˛=i2>i9>iZ>ix>i¨>iı>i¸>i?i?i1?i]?iî?i ?i@i=@i@iÄ@iê@i°@iœ@i AiAi$Ai:Ai\AirAiyAiπAiÎAi
+Bi,BiKBiRBisBi©BiÚBi!Ci(Ci?Ci@CiUCiÇCi∫Ci⁄CiDiODiéDièDi¶DiœDi˚Di'EicEi£Ei§EiµEi∆EiıEiFiFi9FiHFiIFirFiÅFiÇFiøFiFiÒFi*GiSGikGilGißGi—GiÎGiÏGi%HiNHifHigHi†Hi…Hi·HiIi8IiaIivIiwIiøIi˘Ii8Ji|JiÉJi¥JiÔJiˇJi KiGKiÖKiåKi§Ki•Ki…KiÃKi˘Ki&LiPLiãLi…LiMi	MiMi-MiOMiéMi©Mi∆MiNiNi7Ni8Ni^NiäNi∂Ni’NiOiTOiòOiôOi¿OiÔOiPiGPiÜPi…Pi PiÏPi˝PiQi>QiyQiéQi£QiªQiºQi⁄QiRi4RiQRiçRiÃRiSiSiSi0Si`SiõSi∞Si≈SiÊSi.Ti5Ti|Ti¿TiÿTiŸTiˆTi#UiPUipUi¨UiÎUi+Vi,Vi?ViPViqVi∞ViÀViÊVi/WiPWióWi≤WiπWi”Wi‘WiÛWi XiMXilXi™XiÎXi/Yi0YiQYiÄYi¨YiÿYiZiZZi[ZinZiZi±ZiÓZi˛Zi[i[iO[i|[i©[i»[i\iK\iè\iñ\ió\iµ\iÔ\i ]iP]ié]i«]i^iV^iô^iﬂ^i‡^iˇ^i7_ip_i¶_iƒ_i˙_i`iS`is`i©`iÕ`iaiaiQaiiaiüai∫aiai
+bi@biabiÅbi∑biÿbici4cijci†ci¶ci‹ci„ci‰cidi8diodi¨di¸di8eiwei≥eiÚeiÛei/finfi≤fi≥fi…figiKgi|giªgiÚgi,hikhilhimhinhiohiêhi›hi*iiwiiƒii≈ii‚iiÛiiji8jiQjiRjiejiìjiºjiji>kixki∫kiˇki lili<lizliÆliÊliÁli mimiTmiõmiÊmi)niEniFni\nimni≠niÚni3oioiÀoipi-pi.piHpiupi≠pi‰piqiWqióqiòqiœqi	riHriirijri}ririÜri§ri¬r:@last_line_endi¬r{;o;;o;	;
+@
+;iÜ;"#define _VTSS_VOP_API_H_
+
+;@{;o;;o;	;
+@
+;i†;""#include <vtss/api/types.h>
+
+;@{;o;;o;	;
+@
+;iΩ;"##if defined(VTSS_FEATURE_VOP)
+;@{;o;;o;	;
+@
+;i€;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;iÓ;"extern;@:stringo;;o;	;
+@
+;iı;""C";@; [à{;o;;o;	;
+@
+;i˚;"#endif
+
+;@{;o;;o;	;
+@
+;i;"8#if defined(VTSS_FEATURE_VOP_V0)     /* VOP V0 */
+
+;@{;o;;o;	;
+@
+;i6;"_#  define VTSS_DOWN_VOI_CNT           (0)                         // No VOIs (MIPs) in HW
+;@{;o;;o;	;
+@
+;iê;"`#  define VTSS_UP_VOI_CNT             (0)                         // No VOIs (MIPs) in HW.
+;@{;o;;o;	;
+@
+;iÎ;"7#  if defined(VTSS_ARCH_LAN966X)   /* Maserati */
+;@{;o;;o;	;
+@
+;i;"e#    define VTSS_PORT_VOE_CNT           (8)                        // Number of port VOEs in HW
+;@{;o;;o;	;
+@
+;i};"m#    define VTSS_PATH_SERVICE_VOE_CNT   (0)                        // Number of path/service VOEs in HW
+;@{;o;;o;	;
+@
+;iÂ;"c#    define VTSS_PORT_VOE_BASE_IDX      (0)                        // Index of first port VOE
+;@{;o;;o;	;
+@
+;iC;"#  else
+;@{;o;;o;	;
+@
+;iK;"<#    error "not defined expected architure for VOP V0"
+;@{;o;;o;	;
+@
+;iÇ;"#  endif
+
+;@{;o;;o;	;
+@
+;iå;":#elif defined(VTSS_FEATURE_VOP_V1)     /* VOP V1 */
+
+;@{;o;;o;	;
+@
+;i¡;"_#  define VTSS_DOWN_VOI_CNT           (0)                         // No VOIs (MIPs) in HW
+;@{;o;;o;	;
+@
+;i;"`#  define VTSS_UP_VOI_CNT             (0)                         // No VOIs (MIPs) in HW.
+;@{;o;;o;	;
+@
+;iv;"4#  if defined(VTSS_ARCH_OCELOT)   /* Ocelot */
+;@{;o;;o;	;
+@
+;i•;"f#    define VTSS_PORT_VOE_CNT           (11)                        // Number of port VOEs in HW
+;@{;o;;o;	;
+@
+;i;"n#    define VTSS_PATH_SERVICE_VOE_CNT   (32)                        // Number of path/service VOEs in HW
+;@{;o;;o;	;
+@
+;io;"d#    define VTSS_PORT_VOE_BASE_IDX      (32)                        // Index of first port VOE
+;@{;o;;o;	;
+@
+;iŒ;"9#  elif defined(VTSS_ARCH_LAN966X)   /* Maserati */
+;@{;o;;o;	;
+@
+;i;"e#    define VTSS_PORT_VOE_CNT           (8)                        // Number of port VOEs in HW
+;@{;o;;o;	;
+@
+;ib;"m#    define VTSS_PATH_SERVICE_VOE_CNT   (0)                        // Number of path/service VOEs in HW
+;@{;o;;o;	;
+@
+;i ;"c#    define VTSS_PORT_VOE_BASE_IDX      (0)                        // Index of first port VOE
+;@{;o;;o;	;
+@
+;i(;"#  else
+;@{;o;;o;	;
+@
+;i0;"<#    error "not defined expected architure for VOP V1"
+;@{;o;;o;	;
+@
+;ig;"#  endif
+
+;@{;o;;o;	;
+@
+;iq;":#elif defined(VTSS_FEATURE_VOP_V2)  /* End VOP V1 */
+;@{;o;;o;	;
+@
+;i‹;":#  if defined(VTSS_ARCH_SERVAL_T)     /* ServalT */
+
+;@{;o;;o;	;
+@
+;i;"n#    define VTSS_PATH_SERVICE_VOE_CNT   (192)                       // Number of path/service VOEs in HW
+;@{;o;;o;	;
+@
+;iz;"d#    define VTSS_PORT_VOE_BASE_IDX      (192)                       // Index of first port VOE
+;@{;o;;o;	;
+@
+;iŸ;"g#    define VTSS_PORT_VOE_CNT           (11)                        // Number of port VOEs in HW
+
+;@{;o;;o;	;
+@
+;i;	;"k#    define VTSS_DOWN_VOI_CNT           (128)                       // Number of down VOI (MIP) in HW
+;@{;o;;o;	;
+@
+;i°	;" #    define VTSS_UP_VOI_CNT             (127)                       // Number of up VOI (MIP) in HW. Up MIP instance 0 is not used as it cannot be addressed by ES0 action - 0 has the meaning of no MIB
+
+;@{;o;;o;	;
+@
+;ik
+;">#  else                               /* End ServalT */
+
+;@{;o;;o;	;
+@
+;i§
+;"n#    define VTSS_PATH_SERVICE_VOE_CNT   (1024)                      // Number of path/service VOEs in HW
+;@{;o;;o;	;
+@
+;i;"e#    define VTSS_PORT_VOE_BASE_IDX      (1024)                      // Index of first port VOE
+
+;@{;o;;o;	;
+@
+;im;";#    if defined(VTSS_ARCH_JAGUAR_2)     /* Jaguar2 */
+;@{;o;;o;	;
+@
+;i£;"h#      define VTSS_PORT_VOE_CNT           (53)                        // Number of port VOEs in HW
+;@{;o;;o;	;
+@
+;i;";#    elif defined(VTSS_ARCH_SPARX5)     /* SparX-5 */
+;@{;o;;o;	;
+@
+;i<;"h#      define VTSS_PORT_VOE_CNT           (65)                        // Number of port VOEs in HW
+;@{;o;;o;	;
+@
+;iü;"#    else
+;@{;o;;o;	;
+@
+;i©;">#      error "not defined expected architure for VOP V2"
+;@{;o;;o;	;
+@
+;i‚;"#    endif
+
+;@{;o;;o;	;
+@
+;iÓ;"k#    define VTSS_DOWN_VOI_CNT           (1024)                      // Number of down VOI (MIP) in HW
+;@{;o;;o;	;
+@
+;iT;"…#    define VTSS_UP_VOI_CNT             (1023)                      // Number of up VOI (MIP) in HW. Up MIP instance 0 is not used as it cannot be addressed by ES0 action - 0 has the meaning of no MIB
+;@{;o;;o;	;
+@
+;i;"#  endif
+
+;@{;o;;o;	;
+@
+;i';":#else                               /* End VOP V2 */
+;@{;o;;o;	;
+@
+;i\;"-#  error "VOP V1 or V2 must be defined"
+;@{;o;;o;	;
+@
+;iÑ;"#endif
+
+
+;@{;o;;o;	;
+@
+;iç;"Ö#define VTSS_VOE_CNT                ((VTSS_PATH_SERVICE_VOE_CNT) + (VTSS_PORT_VOE_CNT))   // Total count of port + path/service VOEs
+;@{;o;;o;	;
+@
+;i;"}#define VTSS_VOI_CNT                ((VTSS_DOWN_VOI_CNT) + (VTSS_UP_VOI_CNT))             // Total count of down and up VOIs
+;@{;o;;o;	;
+@
+;iè;"•#define VTSS_EVENT_MASK_ARRAY_SIZE  ((VTSS_VOE_CNT+31)/32)                                // Size in u32's of event mask array used by vtss_voe_event_active_get()
+
+
+;@{
+;o;;o;	;
+@
+;if;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i{;"vtss_mac_t  ;@:	nameo;;o;	;
+@
+;iá;"multicast_dmac;@:
+array[ :cap0{;o;;o;	;
+@
+;iº;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;i·;"u32         ;@;o;;o;	;
+@
+;iÌ;"auto_copy_period;@;[{:	expro;;o;	;
+@
+;i˛;"2;@;0{;{;{	;o;;o;	;
+@
+;iß;"u8          ;@;o;;o;	;
+@
+;i≥;"auto_copy_ccm_valid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"u8          ;@;o;;o;	;
+@
+;i(;"auto_copy_ccm_tlv;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬁ;"u8          ;@;o;;o;	;
+@
+;iÍ;"auto_copy_ccm_err;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¢;"u8          ;@;o;;o;	;
+@
+;iÆ;"auto_copy_lbr;@;[ ;0{;o;;o;	;
+@
+;i%;"#endif
+
+;@{;{;{	;o;;o;	;
+@
+;ir;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iä;"voe_queue_ccm;@;[ ;0{;o;;o;	;
+@
+;iô;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;iø;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i◊;"voe_queue_lt;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i;"voe_queue_lbm;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iJ;"voe_queue_lbr;@;[ ;0{;{;{	;o;;o;	;
+@
+;i];"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iu;"voe_queue_aps;@;[ ;0{;o;;o;	;
+@
+;iñ;"#endif
+;@{;{;{	;o;;o;	;
+@
+;i°;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iπ;"voe_queue_err;@;[ ;0{;o;;o;	;
+@
+;i»;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;iÌ;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;i;"voi_queue;@;[ ;0{;o;;o;	;
+@
+;i;"#endif
+;@{;o;;o;	;
+@
+;i;"##if defined(VTSS_FEATURE_MRP)
+;@{;{;{	;o;;o;	;
+@
+;i9;"vtss_packet_rx_queue_t  ;@;o;;o;	;
+@
+;iQ;"mrp_queue;@;[ ;0{;o;;o;	;
+@
+;i\;"#endif
+;@:typedef_nameo;;o;	;
+@
+;ie;"vtss_vop_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;iË;"vtss_rc ;@;o;;o;	;
+@
+;i;"vtss_vop_conf_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i;"const vtss_inst_t       ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i:;"$const vtss_vop_conf_t   *const ;@;o;;o;	;
+@
+;iY;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;ia;"vtss_rc ;@;o;;o;	;
+@
+;ii;"vtss_vop_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i{;"const vtss_inst_t  ;@;o;;o;	;
+@
+;ié;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ;"vtss_vop_conf_t    *const ;@;o;;o;	;
+@
+;i»;"cfg;@;[ ;0;0{
+;o;;o;	;
+@
+;iﬁ;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iÊ;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÒ;"VTSS_VOE_TYPE_SERVICE;@;0{;"{;#o;;o;	;
+@
+;i;"VTSS_VOE_TYPE_PORT;@;0;o;;o;	;
+@
+;i";"vtss_voe_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iI;"typedef;@; {;o;;o;	;
+@
+;iQ;"	enum;@;![{;"{;#o;;o;	;
+@
+;i\;"VTSS_OAM_DIRECTION_DOWN;@;0{;"{;#o;;o;	;
+@
+;iy;"VTSS_OAM_DIRECTION_UP;@;0;o;;o;	;
+@
+;ií;"vtss_oam_direction_t;@;[ ;0{
+;o;;o;	;
+@
+;i∆;"typedef;@;{;[{;o;;o;	;
+@
+;i◊;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;i˝;"vtss_voe_type_t       ;@;o;;o;	;
+@
+;i;"	type;@;[ ;0{;o;;o;	;
+@
+;i;"#endif
+;@{;{;{	;o;;o;	;
+@
+;i$;"vtss_port_no_t        ;@;o;;o;	;
+@
+;i:;"	port;@;[ ;0{;o;;o;	;
+@
+;i@;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;if;"vtss_oam_direction_t  ;@;o;;o;	;
+@
+;i|;"direction;@;[ ;0{;o;;o;	;
+@
+;iá;"#endif
+;@;o;;o;	;
+@
+;iê;"vtss_voe_allocation_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iF;"vtss_rc ;@;o;;o;	;
+@
+;iN;"vtss_voe_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;i];""const vtss_inst_t            ;@;o;;o;	;
+@
+;iz;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ió;")const vtss_voe_allocation_t  *const ;@;o;;o;	;
+@
+;iª;"
+param;@;[ ;0{;{	;o;;o;	;
+@
+;iŸ;")vtss_voe_idx_t               *const ;@;o;;o;	;
+@
+;i˝;"voe_idx;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i±;"vtss_rc ;@;o;;o;	;
+@
+;iπ;"vtss_voe_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;i«;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i›;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i˘;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i;"voe_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;iP;"typedef;@; {;o;;o;	;
+@
+;iX;"	enum;@;![	{;"{;#o;;o;	;
+@
+;ic;" VTSS_VOE_DMAC_CHECK_UNICAST;@;0{;"{;#o;;o;	;
+@
+;iù;""VTSS_VOE_DMAC_CHECK_MULTICAST;@;0{;"{;#o;;o;	;
+@
+;iŸ;"VTSS_VOE_DMAC_CHECK_BOTH;@;0{;"{;#o;;o;	;
+@
+;i";"%VTSS_VOE_DMAC_CHECK_NONE        ;@;0;o;;o;	;
+@
+;iX;"vtss_voe_dmac_check_t;@;[ ;0{
+;o;;o;	;
+@
+;iñ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i´;"BOOL                   ;@;o;;o;	;
+@
+;i¬;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈ;"vtss_mac_t             ;@;o;;o;	;
+@
+;i  ;"unicast_mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i/ ;"u8                     ;@;o;;o;	;
+@
+;iF ;"meg_level;@;[ ;0{;{;{	;o;;o;	;
+@
+;in ;"vtss_voe_dmac_check_t  ;@;o;;o;	;
+@
+;iÖ ;"dmac_check_type;@;[ ;0{;o;;o;	;
+@
+;i∑ ;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;i› ;"vtss_iflow_id_t        ;@;o;;o;	;
+@
+;iÙ ;"loop_iflow_id;@;[ ;0{;o;;o;	;
+@
+;i!;"#endif
+;@{;o;;o;	;
+@
+;i$!;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;iå!;"BOOL                   ;@;o;;o;	;
+@
+;i£!;"block_mel_high;@;[ ;0{;o;;o;	;
+@
+;i≥!;"#endif
+;@{;o;;o;	;
+@
+;i∫!;"+#if defined(VTSS_FEATURE_VOP_TAGGING)
+;@{;{;{	;o;;o;	;
+@
+;i‰!;"vtss_port_max_tags_t   ;@;o;;o;	;
+@
+;i˚!;"tagging;@;[ ;0{;o;;o;	;
+@
+;i0";"#endif
+;@;o;;o;	;
+@
+;i9";"vtss_voe_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iW#;"vtss_rc ;@;o;;o;	;
+@
+;i_#;"vtss_voe_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iq#;"const vtss_inst_t      ;@;o;;o;	;
+@
+;ià#;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i®#;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;iø#;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i‚#;"#const vtss_voe_conf_t  *const ;@;o;;o;	;
+@
+;i $;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i$;"vtss_rc ;@;o;;o;	;
+@
+;i$;"vtss_voe_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i"$;"const vtss_inst_t      ;@;o;;o;	;
+@
+;i9$;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iY$;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;ip$;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iì$;"#vtss_voe_conf_t        *const ;@;o;;o;	;
+@
+;i±$;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i€$;"typedef;@; {;o;;o;	;
+@
+;i„$;"	enum;@;![{;"{;#o;;o;	;
+@
+;iÓ$;"VTSS_VOE_CCM_PERIOD_3_3_MS;@;0{;"{;#o;;o;	;
+@
+;i%;"VTSS_VOE_CCM_PERIOD_10_MS;@;0{;"{;#o;;o;	;
+@
+;i-%;"VTSS_VOE_CCM_PERIOD_100_MS;@;0{;"{;#o;;o;	;
+@
+;iM%;"VTSS_VOE_CCM_PERIOD_1_SEC;@;0{;o;;o;	;
+@
+;ih%;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;"{;#o;;o;	;
+@
+;iç%;" VTSS_VOE_CCM_PERIOD_10_SEC
+;@;0{;o;;o;	;
+@
+;i®%;"#endif
+;@;o;;o;	;
+@
+;i±%;"vtss_voe_ccm_period_t;@;[ ;0{
+;o;;o;	;
+@
+;iË%;"typedef;@; {;o;;o;	;
+@
+;i%;"	enum;@;![
+{;"{;#o;;o;	;
+@
+;i˚%;"VTSS_OAM_CPU_COPY_NONE;@;0{;"{;#o;;o;	;
+@
+;i&;"VTSS_OAM_CPU_COPY_ALL;@;0{;o;;o;	;
+@
+;i/&;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;"{;#o;;o;	;
+@
+;iº&;"VTSS_OAM_CPU_COPY_AUTO
+;@;0{;o;;o;	;
+@
+;i”&;"#endif
+;@;o;;o;	;
+@
+;i‹&;"vtss_oam_cpu_copy_t;@;[ ;0{;o;;o;	;
+@
+;i';"A#define VTSS_OAM_MEG_ID_LENGTH  48     // The MEG-ID length
+;@{
+;o;;o;	;
+@
+;iG';"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i\';"BOOL                   ;@;o;;o;	;
+@
+;is';"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i®';"vtss_oam_cpu_copy_t    ;@;o;;o;	;
+@
+;iø';"cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆ';"BOOL                   ;@;o;;o;	;
+@
+;i(;"seq_no_update;@;[ ;0{;{;{	;o;;o;	;
+@
+;i„(;"BOOL                   ;@;o;;o;	;
+@
+;i˙(;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;);"vtss_voe_ccm_period_t  ;@;o;;o;	;
+@
+;iR);"expected_period;@;[ ;0{;{;{	;o;;o;	;
+@
+;ií);"u8                     ;@;o;;o;	;
+@
+;i©);"expected_priority;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍ);"u8                     ;@;o;;o;	;
+@
+;i*;"expected_megid;@;[{;o;;o;	;
+@
+;i*;"VTSS_OAM_MEG_ID_LENGTH;@;0{;{;{	;o;;o;	;
+@
+;i\*;"u16                    ;@;o;;o;	;
+@
+;is*;"expected_peer_mepid;@;[ ;0;o;;o;	;
+@
+;iä*;"vtss_voe_cc_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_+;"vtss_rc ;@;o;;o;	;
+@
+;ig+;"vtss_voe_cc_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i|+;"const vtss_inst_t         ;@;o;;o;	;
+@
+;iñ+;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iπ+;"const vtss_voe_idx_t      ;@;o;;o;	;
+@
+;i”+;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i˘+;"&const vtss_voe_cc_conf_t  *const ;@;o;;o;	;
+@
+;i,;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i",;"vtss_rc ;@;o;;o;	;
+@
+;i*,;"vtss_voe_cc_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i?,;"const vtss_inst_t      ;@;o;;o;	;
+@
+;iV,;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iy,;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;iê,;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i∂,;"#vtss_voe_cc_conf_t     *const ;@;o;;o;	;
+@
+;i‘,;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iæ-;"vtss_rc ;@;o;;o;	;
+@
+;i∆-;"vtss_voe_cc_rdi_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i⁄-;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i-;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i.;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i(.;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iM.;"const BOOL            ;@;o;;o;	;
+@
+;ic.;"rdi;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;ij.;"vtss_rc ;@;o;;o;	;
+@
+;ir.;"vtss_voe_cc_rdi_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÜ.;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iú.;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iæ.;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i‘.;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i˘.;""BOOL                  *const ;@;o;;o;	;
+@
+;i/;"rdi;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i≥/;"vtss_rc ;@;o;;o;	;
+@
+;iª/;""vtss_voe_cc_cpu_copy_next_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iŸ/;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iÔ/;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i0;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i10;"voe_idx;@;[ ;0;0{;o;;o;	;
+@
+;i;0;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{
+;o;;o;	;
+@
+;iv0;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iã0;"BOOL   ;@;o;;o;	;
+@
+;ií0;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig1;"BOOL   ;@;o;;o;	;
+@
+;in1;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÜ1;"BOOL   ;@;o;;o;	;
+@
+;iç1;"ltm_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iΩ1;"BOOL   ;@;o;;o;	;
+@
+;iƒ1;"ltr_cpu_copy;@;[ ;0;o;;o;	;
+@
+;iÚ1;"vtss_voe_lt_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¡2;"vtss_rc ;@;o;;o;	;
+@
+;i…2;"vtss_voe_lt_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iﬁ2;" const vtss_inst_t          ;@;o;;o;	;
+@
+;i˘2;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i3;" const vtss_voe_idx_t       ;@;o;;o;	;
+@
+;i73;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i]3;"'const vtss_voe_lt_conf_t   *const ;@;o;;o;	;
+@
+;i3;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iá3;"vtss_rc ;@;o;;o;	;
+@
+;iè3;"vtss_voe_lt_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i§3;"const vtss_inst_t      ;@;o;;o;	;
+@
+;iª3;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iﬁ3;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;iı3;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i4;"#vtss_voe_lt_conf_t     *const ;@;o;;o;	;
+@
+;i94;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iZ4;"<#define VTSS_VOE_LBM_TRANSACTION_ID_NONE    0xFFFFFFFF
+;@{
+;o;;o;	;
+@
+;ië4;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i¶4;"BOOL   ;@;o;;o;	;
+@
+;i≠4;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÑ5;"BOOL   ;@;o;;o;	;
+@
+;iã5;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;i£5;"BOOL                 ;@;o;;o;	;
+@
+;i∏5;"lbm_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÁ5;"vtss_oam_cpu_copy_t  ;@;o;;o;	;
+@
+;i¸5;"lbr_cpu_copy;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒ6;"u32                  ;@;o;;o;	;
+@
+;i„6;"trans_id;@;[ ;0;o;;o;	;
+@
+;iÔ6;"vtss_voe_lb_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iΩ7;"vtss_rc ;@;o;;o;	;
+@
+;i≈7;"vtss_voe_lb_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i⁄7;" const vtss_inst_t          ;@;o;;o;	;
+@
+;iı7;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i8;" const vtss_voe_idx_t       ;@;o;;o;	;
+@
+;i38;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iY8;"'const vtss_voe_lb_conf_t   *const ;@;o;;o;	;
+@
+;i{8;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iÉ8;"vtss_rc ;@;o;;o;	;
+@
+;iã8;"vtss_voe_lb_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i†8;"const vtss_inst_t      ;@;o;;o;	;
+@
+;i∑8;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i⁄8;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;iÒ8;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i9;"#vtss_voe_lb_conf_t     *const ;@;o;;o;	;
+@
+;i59;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iX9;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;im9;"BOOL   ;@;o;;o;	;
+@
+;it9;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iE:;"BOOL   ;@;o;;o;	;
+@
+;iL:;"count_as_selected;@;[ ;0{;{;{	;o;;o;	;
+@
+;id:;"BOOL   ;@;o;;o;	;
+@
+;ik:;"cpu_copy;@;[ ;0;o;;o;	;
+@
+;iñ:;"vtss_voe_laps_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÅ;;"vtss_rc ;@;o;;o;	;
+@
+;iâ;;"vtss_voe_laps_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i†;;""const vtss_inst_t            ;@;o;;o;	;
+@
+;iΩ;;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i‚;;""const vtss_voe_idx_t         ;@;o;;o;	;
+@
+;iˇ;;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i'<;")const vtss_voe_laps_conf_t   *const ;@;o;;o;	;
+@
+;iK<;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iS<;"vtss_rc ;@;o;;o;	;
+@
+;i[<;"vtss_voe_laps_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ir<;"const vtss_inst_t      ;@;o;;o;	;
+@
+;iâ<;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ<;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;i≈<;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÌ<;"#vtss_voe_laps_conf_t   *const ;@;o;;o;	;
+@
+;i=;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;i=;"#endif
+
+;@{
+;o;;o;	;
+@
+;i)=;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i®=;"BOOL  ;@;o;;o;	;
+@
+;iÆ=;"opcode_unexp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≈=;"BOOL  ;@;o;;o;	;
+@
+;iÀ=;"dmac_unexp_seen;@;[ ;0{;o;;o;	;
+@
+;i‹=;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;i>;"BOOL  ;@;o;;o;	;
+@
+;i>;"tx_level_low_seen;@;[ ;0{;o;;o;	;
+@
+;i2>;"#endif
+;@{;o;;o;	;
+@
+;i9>;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;i^>;"BOOL  ;@;o;;o;	;
+@
+;id>;"version_unexp_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i|>;"BOOL  ;@;o;;o;	;
+@
+;iÇ>;"rx_level_low_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞>;"BOOL  ;@;o;;o;	;
+@
+;i∂>;"rx_level_high_seen;@;[ ;0{;o;;o;	;
+@
+;iı>;"#endif
+;@;o;;o;	;
+@
+;i˛>;"vtss_voe_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i ?;"vtss_rc ;@;o;;o;	;
+@
+;i“?;"vtss_voe_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÊ?;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i¸?;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i@;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i4@;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iY@;""vtss_voe_status_t     *const ;@;o;;o;	;
+@
+;iv@;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;iê@;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i(A;"u64   ;@;o;;o;	;
+@
+;i.A;"rx_counter;@;[ ;0{;o;;o;	;
+@
+;i:A;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;i`A;"u64   ;@;o;;o;	;
+@
+;ifA;"tx_counter;@;[ ;0{;o;;o;	;
+@
+;irA;"#endif
+;@{;{;{	;o;;o;	;
+@
+;iÔA;"u64   ;@;o;;o;	;
+@
+;iıA;"rx_selected_counter;@;[ ;0{;o;;o;	;
+@
+;i
+B;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{;{;{	;o;;o;	;
+@
+;i0B;"u64   ;@;o;;o;	;
+@
+;i6B;"tx_selected_counter;@;[ ;0{;o;;o;	;
+@
+;iKB;"#endif
+;@{;o;;o;	;
+@
+;iRB;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;i≠B;"u64   ;@;o;;o;	;
+@
+;i≥B;"rx_discard_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆB;"u64   ;@;o;;o;	;
+@
+;i¸B;"tx_discard_counter;@;[ ;0{;o;;o;	;
+@
+;i!C;"#endif
+;@;o;;o;	;
+@
+;i*C;"vtss_voe_counters_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄C;"vtss_rc ;@;o;;o;	;
+@
+;i‚C;"vtss_voe_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i¯C;"const vtss_inst_t    ;@;o;;o;	;
+@
+;iD;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i1D;"const vtss_voe_idx_t ;@;o;;o;	;
+@
+;iFD;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;imD;"vtss_voe_counters_t  *;@;o;;o;	;
+@
+;iÉD;"counters;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i'E;"vtss_rc ;@;o;;o;	;
+@
+;i/E;"vtss_voe_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;iGE;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i]E;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÉE;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;iôE;"voe_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;iµE;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i˘E;"BOOL  ;@;o;;o;	;
+@
+;iˇE;"zero_period;@;[ ;0{;{;{	;o;;o;	;
+@
+;i=F;"BOOL  ;@;o;;o;	;
+@
+;iCF;"rdi;@;[ ;0{;{;{	;o;;o;	;
+@
+;ivF;"BOOL  ;@;o;;o;	;
+@
+;i|F;"loc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iWG;"BOOL  ;@;o;;o;	;
+@
+;i]G;"period_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’G;"BOOL  ;@;o;;o;	;
+@
+;i€G;"priority_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iRH;"BOOL  ;@;o;;o;	;
+@
+;iXH;"mep_id_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÕH;"BOOL  ;@;o;;o;	;
+@
+;i”H;"meg_id_unexp;@;[ ;0{;o;;o;	;
+@
+;i·H;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;ieI;"BOOL  ;@;o;;o;	;
+@
+;ikI;"mel_unexp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i√I;"vtss_port_no_t  ;@;o;;o;	;
+@
+;i”I;"rx_port;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝I;"u8              ;@;o;;o;	;
+@
+;iJ;"port_status_tlv;@;[ ;0{;{;{	;o;;o;	;
+@
+;i<J;"u8              ;@;o;;o;	;
+@
+;iLJ;"if_status_tlv;@;[ ;0{;o;;o;	;
+@
+;i|J;"#endif
+;@{;{;{	;o;;o;	;
+@
+;iÛJ;"BOOL  ;@;o;;o;	;
+@
+;i˘J;"	seen;@;[ ;0{;o;;o;	;
+@
+;iˇJ;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;i$K;"BOOL  ;@;o;;o;	;
+@
+;i*K;"tlv_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iKK;"BOOL  ;@;o;;o;	;
+@
+;iQK;"seq_unexp_seen;@;[ ;0{;o;;o;	;
+@
+;iÖK;"#endif
+;@;o;;o;	;
+@
+;iéK;"vtss_voe_cc_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iPL;"vtss_rc ;@;o;;o;	;
+@
+;iXL;"vtss_voe_cc_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ioL;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iÖL;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i™L;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i¿L;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iËL;"vtss_voe_cc_status_t  *;@;o;;o;	;
+@
+;iˇL;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;iM;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iíM;"
+u64  ;@;o;;o;	;
+@
+;ióM;"rx_valid_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i≠M;"
+u64  ;@;o;;o;	;
+@
+;i≤M;"rx_invalid_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;i M;"
+u64  ;@;o;;o;	;
+@
+;iœM;"rx_oo_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iN;"
+u64  ;@;o;;o;	;
+@
+;iN;"tx_counter;@;[ ;0;o;;o;	;
+@
+;iN;"vtss_voe_cc_counters_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’N;"vtss_rc ;@;o;;o;	;
+@
+;i›N;"vtss_voe_cc_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iˆN;"const vtss_inst_t      ;@;o;;o;	;
+@
+;iO;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i4O;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;iKO;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iuO;"vtss_voe_cc_counters_t *;@;o;;o;	;
+@
+;içO;"counters;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iGP;"vtss_rc ;@;o;;o;	;
+@
+;iOP;"vtss_voe_cc_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;ijP;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iÄP;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i©P;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;iøP;"voe_idx;@;[ ;0;0{;o;;o;	;
+@
+;i P;"'#if defined(VTSS_FEATURE_VOP_CFM)
+;@{
+;o;;o;	;
+@
+;i˝P;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i}Q;"BOOL   ;@;o;;o;	;
+@
+;iÑQ;"ltm_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;iíQ;"BOOL   ;@;o;;o;	;
+@
+;iôQ;"ltr_seen;@;[ ;0;o;;o;	;
+@
+;i•Q;"vtss_voe_lt_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iQR;"vtss_rc ;@;o;;o;	;
+@
+;iYR;"vtss_voe_lt_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ipR;"const vtss_inst_t      ;@;o;;o;	;
+@
+;iáR;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¨R;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;i√R;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iÎR;"vtss_voe_lt_status_t   *;@;o;;o;	;
+@
+;iS;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;iS;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iüS;"BOOL   ;@;o;;o;	;
+@
+;i¶S;"lbm_seen;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¥S;"BOOL   ;@;o;;o;	;
+@
+;iªS;"lbr_seen;@;[ ;0{;o;;o;	;
+@
+;i≈S;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;iÍS;"BOOL   ;@;o;;o;	;
+@
+;iÒS;"trans_unexp_seen;@;[ ;0{;o;;o;	;
+@
+;i.T;"#endif
+;@{;{;{	;o;;o;	;
+@
+;i9T;"u32    ;@;o;;o;	;
+@
+;i@T;"tx_trans_id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÄT;"u32    ;@;o;;o;	;
+@
+;iáT;"rx_trans_id;@;[ ;0;o;;o;	;
+@
+;i¬T;"vtss_voe_lb_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;ipU;"vtss_rc ;@;o;;o;	;
+@
+;ixU;"vtss_voe_lb_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;ièU;"const vtss_inst_t      ;@;o;;o;	;
+@
+;i¶U;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÀU;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;i‚U;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i
+V;"vtss_voe_lb_status_t   *;@;o;;o;	;
+@
+;i"V;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i?V;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¥V;"u64    ;@;o;;o;	;
+@
+;iªV;"rx_lbr_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœV;"u64    ;@;o;;o;	;
+@
+;i÷V;"tx_lbm_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍV;"u64    ;@;o;;o;	;
+@
+;iÒV;"rx_lbr_oo_counter;@;[ ;0{;o;;o;	;
+@
+;i/W;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;{;{	;o;;o;	;
+@
+;iTW;"u64    ;@;o;;o;	;
+@
+;i[W;"rx_lbr_crc_counter;@;[ ;0{;{;{	;o;;o;	;
+@
+;iõW;"u64    ;@;o;;o;	;
+@
+;i¢W;"tx_lbr_counter;@;[ ;0{;o;;o;	;
+@
+;i≤W;"#endif
+;@;o;;o;	;
+@
+;iªW;"vtss_voe_lb_counters_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;ilX;"vtss_rc ;@;o;;o;	;
+@
+;itX;"vtss_voe_lb_counters_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;içX;"const vtss_inst_t      ;@;o;;o;	;
+@
+;i§X;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÀX;"const vtss_voe_idx_t   ;@;o;;o;	;
+@
+;i‚X;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iY;"vtss_voe_lb_counters_t *;@;o;;o;	;
+@
+;i$Y;"counters;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iÿY;"vtss_rc ;@;o;;o;	;
+@
+;i‡Y;"vtss_voe_lb_counters_clear;@;[ ;0;[{;{	;o;;o;	;
+@
+;i˚Y;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iZ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i:Z;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;iPZ;"voe_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;inZ;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÚZ;"BOOL  ;@;o;;o;	;
+@
+;i¯Z;"	seen;@;[ ;0;o;;o;	;
+@
+;i [;"vtss_voe_laps_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i»[;"vtss_rc ;@;o;;o;	;
+@
+;i–[;"vtss_voe_laps_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÈ[;"const vtss_inst_t        ;@;o;;o;	;
+@
+;i\;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i)\;"const vtss_voe_idx_t     ;@;o;;o;	;
+@
+;iB\;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;il\;"vtss_voe_laps_status_t   *;@;o;;o;	;
+@
+;iÜ\;"status;@;[ ;0;0{;o;;o;	;
+@
+;iè\;"#endif
+
+;@{;{;{	;o;;o;	;
+@
+;i^;"vtss_rc ;@;o;;o;	;
+@
+;i"^;"vtss_voe_event_active_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i<^;"const vtss_inst_t   ;@;o;;o;	;
+@
+;iP^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ix^;"const u32           ;@;o;;o;	;
+@
+;iå^;"active_size;@;[ ;0{;{	;o;;o;	;
+@
+;iª^;" u32                 *const ;@;o;;o;	;
+@
+;i÷^;"active;@;[ ;0;0{;o;;o;	;
+@
+;ip_;";#define VTSS_VOE_EVENT_MASK_NONE                0x000
+;@{;o;;o;	;
+@
+;iƒ_;";#define VTSS_VOE_EVENT_MASK_CCM_PERIOD          0x001
+;@{;o;;o;	;
+@
+;i`;";#define VTSS_VOE_EVENT_MASK_CCM_ZERO_PERIOD     0x002
+;@{;o;;o;	;
+@
+;is`;";#define VTSS_VOE_EVENT_MASK_CCM_PRIORITY        0x004
+;@{;o;;o;	;
+@
+;iÕ`;";#define VTSS_VOE_EVENT_MASK_CCM_LOC             0x008
+;@{;o;;o;	;
+@
+;ia;";#define VTSS_VOE_EVENT_MASK_CCM_MEP_ID          0x010
+;@{;o;;o;	;
+@
+;iia;";#define VTSS_VOE_EVENT_MASK_CCM_MEG_ID          0x020
+;@{;o;;o;	;
+@
+;i∫a;";#define VTSS_VOE_EVENT_MASK_CCM_MEG_LEVEL       0x040
+;@{;o;;o;	;
+@
+;i
+b;";#define VTSS_VOE_EVENT_MASK_CCM_RX_RDI          0x080
+;@{;o;;o;	;
+@
+;i@b;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{;o;;o;	;
+@
+;iÅb;";#define VTSS_VOE_EVENT_MASK_CCM_SRC_PORT_MOVE   0x100
+;@{;o;;o;	;
+@
+;iÿb;";#define VTSS_VOE_EVENT_MASK_CCM_TLV_PORT_STATUS 0x200
+;@{;o;;o;	;
+@
+;i4c;";#define VTSS_VOE_EVENT_MASK_CCM_TLV_IF_STATUS   0x400
+;@{;o;;o;	;
+@
+;ijc;";#define VTSS_VOE_EVENT_MASK_ALL                 0x7FF
+;@{;o;;o;	;
+@
+;i†c;"#else
+;@{;o;;o;	;
+@
+;i¶c;";#define VTSS_VOE_EVENT_MASK_ALL                 0x0FF
+;@{;o;;o;	;
+@
+;i‹c;"#endif
+
+;@{;{;{	;o;;o;	;
+@
+;i¸d;"vtss_rc ;@;o;;o;	;
+@
+;ie;"vtss_voe_event_mask_set;@;[ ;0;[	{;{	;o;;o;	;
+@
+;ie;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i2e;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iXe;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;ine;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;ióe;"const u32             ;@;o;;o;	;
+@
+;i≠e;"	mask;@;[ ;0{;{	;o;;o;	;
+@
+;i”e;"const BOOL            ;@;o;;o;	;
+@
+;iÈe;"enable;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iÛe;"vtss_rc ;@;o;;o;	;
+@
+;i˚e;"vtss_voe_event_mask_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;if;"const vtss_inst_t     ;@;o;;o;	;
+@
+;i)f;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iOf;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;ief;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iéf;""u32                   *const ;@;o;;o;	;
+@
+;i´f;"	mask;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iªg;"vtss_rc ;@;o;;o;	;
+@
+;i√g;"vtss_voe_event_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i÷g;"const vtss_inst_t     ;@;o;;o;	;
+@
+;iÏg;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ih;"const vtss_voe_idx_t  ;@;o;;o;	;
+@
+;i#h;"voe_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iGh;""u32                   *const ;@;o;;o;	;
+@
+;idh;"	mask;@;[ ;0;0{;o;;o;	;
+@
+;ioh;"&#if defined(VTSS_FEATURE_VOP_V2)
+;@{
+;o;;o;	;
+@
+;i‚i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i˜i;"vtss_port_no_t        ;@;o;;o;	;
+@
+;ij;"	port;@;[ ;0{;{;{	;o;;o;	;
+@
+;ij;"vtss_oam_direction_t  ;@;o;;o;	;
+@
+;i-j;"direction;@;[ ;0;o;;o;	;
+@
+;i:j;"vtss_voi_allocation_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>k;"vtss_rc ;@;o;;o;	;
+@
+;iFk;"vtss_voi_alloc;@;[ ;0;[{;{	;o;;o;	;
+@
+;iUk;""const vtss_inst_t            ;@;o;;o;	;
+@
+;irk;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ièk;")const vtss_voi_allocation_t  *const ;@;o;;o;	;
+@
+;i≥k;"
+param;@;[ ;0{;{	;o;;o;	;
+@
+;i—k;")vtss_voi_idx_t               *const ;@;o;;o;	;
+@
+;iık;"voi_idx;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;izl;"vtss_rc ;@;o;;o;	;
+@
+;iÇl;"vtss_voi_free;@;[ ;0;[{;{	;o;;o;	;
+@
+;iêl;"const vtss_inst_t       ;@;o;;o;	;
+@
+;i®l;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iƒl;"const vtss_voi_idx_t    ;@;o;;o;	;
+@
+;i‹l;"voi_idx;@;[ ;0;0{
+;o;;o;	;
+@
+;i m;"typedef;@; {;o;;o;	;
+@
+;im;"	enum;@;![	{;"{;#o;;o;	;
+@
+;im;" VTSS_OAM_RAPS_HANDLING_NONE;@;0{;"{;#o;;o;	;
+@
+;iXm;"$VTSS_OAM_RAPS_HANDLING_COPY_CPU;@;0{;"{;#o;;o;	;
+@
+;iüm;"%VTSS_OAM_RAPS_HANDLING_REDIR_CPU;@;0{;"{;#o;;o;	;
+@
+;iÍm;"#VTSS_OAM_RAPS_HANDLING_DISCARD;@;0;o;;o;	;
+@
+;i+n;"vtss_oam_raps_handling_t;@;[ ;0{
+;o;;o;	;
+@
+;i\n;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iqn;"BOOL                      ;@;o;;o;	;
+@
+;iãn;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±n;"vtss_mac_t                ;@;o;;o;	;
+@
+;iÀn;"unicast_mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;iˆn;"u32                       ;@;o;;o;	;
+@
+;io;"meg_level;@;[ ;0{;{;{	;o;;o;	;
+@
+;i7o;"BOOL                      ;@;o;;o;	;
+@
+;iQo;"lbm_cpu_redir;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉo;"BOOL                      ;@;o;;o;	;
+@
+;iùo;"ltm_cpu_redir;@;[ ;0{;{;{	;o;;o;	;
+@
+;iœo;"vtss_oam_raps_handling_t  ;@;o;;o;	;
+@
+;iÈo;"raps_handling;@;[ ;0;o;;o;	;
+@
+;ip;"vtss_voi_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‰p;"vtss_rc ;@;o;;o;	;
+@
+;iÏp;"vtss_voi_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;i˛p;"const vtss_inst_t       ;@;o;;o;	;
+@
+;iq;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i6q;"const vtss_voi_idx_t    ;@;o;;o;	;
+@
+;iNq;"voi_idx;@;[ ;0{;{	;o;;o;	;
+@
+;iqq;"$const vtss_voi_conf_t   *const ;@;o;;o;	;
+@
+;iêq;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iòq;"vtss_rc ;@;o;;o;	;
+@
+;i†q;"vtss_voi_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;i≤q;"const vtss_inst_t      ;@;o;;o;	;
+@
+;i…q;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÈq;"const vtss_voi_idx_t   ;@;o;;o;	;
+@
+;i r;"voi_idx;@;[ ;0{;{	;o;;o;	;
+@
+;i#r;"#vtss_voi_conf_t        *const ;@;o;;o;	;
+@
+;iAr;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iHr;"'#endif /* VTSS_FEATURE_VOP_V2 */
+
+;@{;o;;o;	;
+@
+;ijr;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;ir;"#endif
+;@{;o;;o;	;
+@
+;iÜr;"##endif /* VTSS_FEATURE_VOP */
+;@{;o;;o;	;
+@
+;i§r;"##endif /* _VTSS_VOP_API_H_ */
+;@

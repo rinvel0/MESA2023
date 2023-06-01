@@ -1,0 +1,2848 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"˝§// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief QoS API
+ * \details This header file describes Quality of Service functions
+ */
+
+#ifndef _VTSS_QOS_API_H_
+#define _VTSS_QOS_API_H_
+
+#include <vtss/api/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(VTSS_FEATURE_QOS)
+
+/** \page qos Quality of Service (QoS)
+
+    The Quality of Service (QoS) functions are used to control the various QoS features in the switch.
+*/
+
+#if defined(VTSS_FEATURE_QOS_WRED_V2) || defined(VTSS_FEATURE_QOS_WRED_V3)
+/**
+ * \brief Random Early Detection version 2. Select if max means max drop probability or max fill level
+ **/
+typedef enum {
+    VTSS_WRED_MAX_DP, /**< Unit for max is drop probability */
+    VTSS_WRED_MAX_FL  /**< Unit for max is fill level */
+} vtss_wred_max_t;
+
+#define VTSS_WRED_V2_MAX_DP VTSS_WRED_MAX_DP /**< Backward compatibility */
+#define VTSS_WRED_V2_MAX_FL VTSS_WRED_MAX_FL /**< Backward compatibility */
+
+/** \brief Backward compatibility */
+typedef vtss_wred_max_t vtss_wred_v2_max_t;
+
+/**
+ * \brief Random Early Detection configuration struct version 2 (per queue, per dpl - switch global)
+ **/
+typedef struct {
+    BOOL               enable;   /**< Enable/disable RED */
+    vtss_pct_t         min_fl;   /**< Minimum fill level */
+    vtss_pct_t         max;      /**< Maximum drop probability or fill level - selected by max_unit */
+    vtss_wred_v2_max_t max_unit; /**< Selects the unit for max */
+} vtss_wred_conf_t;
+
+/** \brief Backward compatibility */
+typedef vtss_wred_conf_t vtss_red_v2_t;
+
+#endif /* defined(VTSS_FEATURE_QOS_WRED_V2) || defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+#define VTSS_WRED_DPL_CNT    3           /**< Number of dpl's. There are no profile for dpl 0, only for dpl 1 to 3 */
+#define VTSS_WRED_GROUP_CNT  3           /**< Number of groups */
+typedef vtss_wred_conf_t vtss_red_v3_t; /**< Version 3 uses the v2 struct (per queue, per dpl, per group - switch global */
+#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+/** \page qos
+
+    \section global_conf Global Configuration
+
+    The global configuration functions are used to control the global switch parameters.\n
+    The following functions are available:
+    - vtss_qos_conf_get() is used to get global configuration.
+    - vtss_qos_conf_set() is used to set global configuration.
+*/
+
+/**
+ * \brief All parameters below are defined per chip
+ **/
+typedef struct {
+    vtss_prio_t          prios;                                   /**< Number of priorities (1/2/4/8) */
+
+    BOOL                 dscp_trust[64];                          /**< Ingress: Only trusted DSCP values are used for QOS class and DP level classification  */
+    vtss_prio_t          dscp_qos_class_map[64];                  /**< Ingress: Mapping from DSCP value to QOS class  */
+    vtss_dp_level_t      dscp_dp_level_map[64];                   /**< Ingress: Mapping from DSCP value to DP level */
+
+    vtss_dscp_t          dscp_qos_map[VTSS_PRIO_ARRAY_SIZE];      /**< Ingress: Mapping from QoS class to DSCP (DP unaware or DP level = 0) */
+    vtss_dscp_t          dscp_qos_map_dp1[VTSS_PRIO_ARRAY_SIZE];  /**< Ingress: Mapping from QoS class to DSCP (DP aware and DP level = 1) */
+#if VTSS_DPLS == 4
+    vtss_dscp_t          dscp_qos_map_dp2[VTSS_PRIO_ARRAY_SIZE];  /**< Ingress: Mapping from QoS class to DSCP (DP aware and DP level = 2) */
+    vtss_dscp_t          dscp_qos_map_dp3[VTSS_PRIO_ARRAY_SIZE];  /**< Ingress: Mapping from QoS class to DSCP (DP aware and DP level = 3) */
+#endif /* VTSS_DPLS == 4 */
+
+    BOOL                 dscp_remark[64];                         /**< Ingress: DSCP remarking enable. Used when port.dscp_mode = VTSS_DSCP_MODE_SEL */
+    vtss_dscp_t          dscp_translate_map[64];                  /**< Ingress: Translated DSCP value. Used when port.dscp_translate = TRUE) */
+    vtss_dscp_t          dscp_remap[64];                          /**< Egress: Remap one DSCP to another (DP unaware or DP level = 0) */
+#if defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE)
+    vtss_dscp_t          dscp_remap_dp1[64];                      /**< Egress: Remap one DSCP to another (DP aware and DP level = 1) */
+#endif /* defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE) */
+
+    vtss_packet_rate_t        policer_uc;                         /**< Unicast packet storm policer */
+    BOOL                      policer_uc_frame_rate;              /**< FALSE: Unit is kbps. TRUE: Unit is fps */
+    vtss_storm_policer_mode_t policer_uc_mode;                    /**< Unicast packet storm policer mode */
+    vtss_packet_rate_t        policer_mc;                         /**< Multicast packet storm policer */
+    BOOL                      policer_mc_frame_rate;              /**< FALSE: Unit is kbps. TRUE: Unit is fps */
+    vtss_storm_policer_mode_t policer_mc_mode;                    /**< Multicast packet storm policer mode */
+    vtss_packet_rate_t        policer_bc;                         /**< Broadcast packet storm policer */
+    BOOL                      policer_bc_frame_rate;              /**< FALSE: Unit is kbps. TRUE: Unit is fps */
+    vtss_storm_policer_mode_t policer_bc_mode;                    /**< Broadcast packet storm policer mode */
+
+#if defined(VTSS_FEATURE_QOS_WRED_V2)
+    vtss_wred_conf_t          red_v2[VTSS_QUEUE_ARRAY_SIZE][2];        /**< Random Early Detection - per queue (0..7), per dpl (0..1) */
+#endif /* defined(VTSS_FEATURE_QOS_WRED_V2) */
+
+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+    vtss_wred_conf_t          red_v3[VTSS_QUEUE_ARRAY_SIZE]            /**< Random Early Detection - per queue (0..7), per dpl (1..3), per group (0..2) */
+    [VTSS_WRED_DPL_CNT]
+    [VTSS_WRED_GROUP_CNT];
+#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+} vtss_qos_conf_t;
+
+/**
+ * \brief Get QoS setup for switch.
+ *
+ * \param inst [IN]   Target instance reference.
+ * \param conf [OUT]  QoS setup structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_conf_get(const vtss_inst_t  inst,
+                          vtss_qos_conf_t    *const conf);
+
+/**
+ * \brief Set QoS setup for switch.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param conf [IN]  QoS setup structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_conf_set(const vtss_inst_t      inst,
+                          const vtss_qos_conf_t  *const conf);
+
+/* Number of Port policers (per port) available in HW */
+#if defined(VTSS_ARCH_SERVAL_T)
+#define VTSS_PORT_POLICERS 2 /**< Number of Port policers (per port) available in HW */
+#elif defined(VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+#define VTSS_PORT_POLICERS 4 /**< Number of Port policers (per port) available in HW */
+#else
+#define VTSS_PORT_POLICERS 1 /**< Number of Port policers (per port) available in HW */
+#endif
+
+/**
+ * \brief Policer
+ **/
+typedef struct {
+    vtss_burst_level_t level;       /**< Burst level */
+    vtss_bitrate_t     rate;        /**< Maximum rate */
+} vtss_policer_t;
+
+#define VTSS_PORT_POLICER_CPU_QUEUES 8 /**< Number of cpu queues pr port policer */
+
+/**
+ * \brief Policer Extensions
+ **/
+typedef struct {
+    BOOL               frame_rate;           /**< Measure rates in frames per seconds instead of bits per second */
+#if defined(VTSS_FEATURE_QOS_PORT_POLICER_EXT_DPBL)
+    vtss_dp_level_t    dp_bypass_level;      /**< Drop Predence bypass level */
+#endif /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_DPBL */
+#if defined(VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2)
+    BOOL               known_unicast;        /**< Known unicast frames are policed */
+    BOOL               known_multicast;      /**< Known multicast frames are policed */
+    BOOL               known_broadcast;      /**< Known broadcast frames are policed */
+    BOOL               unknown_unicast;      /**< Unknown unicast frames are policed */
+    BOOL               unknown_multicast;    /**< Unknown multicast frames are policed */
+    BOOL               unknown_broadcast;    /**< Unknown broadcast frames are policed */
+    BOOL               learning;             /**< Learning frames are policed */
+    BOOL               to_cpu;               /**< Frames to the CPU are policed */
+    BOOL               cpu_queue[VTSS_PORT_POLICER_CPU_QUEUES]; /**< Enable each individual CPU queue (if to_cpu is set) */
+    BOOL               limit_noncpu_traffic; /**< Remove the front ports from the destination set for a policed frame */
+    BOOL               limit_cpu_traffic;    /**< Remove the CPU ports from the destination set for a policed frame */
+#endif /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2 */
+    BOOL               flow_control;         /**< Flow control is enabled */
+} vtss_policer_ext_t;
+
+#if defined(VTSS_FEATURE_QOS_POLICER_DLB)
+/** \brief Dual leaky buckets policer configuration */
+typedef struct {
+    vtss_policer_type_t type;      /**< Policer type */
+    BOOL                enable;    /**< Enable/disable policer */
+#if defined(VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+    BOOL                cm;        /**< Colour Mode (TRUE means colour aware) */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+    BOOL                cf;        /**< Coupling Flag */
+    BOOL                line_rate; /**< Line rate policing (default is data rate policing) */
+    vtss_bitrate_t      cir;       /**< Committed Information Rate */
+    vtss_burst_level_t  cbs;       /**< Committed Burst Size */
+    vtss_bitrate_t      eir;       /**< Excess Information Rate */
+    vtss_burst_level_t  ebs;       /**< Excess Burst Size */
+#if defined(VTSS_FEATURE_PSFP)
+    BOOL                drop_yellow;  // DropOnYellow: Discard yellow frames
+    vtss_opt_bool_t     mark_all_red; // MarkAllFramesRedEnable/MarkAllFramesRed: Discard all frames if red frame seen
+#endif
+} vtss_dlb_policer_conf_t;
+#endif /* VTSS_FEATURE_QOS_POLICER_DLB */
+
+#if defined(VTSS_ARCH_CARACAL)
+/** \page qos
+
+    \section mep_conf MEP Policer Configuration
+
+    The MEP policer configuration functions are used to control the MEP policers.\n
+    The following functions are available:
+    - vtss_mep_policer_conf_get() is used to get MEP policer configuration for a specific port and priority.
+    - vtss_mep_policer_conf_set() is used to set MEP policer configuration for a specific port and priority.
+*/
+
+/**
+ * \brief Get MEP policer configuration.
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param port_no [IN]     Ingress port number.
+ * \param prio [IN]        Selected priority (QoS class).
+ * \param conf [OUT]       Policer configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_mep_policer_conf_get(const vtss_inst_t       inst,
+                                  const vtss_port_no_t    port_no,
+                                  const vtss_prio_t       prio,
+                                  vtss_dlb_policer_conf_t *const conf);
+
+/**
+ * \brief Set MEP policer configuration.
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param port_no [IN]     Ingress port number.
+ * \param prio [IN]        Selected priority (QoS class).
+ * \param conf [IN]        Policer configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_mep_policer_conf_set(const vtss_inst_t             inst,
+                                  const vtss_port_no_t          port_no,
+                                  const vtss_prio_t             prio,
+                                  const vtss_dlb_policer_conf_t *const conf);
+#endif /* defined(VTSS_ARCH_CARACAL) */
+
+#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_RT)
+/**
+ * \brief Shaper Accounting Mode
+ **/
+typedef enum {
+    VTSS_SHAPER_MODE_LINE, /**< Use line-rate for the shaper */
+    VTSS_SHAPER_MODE_DATA, /**< Use data-rate for the shaper */
+#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPER_FRAME)
+    VTSS_SHAPER_MODE_FRAME  /**< Use frame-rate for the shaper */
+#endif
+} vtss_shaper_mode_t;
+#endif
+
+/**
+ * \brief Shaper
+ **/
+typedef struct {
+    vtss_burst_level_t level;          /**< CBS (Committed Burst Size).       Unit: bytes. frames if frame-rate */
+    vtss_bitrate_t     rate;           /**< CIR (Committed Information Rate). Unit: kbps. frame/s if frame-rate. Use VTSS_BITRATE_DISABLED to disable shaper */
+#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_DLB)
+    vtss_burst_level_t ebs;            /**< EBS (Excess Burst Size).          Unit: bytes */
+    vtss_bitrate_t     eir;            /**< EIR (Excess Information Rate).    Unit: kbps. Use VTSS_BITRATE_DISABLED to disable DLB */
+#endif /* VTSS_FEATURE_QOS_EGRESS_SHAPERS_DLB */
+#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_RT)
+    vtss_shaper_mode_t mode;           /**< RT (Rate type). Shaper rate type configuration: 0 = Line-rate, 1 = Data-rate */
+#endif
+#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_CRB)
+    BOOL               credit_enable;  /**< Queue shaper only: Credit-based shaping */
+#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_CRB */
+
+} vtss_shaper_t;
+
+/** \brief Tag Remark Mode */
+typedef enum {
+    VTSS_TAG_REMARK_MODE_CLASSIFIED = 0, /**< Use classified PCP/DEI values */
+    VTSS_TAG_REMARK_MODE_DEFAULT    = 2, /**< Use default (configured) PCP/DEI values */
+    VTSS_TAG_REMARK_MODE_MAPPED     = 3  /**< Use mapped versions of classified QOS class and DP level */
+} vtss_tag_remark_mode_t;
+
+/**
+ * \brief DSCP mode for ingress port
+ **/
+typedef enum {
+    VTSS_DSCP_MODE_NONE,   /**< DSCP not remarked */
+    VTSS_DSCP_MODE_ZERO,   /**< DSCP value zero remarked */
+    VTSS_DSCP_MODE_SEL,    /**< DSCP values selected above (dscp_remark) are remarked */
+    VTSS_DSCP_MODE_ALL     /**< DSCP remarked for all values */
+} vtss_dscp_mode_t;
+
+/**
+ * \brief DSCP mode for egress port
+ **/
+typedef enum {
+    VTSS_DSCP_EMODE_DISABLE,   /**< DSCP not remarked */
+    VTSS_DSCP_EMODE_REMARK,    /**< DSCP remarked with DSCP value from analyzer */
+    VTSS_DSCP_EMODE_REMAP,     /**< DSCP remarked with DSCP value from analyzer remapped through global remap table  */
+#if defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE)
+    VTSS_DSCP_EMODE_REMAP_DPA  /**< DSCP remarked with DSCP value from analyzer remapped through global remap dp aware tables */
+#endif /* VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE */
+} vtss_dscp_emode_t;
+
+/** \page qos
+
+    \section port_conf Port Configuration
+
+    The port configuration functions are used to control the per port parameters.\n
+    The following functions are available:
+    - vtss_qos_port_conf_get() is used to get port configuration for a specific port.
+    - vtss_qos_port_conf_set() is used to set port configuration for a specific port.
+*/
+
+/** \brief QoS setup per port **/
+typedef struct {
+    vtss_policer_t policer_port[VTSS_PORT_POLICERS];             /**< Ingress port policers */
+
+    vtss_policer_ext_t policer_ext_port[VTSS_PORT_POLICERS];     /**< Ingress port policers extensions */
+
+    vtss_policer_t     policer_queue[VTSS_QUEUE_ARRAY_SIZE];     /**< Ingress queue policers */
+
+    vtss_shaper_t  shaper_port;                                  /**< Egress port shaper */
+
+    vtss_shaper_t shaper_queue[VTSS_QUEUE_ARRAY_SIZE];           /**< Egress queue shapers */
+#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_EB)
+    BOOL          excess_enable[VTSS_QUEUE_ARRAY_SIZE];          /**< Allow this queue to use excess bandwidth */
+#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_EB */
+
+#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_CUT_THROUGH)
+    BOOL          cut_through_enable[VTSS_QUEUE_ARRAY_SIZE];     /**< Allow this queue to use cut through feature */
+#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_CUT_THROUGH */
+
+    vtss_prio_t    default_prio;                                 /**< Default port priority (QoS class) */
+    vtss_tagprio_t usr_prio;                                     /**< Default Ingress VLAN tag priority (PCP) */
+
+    vtss_dp_level_t   default_dpl;                                             /**< Default Ingress Drop Precedence level */
+    vtss_dei_t        default_dei;                                             /**< Default Ingress DEI value  */
+    BOOL              tag_class_enable;                                        /**< Ingress classification of QoS class and DP level based PCP and DEI */
+    vtss_prio_t       qos_class_map[VTSS_PCP_ARRAY_SIZE][VTSS_DEI_ARRAY_SIZE]; /**< Ingress mapping for tagged frames from PCP and DEI to QOS class  */
+    vtss_dp_level_t   dp_level_map[VTSS_PCP_ARRAY_SIZE][VTSS_DEI_ARRAY_SIZE];  /**< Ingress mapping for tagged frames from PCP and DEI to DP level */
+    BOOL              dscp_class_enable;                                       /**< Ingress classification of QoS class and DP level based on DSCP */
+
+    vtss_dscp_mode_t  dscp_mode;                      /**< Ingress DSCP mode */
+    vtss_dscp_emode_t dscp_emode;                     /**< Egress DSCP mode */
+    BOOL              dscp_translate;                 /**< Ingress: Translate DSCP value via dscp_translate_map[DSCP] before use */
+
+    vtss_tag_remark_mode_t tag_remark_mode;                      /**< Egress tag remark mode */
+    vtss_tagprio_t         tag_default_pcp;                      /**< Default PCP value for Egress port */
+    vtss_dei_t             tag_default_dei;                      /**< Default DEI value for Egress port */
+    vtss_tagprio_t         tag_pcp_map[VTSS_PRIO_ARRAY_SIZE][2]; /**< Egress mapping from QOS class and (1 bit) DP level to PCP */
+    vtss_dei_t             tag_dei_map[VTSS_PRIO_ARRAY_SIZE][2]; /**< Egress mapping from QOS class and (1 bit) DP level to DEI */
+
+    BOOL       dwrr_enable;                                      /**< Enable Weighted fairness queueing */
+#if defined(VTSS_FEATURE_QOS_SCHEDULER_DWRR_CNT)
+    u8         dwrr_cnt;                                         /**< Number of queues, starting from queue 0, running in DWRR mode */
+#endif /* VTSS_FEATURE_QOS_SCHEDULER_DWRR_CNT */
+    vtss_pct_t queue_pct[VTSS_QUEUE_ARRAY_SIZE];                 /**< Queue percentages */
+
+#if defined(VTSS_FEATURE_QCL_DMAC_DIP)
+    BOOL       dmac_dip;                                         /**< Enable DMAC/DIP matching in QCLs (default SMAC/SIP) */
+#endif /* VTSS_FEATURE_QCL_DMAC_DIP */
+
+#if defined(VTSS_FEATURE_QCL_KEY_TYPE)
+    vtss_vcap_key_type_t key_type;                               /**< Key type for received frames */
+#endif /* defined(VTSS_FEATURE_QCL_KEY_TYPE) */
+
+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+    vtss_wred_group_t wred_group;                                /**< WRED group number - zero based */
+#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+#if (defined VTSS_FEATURE_QOS_COSID_CLASSIFICATION)
+    vtss_cosid_t cosid;                                          /**< Default COSID */
+#endif /* VTSS_FEATURE_QOS_COSID_CLASSIFICATION */
+
+#if (defined VTSS_FEATURE_QOS_INGRESS_MAP)
+    vtss_qos_ingress_map_id_t ingress_map;                       /**< Ingress map to use for classification. Default is none. */
+#endif /* VTSS_FEATURE_QOS_INGRESS_MAP */
+
+#if (defined VTSS_FEATURE_QOS_EGRESS_MAP)
+    vtss_qos_egress_map_id_t egress_map;                         /**< Egress map to use for remarking. Default is none. */
+#endif /* VTSS_FEATURE_QOS_EGRESS_MAP */
+} vtss_qos_port_conf_t;
+
+/**
+ * \brief Get QoS setup for port.
+ *
+ * \param inst [IN]     Target instance reference.
+ * \param port_no [IN]  Port number.
+ * \param conf [OUT]    QoS setup structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_port_conf_get(const vtss_inst_t     inst,
+                               const vtss_port_no_t  port_no,
+                               vtss_qos_port_conf_t  *const conf);
+
+/**
+ * \brief Set QoS setup for port.
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param port_no [IN] Port number.
+ * \param conf [IN]    QoS setup structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_port_conf_set(const vtss_inst_t           inst,
+                               const vtss_port_no_t        port_no,
+                               const vtss_qos_port_conf_t  *const conf);
+
+/** \brief QoS status  **/
+typedef struct {
+    vtss_event_t        storm;                  /**< Storm policing active since last call. */
+} vtss_qos_status_t;
+
+/**
+* \brief Get QoS status for port.
+*
+* \param inst [IN]     Target instance reference.
+* \param status [OUT]  QoS status structure.
+*
+* \return Return code.
+**/
+vtss_rc vtss_qos_status_get(const vtss_inst_t inst,
+                            vtss_qos_status_t *const status);
+
+#if defined(VTSS_FEATURE_QCL)
+/** \page qos
+
+    \section qcl_conf QoS Control List Configuration
+
+    Advanced QoS classification rules can be done using the QoS Control List (QCL).
+    Each QoS Control Entry (QCE) is identified by a QCE ID (::vtss_qce_id_t).\n
+    The following functions are available:
+    - vtss_qce_init() is used to initialize a QCE (::vtss_qce_t) to default values.
+    - vtss_qce_add() is used to add or modify a QCE.
+    - vtss_qce_del() is used to delete a QCE.
+
+    The QCEs are ordered in a list of rules based on the QCE IDs. When adding a rule,
+    the QCE ID of the rule and the QCE ID of the next rule in the list must be specified.
+    A special value #VTSS_QCE_ID_LAST is used to specify that the rule must be added at the
+    end of the list.\n
+    Each QCE includes a key structure (::vtss_qce_key_t) with fields used for matching
+    received frames and an action structure (::vtss_qce_action_t) with the classification parameters.\n
+    By default, no QCE rules are setup.
+
+*/
+
+/**
+ * \brief QCL ID type
+ **/
+typedef u32 vtss_qcl_id_t;
+
+#define VTSS_QCL_IDS        1                                  /**< Number of QCLs */
+#define VTSS_QCL_ID_START   0                                  /**< QCL ID start number */
+#define VTSS_QCL_ID_END     (VTSS_QCL_ID_START + VTSS_QCL_IDS) /**< QCL ID end number */
+#define VTSS_QCL_ARRAY_SIZE VTSS_QCL_ID_END                    /**< QCL ID array size */
+
+#define VTSS_QCE_ID_LAST 0 /**< Special value used to add last in list */
+
+/** \brief QoS Control Entry type */
+typedef enum {
+    VTSS_QCE_TYPE_ANY,     /**< Any frame type */
+    VTSS_QCE_TYPE_ETYPE,   /**< Ethernet Type */
+    VTSS_QCE_TYPE_LLC,     /**< LLC */
+    VTSS_QCE_TYPE_SNAP,    /**< SNAP */
+    VTSS_QCE_TYPE_IPV4,    /**< IPv4 */
+    VTSS_QCE_TYPE_IPV6     /**< IPv6 */
+} vtss_qce_type_t;
+
+/** \brief QCE MAC information */
+typedef struct {
+    vtss_vcap_bit_t dmac_mc; /**< Multicast DMAC */
+    vtss_vcap_bit_t dmac_bc; /**< Broadcast DMAC */
+#if defined(VTSS_FEATURE_QCL_KEY_DMAC)
+    vtss_vcap_u48_t dmac;    /**< DMAC - Serval: key_type = mac_ip_addr */
+#endif /* defined(VTSS_FEATURE_QCL_KEY_DMAC) */
+    vtss_vcap_u48_t smac;    /**< SMAC - Only the 24 most significant bits (OUI) are supported on Jaguar1, rest are wildcards */
+} vtss_qce_mac_t;
+
+/** \brief QCE tag information */
+typedef struct {
+    vtss_vcap_vr_t  vid;    /**< VLAN ID (12 bit) */
+    vtss_vcap_u8_t  pcp;    /**< PCP (3 bit) */
+    vtss_vcap_bit_t dei;    /**< DEI */
+    vtss_vcap_bit_t tagged; /**< Tagged/untagged frame */
+    vtss_vcap_bit_t s_tag;  /**< S-tagged/C-tagged frame */
+} vtss_qce_tag_t;
+
+/** \brief Frame data for VTSS_QCE_TYPE_ETYPE */
+typedef struct {
+    vtss_vcap_u16_t etype; /**< Ethernet Type value */
+    vtss_vcap_u32_t data;  /**< MAC data */
+} vtss_qce_frame_etype_t;
+
+/** \brief Frame data for VTSS_QCE_TYPE_LLC */
+typedef struct {
+    vtss_vcap_u48_t data; /**< Data */
+} vtss_qce_frame_llc_t;
+
+/** \brief Frame data for VTSS_QCE_TYPE_SNAP */
+typedef struct {
+    vtss_vcap_u48_t data; /**< Data */
+} vtss_qce_frame_snap_t;
+
+/** \brief Frame data for VTSS_QCE_TYPE_IPV4 */
+typedef struct {
+    vtss_vcap_bit_t fragment; /**< Fragment */
+    vtss_vcap_vr_t  dscp;     /**< DSCP field (6 bit) */
+    vtss_vcap_u8_t  proto;    /**< Protocol */
+    vtss_vcap_ip_t  sip;      /**< Source IP address - Serval: key_type = normal, ip_addr and mac_ip_addr */
+#if defined(VTSS_FEATURE_QCL_KEY_DIP)
+    vtss_vcap_ip_t  dip;      /**< Destination IP address - Serval: key_type = ip_addr and mac_ip_addr */
+#endif /* defined(VTSS_FEATURE_QCL_KEY_DIP) */
+    vtss_vcap_vr_t  sport;    /**< UDP/TCP: Source port - Serval: key_type = normal, ip_addr and mac_ip_addr */
+    vtss_vcap_vr_t  dport;    /**< UDP/TCP: Destination port - Serval: key_type = double_tag, ip_addr and mac_ip_addr */
+} vtss_qce_frame_ipv4_t;
+
+/** \brief Frame data for VTSS_QCE_TYPE_IPV6 */
+typedef struct {
+    vtss_vcap_vr_t   dscp;    /**< DSCP field (6 bit) */
+    vtss_vcap_u8_t   proto;   /**< Protocol */
+    vtss_vcap_u128_t sip;     /**< Source IP address (32 LSB on L26 and J1, 64 LSB on Serval when key_type = mac_ip_addr) */
+#if defined(VTSS_FEATURE_QCL_KEY_DIP)
+    vtss_vcap_u128_t dip;     /**< Destination IP address - 64 LSB on Serval when key_type = mac_ip_addr */
+#endif /* defined(VTSS_FEATURE_QCL_KEY_DIP) */
+    vtss_vcap_vr_t   sport;   /**< UDP/TCP: Source port - Serval: key_type = normal, ip_addr and mac_ip_addr */
+    vtss_vcap_vr_t   dport;   /**< UDP/TCP: Destination port - Serval: key_type = double_tag, ip_addr and mac_ip_addr */
+} vtss_qce_frame_ipv6_t;
+
+/**
+ * \brief QCE key
+ **/
+typedef struct {
+    BOOL            port_list[VTSS_PORT_ARRAY_SIZE]; /**< Port list */
+    vtss_qce_mac_t  mac;                             /**< MAC */
+    vtss_qce_tag_t  tag;                             /**< Tag */
+#if defined(VTSS_FEATURE_QCL_KEY_INNER_TAG)
+    vtss_qce_tag_t  inner_tag;                       /**< Inner tag */
+#endif /* defined(VTSS_FEATURE_QCL_KEY_INNER_TAG) */
+    vtss_qce_type_t type;                            /**< Frame type */
+
+    union {
+        /* VTSS_QCE_TYPE_ANY: No specific fields */
+        vtss_qce_frame_etype_t etype; /**< VTSS_QCE_TYPE_ETYPE */
+        vtss_qce_frame_llc_t   llc;   /**< VTSS_QCE_TYPE_LLC */
+        vtss_qce_frame_snap_t  snap;  /**< VTSS_QCE_TYPE_SNAP */
+        vtss_qce_frame_ipv4_t  ipv4;  /**< VTSS_QCE_TYPE_IPV4 */
+        vtss_qce_frame_ipv6_t  ipv6;  /**< VTSS_QCE_TYPE_IPV6 */
+    } frame; /**< Frame type specific data */
+} vtss_qce_key_t;
+
+/**
+ * \brief QCE action
+ **/
+typedef struct {
+    BOOL                      prio_enable;      /**< Enable priority classification */
+    vtss_prio_t               prio;             /**< Priority value */
+    BOOL                      dp_enable;        /**< Enable DP classification */
+    vtss_dp_level_t           dp;               /**< DP value */
+    BOOL                      dscp_enable;      /**< Enable DSCP classification */
+    vtss_dscp_t               dscp;             /**< DSCP value */
+    BOOL                      pcp_dei_enable;   /**< Enable PCP and DEI classification */
+    vtss_tagprio_t            pcp;              /**< PCP value */
+    vtss_dei_t                dei;              /**< DEI value */
+    BOOL                      policy_no_enable; /**< Enable ACL policy classification */
+    vtss_acl_policy_no_t      policy_no;        /**< ACL policy number */
+#if (defined VTSS_FEATURE_QCL_MAP_ACTION)
+    BOOL                      map_id_enable;    /**< Enable classification via ingress map */
+    vtss_qos_ingress_map_id_t map_id;           /**< Ingress map to use for classification */
+#endif /* VTSS_FEATURE_QCL_MAP_ACTION */
+} vtss_qce_action_t;
+
+/**
+ * \brief QoS Control Entry
+ **/
+typedef struct {
+    vtss_qce_id_t     id;         /**< Entry ID */
+    vtss_qce_key_t    key;        /**< QCE key */
+    vtss_qce_action_t action;     /**< QCE action */
+} vtss_qce_t;
+
+/**
+ * \brief Initialize QCE to default values.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param type [IN]  QCE type.
+ * \param qce [OUT]  QCE structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qce_init(const vtss_inst_t      inst,
+                      const vtss_qce_type_t  type,
+                      vtss_qce_t             *const qce);
+
+/**
+ * \brief Add QCE to QCL.
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param qcl_id [IN]  QCL ID.
+ * \param qce_id [IN]  QCE ID. The QCE will be added before the entry with this ID.
+ *                     VTSS_QCE_ID_LAST is reserved for inserting last.
+ * \param qce [IN]     QCE structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qce_add(const vtss_inst_t    inst,
+                     const vtss_qcl_id_t  qcl_id,
+                     const vtss_qce_id_t  qce_id,
+                     const vtss_qce_t     *const qce);
+
+/**
+ * \brief Delete QCE from QCL.
+ *
+ * \param inst [IN]    Target instance reference.
+ * \param qcl_id [IN]  QCL ID.
+ * \param qce_id [IN]  QCE ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qce_del(const vtss_inst_t    inst,
+                     const vtss_qcl_id_t  qcl_id,
+                     const vtss_qce_id_t  qce_id);
+#endif // VTSS_FEATURE_QCL
+
+#if defined(VTSS_FEATURE_QOS_INGRESS_MAP) || defined(VTSS_FEATURE_QOS_EGRESS_MAP)
+/** \brief Key that determines what to match */
+typedef enum {
+    VTSS_QOS_INGRESS_MAP_KEY_PCP,                   /**< Use PCP for tagged frames and none for the rest */
+    VTSS_QOS_INGRESS_MAP_KEY_PCP_DEI,               /**< Use PCP/DEI for tagged frames and none for the rest */
+    VTSS_QOS_INGRESS_MAP_KEY_DSCP,                  /**< Use DSCP as key for IP frames and none for the rest */
+    VTSS_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI,          /**< Use DSCP as key for IP frames, PCP/DEI for tagged frames and none for the rest */
+    VTSS_QOS_INGRESS_MAP_KEY_MPLS_TC                /**< Use MPLS TC as key for MPLS frames and none for the rest */
+} vtss_qos_ingress_map_key_t;
+
+/** \brief Actions that can be applied to classified values if the entry is matched */
+typedef struct {
+    BOOL cos;                                       /**< If TRUE, then replace the classified COS */
+    BOOL dpl;                                       /**< If TRUE, then replace the classified DPL */
+    BOOL pcp;                                       /**< If TRUE, then replace the classified PCP */
+    BOOL dei;                                       /**< If TRUE, then replace the classified DEI */
+    BOOL dscp;                                      /**< If TRUE, then replace the classified DSCP */
+    BOOL cosid;                                     /**< If TRUE, then replace the classified COS ID */
+    BOOL path;                                      /**< If TRUE, then replace the classified path COS ID */
+    BOOL mpls_tc;                                   /**< If TRUE, then replace the classified MPLS TC */
+} vtss_qos_ingress_map_action_t;
+
+/** \brief Mapped values that can be applied to classified values if the entry is matched */
+typedef struct {
+    vtss_cos_t     cos;                             /**< The classified COS is set to cos if action.cos is TRUE */
+    vtss_dpl_t     dpl;                             /**< The classified DPL is set to dpl if action.dpl is TRUE */
+    vtss_pcp_t     pcp;                             /**< The classified PCP is set to pcp if action.pcp is TRUE */
+    vtss_dei_t     dei;                             /**< The classified DEI is set to dei if action.dei is TRUE */
+    vtss_dscp_t    dscp;                            /**< The classified DSCP is set to dscp if action.dscp is TRUE */
+    vtss_cosid_t   cosid;                           /**< The classified COS ID is set to cosid if action.cosid is TRUE */
+    vtss_cosid_t   path_cosid;                      /**< Path COS ID value used by OAM MEP if action.path is TRUE */
+    vtss_mpls_tc_t mpls_tc;                         /**< The classified TC is set to mpls_tc if action.mpls_tc is TRUE */
+} vtss_qos_ingress_map_values_t;
+
+/** \brief Values for a combination of DSCP, PCP and DEI */
+typedef struct {
+    vtss_qos_ingress_map_values_t dscp[64];         /**< Mapped values for each DSCP value */
+    vtss_qos_ingress_map_values_t pcp_dei[8][2];    /**< Mapped values for each PCP/DEI value */
+} vtss_qos_ingress_map_dpd_t;
+
+/** \brief Union of mapped values for different keys */
+typedef union {
+    vtss_qos_ingress_map_values_t pcp[8];           /**< VTSS_QOS_INGRESS_MAP_KEY_PCP */
+    vtss_qos_ingress_map_values_t pcp_dei[8][2];    /**< VTSS_QOS_INGRESS_MAP_KEY_PCP_DEI */
+    vtss_qos_ingress_map_values_t dscp[64];         /**< VTSS_QOS_INGRESS_MAP_KEY_DSCP */
+    vtss_qos_ingress_map_dpd_t    dpd;              /**< VTSS_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI */
+    vtss_qos_ingress_map_values_t mpls_tc[8];       /**< VTSS_QOS_INGRESS_MAP_KEY_MPLS_TC */
+} vtss_qos_ingress_map_maps_t;
+
+/** \brief The complete map. There is one of these per map id */
+typedef struct {
+    vtss_qos_ingress_map_id_t     id;               /**< ID for this entry */
+    vtss_qos_ingress_map_key_t    key;              /**< Lookup key */
+    vtss_qos_ingress_map_action_t action;           /**< Action enable/disable */
+    vtss_qos_ingress_map_maps_t   maps;             /**< Maps for specific key */
+} vtss_qos_ingress_map_t;
+
+/** \brief Key that determines what to match */
+typedef enum {
+    VTSS_QOS_EGRESS_MAP_KEY_COSID,                  /**< Use classified COS ID */
+    VTSS_QOS_EGRESS_MAP_KEY_COSID_DPL,              /**< Use classified COS ID and DPL */
+    VTSS_QOS_EGRESS_MAP_KEY_DSCP,                   /**< Use classified DSCP  */
+    VTSS_QOS_EGRESS_MAP_KEY_DSCP_DPL,               /**< Use classified DSCP and DPL */
+    VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC,                /**< Use classified TC */
+    VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL             /**< Use classified TC and DPL */
+} vtss_qos_egress_map_key_t;
+
+/** \brief Actions that can be applied to the frame if the entry is matched */
+typedef struct {
+    BOOL pcp;                                       /**< If TRUE, then replace PCP in frame */
+    BOOL dei;                                       /**< If TRUE, then replace DEI in frame */
+    BOOL dscp;                                      /**< If TRUE, then replace DSCP in frame */
+    BOOL path;                                      /**< If TRUE, then replace path COS ID in frame */
+    BOOL mpls_tc;                                   /**< If TRUE, then replace MPLS TC in frame */
+} vtss_qos_egress_map_action_t;
+
+/** \brief Mapped values that can be applied to classified values if the entry is matched */
+typedef struct {
+    vtss_pcp_t     pcp;                             /**< The classified PCP is set to pcp if action.pcp is TRUE */
+    vtss_dei_t     dei;                             /**< The classified DEI is set to dei if action.dei is TRUE */
+    vtss_dscp_t    dscp;                            /**< The classified DSCP is set to dscp if action.dscp is TRUE */
+    vtss_cosid_t   path_cosid;                      /**< Path COS ID value used by OAM MEP if action.path is TRUE */
+    vtss_mpls_tc_t mpls_tc;                         /**< The classified TC is set to mpls_tc if action.mpls_tc is TRUE */
+} vtss_qos_egress_map_values_t;
+
+/** \brief Union of mapped values for different keys */
+typedef union {
+    vtss_qos_egress_map_values_t cosid[8];          /**< VTSS_QOS_EGRESS_MAP_KEY_COSID */
+    vtss_qos_egress_map_values_t cosid_dpl[8][4];   /**< VTSS_QOS_EGRESS_MAP_KEY_COSID_DPL */
+    vtss_qos_egress_map_values_t dscp[64];          /**< VTSS_QOS_EGRESS_MAP_KEY_DSCP */
+    vtss_qos_egress_map_values_t dscp_dpl[64][4];   /**< VTSS_QOS_EGRESS_MAP_KEY_DSCP_DPL */
+    vtss_qos_egress_map_values_t mpls_tc[8];        /**< VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC */
+    vtss_qos_egress_map_values_t mpls_tc_dpl[8][4]; /**< VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL */
+} vtss_qos_egress_map_maps_t;
+
+/** \brief The complete map. There is one of these per map id */
+typedef struct {
+    vtss_qos_egress_map_id_t     id;                /**< ID for this entry */
+    vtss_qos_egress_map_key_t    key;               /**< Lookup key */
+    vtss_qos_egress_map_action_t action;            /**< Action enable/disable */
+    vtss_qos_egress_map_maps_t   maps;              /**< Maps for specific key */
+} vtss_qos_egress_map_t;
+#endif /* defined(VTSS_FEATURE_QOS_INGRESS_MAP) || defined(VTSS_FEATURE_QOS_EGRESS_MAP) */
+
+#if defined(VTSS_FEATURE_QOS_INGRESS_MAP)
+/** \page qos
+
+    \section ingress_map Ingress Map
+
+    Global ingress mapping can be done using the ingress map functionality.
+    Each ingress map is identified by an ingress map id (::vtss_qos_ingress_map_id_t).\n
+    The following functions are available:
+    - vtss_qos_ingress_map_init() is used to initialize an ingress map (::vtss_qos_ingress_map_t) to default values.
+    - vtss_qos_ingress_map_add() is used to add or modify an ingress map.
+    - vtss_qos_ingress_map_del() is used to delete an ingress map.
+    - vtss_qos_ingress_map_del_all() is used to delete all ingress maps.
+
+    By default, no ingress maps are setup.
+*/
+
+/**
+ * \brief Initialize an ingress map to default values.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param key  [IN]  Initialize to this key.
+ * \param map [OUT]  Ingress map structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_ingress_map_init(const vtss_inst_t                inst,
+                                  const vtss_qos_ingress_map_key_t key,
+                                  vtss_qos_ingress_map_t           *const map);
+
+/**
+ * \brief Add/update an ingress map.
+ *
+ * \param inst [IN] Target instance reference.
+ * \param map  [IN] Ingress map structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_ingress_map_add(const vtss_inst_t            inst,
+                                 const vtss_qos_ingress_map_t *const map);
+
+/**
+ * \brief Delete an ingress map.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param id   [IN]  Map ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_ingress_map_del(const vtss_inst_t               inst,
+                                 const vtss_qos_ingress_map_id_t id);
+/**
+ * \brief Delete all ingress maps.
+ *
+ * \param inst [IN]  Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_ingress_map_del_all(const vtss_inst_t inst);
+#endif /* VTSS_FEATURE_QOS_INGRESS_MAP */
+
+#if defined(VTSS_FEATURE_QOS_EGRESS_MAP)
+/** \page qos
+
+    \section egress_map Egress Map
+
+    Global egress mapping can be done using the egress map functionality.
+    Each egress map is identified by an egress map id (::vtss_qos_egress_map_id_t).\n
+    The following functions are available:
+    - vtss_qos_egress_map_init() is used to initialize an egress map (::vtss_qos_egress_map_t) to default values.
+    - vtss_qos_egress_map_add() is used to add or modify an egress map.
+    - vtss_qos_egress_map_del() is used to delete an egress map.
+    - vtss_qos_egress_map_del_all() is used to delete all egress maps.
+
+    By default, no egress maps are setup.
+*/
+
+/**
+ * \brief Initialize an egress map to default values.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param key  [IN]  Initialize to this key.
+ * \param map [OUT]  Egress map structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_egress_map_init(const vtss_inst_t               inst,
+                                 const vtss_qos_egress_map_key_t key,
+                                 vtss_qos_egress_map_t           *const map);
+
+/**
+ * \brief Add/update an egress map.
+ *
+ * \param inst [IN] Target instance reference.
+ * \param map  [IN] Egress map structure.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_egress_map_add(const vtss_inst_t           inst,
+                                const vtss_qos_egress_map_t *const map);
+
+/**
+ * \brief Delete an egress map.
+ *
+ * \param inst [IN]  Target instance reference.
+ * \param id   [IN]  Map ID.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_egress_map_del(const vtss_inst_t              inst,
+                                const vtss_qos_egress_map_id_t id);
+/**
+ * \brief Delete all egress maps.
+ *
+ * \param inst [IN]  Target instance reference.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_qos_egress_map_del_all(const vtss_inst_t inst);
+#endif /* VTSS_FEATURE_QOS_EGRESS_MAP */
+
+#if defined(VTSS_ARCH_OCELOT)
+/**
+ * \brief Calibrate egress shaper rates.
+ *
+ * This function calibrates the egress port and queue shapers on VTSS_ARCH_OCELOT.
+ *
+ * Calling this function periodically will enhance the accuracy of the egress
+ * port and queue shapers.
+ *
+ * Recommended rate is between 1 to 50 times per second.
+ *
+ * \param inst [IN] Target instance reference.
+ *
+ * \return VTSS_RC_INCOMPLETE if calibration is still needed, VTSS_RC_OK if not
+ * needed anymore, VTSS_RC_ERROR in case of an error.
+ * NOTICE: Everytime a shaper is changed, this function must be invoked again.
+ **/
+vtss_rc vtss_qos_shaper_calibrate(const vtss_inst_t inst);
+#endif /* defined(VTSS_ARCH_OCELOT) */
+
+#if defined(VTSS_FEATURE_QOS_POLICER_DLB)
+/** \brief EVC policer configuration */
+typedef vtss_dlb_policer_conf_t vtss_evc_policer_conf_t;
+#endif /* VTSS_FEATURE_QOS_POLICER_DLB */
+
+#if defined(VTSS_FEATURE_EVC_POLICERS)
+
+#if defined(VTSS_CHIP_SERVAL)
+#define VTSS_EVC_POLICERS           1022 /**< Maximum number of EVC policers */
+#elif defined(VTSS_ARCH_LUTON26) || defined(VTSS_CHIP_SERVAL_LITE)
+#define VTSS_EVC_POLICERS           256  /**< Maximum number of EVC policers */
+#elif defined(VTSS_ARCH_OCELOT)
+#define VTSS_EVC_POLICERS           64   /**< Maximum number of EVC policers */
+#endif
+
+#if defined(VTSS_ARCH_OCELOT)
+#define VTSS_EVC_POLICER_ID_DISCARD 4094 /**< EVC/ECE: Policer discards all frames */
+#define VTSS_EVC_POLICER_ID_NONE    4095 /**< EVC/ECE: Policer forwards all frames */
+#define VTSS_EVC_POLICER_ID_EVC     4096 /**< ECE only: Use EVC policer */
+#endif /* VTSS_ARCH_OCELOT */
+
+/**
+ * \brief Get EVC policer configuration.
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param policer_id [IN]  Policer ID.
+ * \param conf [OUT]       Policer configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_evc_policer_conf_get(const vtss_inst_t           inst,
+                                  const vtss_evc_policer_id_t policer_id,
+                                  vtss_evc_policer_conf_t     *const conf);
+
+/**
+ * \brief Set EVC policer configuration.
+ *
+ * \param inst [IN]        Target instance reference.
+ * \param policer_id [IN]  Policer ID.
+ * \param conf [IN]        Policer configuration.
+ *
+ * \return Return code.
+ **/
+vtss_rc vtss_evc_policer_conf_set(const vtss_inst_t             inst,
+                                  const vtss_evc_policer_id_t   policer_id,
+                                  const vtss_evc_policer_conf_t *const conf);
+#endif /* VTSS_FEATURE_EVC_POLICERS */
+
+#endif /* VTSS_FEATURE_QOS */
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* _VTSS_QOS_API_H_ */
+:@byteposi’:	@str"#ifndef _VTSS_QOS_API_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ùiPipiqiriviiåi–i‘i’iÓiii$i%i8iEiLiMikiliìiîi˚i˛iˇiJiNiµi∫i…iiAiTiUi°iÌiÓii?i@iDi©iÆiøi˚i7iûi‡iÙiıiiBiCióiòiæi4iviÚi!i"i0i1i_i`iªiÊi%	id	ig	ih	il	i†	i•	i∂	i
+i 
+i¿
+i9i∞i±i@iŒi·ioi˝iii≤iBiÀi˛iÜi¬i√i*iõiipi·iOi∏i)ióiòiæiGiviwiùi8iPikiöi≠iÆi≤i÷iŸi
+i5i8iPiUiài√iƒi»iÏiÔiiIiLidiii†iﬂi‡ii9iëi—i)i/iáiéièiìi•i™iªiÛi,i>i?iìiîiòiµi∫iÀi?isi√i˜i-iÉi€i3iãiÂi?iêi„i_ iÿ iO!iÖ!i“!iË!iÈ!i"iJ"i["iì"i’"i#id#iÑ#iΩ#i$ia$i°$i‰$i!%i@%iç%i&i&i&&iP&iQ&ip&i~&i&iØ&i∞&i'i/'iú'i	(i(i(i(i:(i=(is(i£(i›(i)i)i*)i/)io)i≤)iÚ)i:*i;*i?*ih*ik*i°*i—*i+i=+i@+iX+i]+i£+iÏ+i2,iÄ,i®,i©,iŸ,i›,i˛,i-i-iR-ií-iƒ-i.i.i#.i*.i+.i/.i@.iE.iV.i….ii/iö/i˜/i}0iÆ0iﬁ0iZ1ia1iò1iÔ1i&2i'2i82i92iW2if2iµ2i3ix3ií3iì3ió3iº3i¡3i–3i4iA4iö4i⁄4iÓ4iÔ4iÛ4i5i5i+5id5i∑5i/6ib6i„6i7i+7i,7i:7i;7ie7if7i∫7iÂ7i;8ië8iî8iï8i∑8i»8i'9i(9ií9iì9iÛ9iÙ9iP:iQ:iØ:iÂ:iW;iç;ié;i≈;i:<iq<ir<i›<iN=iO=iÃ=i>>iÿ>ip?i@iú@iù@iÌ@i<Ai¿Ai¡Ai!BiåBi˜BizCi˝Ci˛CiiDiöDi!EiREi≠EiÆEi’EiRFiyFizFi°FiGi7Gi8Gi^Gi∆GiıGiˆGi*HiÅHi¥HiµHi‡HiaIiãIiåIi∂Ii1JiZJirJisJiwJiôJiúJiœJiÙJi!Ki$Ki<KiAKi|Ki∫Ki˝Ki˛KiLi$Li'LiYLi}Li©Li¨LiƒLi…Li
+MiNMióMiòMi≥MiƒMi#Ni8Ni9Ni=Ni_NiaNiìNi¿Ni¬NiŸNi›NiOiOOiPOinOi|Oi}Oi≤Oi≥OiPiWPiÇPi÷PiQi9Qi:QiêQiÍQiFRi]Ri¥RiSiDSiESiHSiISiMSicSihSiÉSiÑSi⁄Si5TiéTiÁTiËTi2Ui3UiXUigUiôUi UiÒUiViAViiVi|Vi}ViüVi∞Vi‰ViWi?WiäWi∫Wi;XiMXiNXipXiÅXi∂XiÊXiYiHYiÑYiñYióYi»YiŸYiZi<ZiVZiWZiÜZióZiæZi÷Zi◊Zi[i[i?[iX[iY[iâ[iö[i…[i\i1\iû\iƒ\i.]i]]iÕ]iF^i_^i`^iê^i°^i⁄^i	_iÜ_i¨_i`iG`i∑`i0aiIaiJaiNai`aieaivaiΩai˛ai?bikbi≤biÁbi/ci0ci<cipci≤ciÚci3ditdiµdi„diıdiˆdi˙dieiei%ei|ei√eifiUfi®fiÎfiEgiági…gi"hilhiñhiÙhiRii{iiêiiëiiïii±ii∂ii«ii˙ii,jiajiojipjitji†ji£ji”jiÚjikiki1ki6kiikiúki÷ki◊ki€kiıki¯ki*liIliùliÂlimimi&mi+mi[miçmiømiˆmi˜mi˚mininiOninniçniêni®ni≠ni›nioiBoi]oi^oi∞oi‡oiÔoi[piÀpi;qi∆qi;riYriZri±ri¬ri'siåsiÒsiVtiºti$uiëui˙uiviviyviävi˝vipwi„wiVxiÃxiFyiªyi5ziVziWziìzi§zi{ic{iÅ{iÇ{i∫{i {i#|iÄ|i⁄|i<}iô}i∏}iπ}i˙}i~iY~i†~iÚ~iDi^i_ièiûiiJÄiõÄiÛÄiAÅióÅi¥ÅiµÅiÇiÇitÇi”Çi3ÉiöÉi˝ÉiÑiÑi{ÑiåÑiˇÑirÖiËÖi]Üi◊Üi˜Üi¯Üi0ái@áiöái¯áiQàiÆài
+âijâiàâiââi âi€âi)äipäi¬äiãi-ãiàãiâãi≥ãi¡ãi¬ãiÁãiËãi4åiçåi∏åi-çiwçi∫çiéiéi/éi2éi3éi7éinéiqéi°éiŒéi˙éi˝éièièicèi´èi˚èi¸èi êi%êi(êiWêiÇêiÖêiùêi¢êiÊêi1ëi2ëi6ëiWëiZëiäëißëi™ëi¬ëi«ëiíiTíiXíi{íi~íiÆíi±íi…íiŒíiìi6ìi7ìi`ìinìioìiíìiììi›ìi3îi^îi–îiïiYïi†ïi°ïiÀïiŒïiœïi”ïi	ñiñi<ñiiñiîñióñiØñi¥ñi˚ñiAóièóiêóiîói∏óiªóiÍóiòiòi/òi4òivòiøòi¿òiƒòi‰òiÁòiôi4ôi7ôiOôiTôiôôi›ôi·ôiöiöi6öi9öiQöiVöiìöiºöiΩöi€öiﬂöiõiõi^õiaõiØõi õiÕõiúi	úi8úi;úiãúi¡úiùiùiPùiwùixùi¢ùi ùiûi-ûi.ûiUûiVûitûiƒûiüiWüiwüi«üiŒüiœüiÌüiC†iô†i‰†i°i°i°i0°i3°ii°iê°i¬°i≈°i›°i‚°i&¢ip¢iº¢iΩ¢i¡¢iÍ¢iÌ¢i#£iJ£i|£i£ió£iú£i‚£i.§i|§i£§i§§i¬§i√§i÷§iÿ§iﬂ§i˝§:@last_line_endi˝§{;o;;o;	;
+@
+;iÓ;"#define _VTSS_QOS_API_H_
+
+;@{;o;;o;	;
+@
+;i;""#include <vtss/api/types.h>
+
+;@{;o;;o;	;
+@
+;i%;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;i8;"extern;@:stringo;;o;	;
+@
+;i?;""C";@; [{{;o;;o;	;
+@
+;iE;"#endif
+
+;@{;o;;o;	;
+@
+;iM;"$#if defined(VTSS_FEATURE_QOS)
+
+;@{;o;;o;	;
+@
+;iˇ;"P#if defined(VTSS_FEATURE_QOS_WRED_V2) || defined(VTSS_FEATURE_QOS_WRED_V3)
+;@{
+;o;;o;	;
+@
+;i∫;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;i¬;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;iÕ;"VTSS_WRED_MAX_DP;@:cap0{;{;o;;o;	;
+@
+;i;"VTSS_WRED_MAX_FL  ;@;0:typedef_nameo;;o;	;
+@
+;iC;"vtss_wred_max_t;@:
+array[ ;0{;o;;o;	;
+@
+;iU;"Q#define VTSS_WRED_V2_MAX_DP VTSS_WRED_MAX_DP /**< Backward compatibility */
+;@{;o;;o;	;
+@
+;i°;"R#define VTSS_WRED_V2_MAX_FL VTSS_WRED_MAX_FL /**< Backward compatibility */
+
+;@{
+;o;;o;	;
+@
+;i;"typedef;@:type_aliaso;;o;	;
+@
+;i;"vtss_wred_max_t ;@;o;;o;	;
+@
+;i+;"vtss_wred_v2_max_t;@;[ ;0{
+;o;;o;	;
+@
+;iÆ;"typedef;@:struct_type_declare{:struct_members[	{:member{:normal{	:	typeo;;o;	;
+@
+;i√;"BOOL               ;@:	nameo;;o;	;
+@
+;i÷;"enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;iˇ;"vtss_pct_t         ;@;!o;;o;	;
+@
+;i;"min_fl;@;[ ;0{;{;{	; o;;o;	;
+@
+;i;;"vtss_pct_t         ;@;!o;;o;	;
+@
+;iN;"max;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¢;"vtss_wred_v2_max_t ;@;!o;;o;	;
+@
+;iµ;"max_unit;@;[ ;0;o;;o;	;
+@
+;i‚;"vtss_wred_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;o;;o;	;
+@
+;i";"vtss_wred_conf_t ;@;o;;o;	;
+@
+;i3;"vtss_red_v2_t;@;[ ;0{;o;;o;	;
+@
+;iC;"Z#endif /* defined(VTSS_FEATURE_QOS_WRED_V2) || defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+;@{;o;;o;	;
+@
+;iò;"+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+;@{;o;;o;	;
+@
+;iæ;"{#define VTSS_WRED_DPL_CNT    3           /**< Number of dpl's. There are no profile for dpl 0, only for dpl 1 to 3 */
+;@{;o;;o;	;
+@
+;i4;"G#define VTSS_WRED_GROUP_CNT  3           /**< Number of groups */
+;@{
+;o;;o;	;
+@
+;iv;"typedef;@;o;;o;	;
+@
+;i~;"vtss_wred_conf_t ;@;o;;o;	;
+@
+;iè;"vtss_red_v3_t;@;[ ;0{;o;;o;	;
+@
+;iÚ;"5#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+;@{
+;o;;o;	;
+@
+;i•	;"typedef;@;{;[${;{;{	; o;;o;	;
+@
+;i∫	;"vtss_prio_t          ;@;!o;;o;	;
+@
+;iœ	;"
+prios;@;[ ;0{;{;{	; o;;o;	;
+@
+;i$
+;"BOOL                 ;@;!o;;o;	;
+@
+;i9
+;"dscp_trust;@;[{:	expro;;o;	;
+@
+;iD
+;"64;@;0{;{;{	; o;;o;	;
+@
+;iƒ
+;"vtss_prio_t          ;@;!o;;o;	;
+@
+;iŸ
+;"dscp_qos_class_map;@;[{;"o;;o;	;
+@
+;iÏ
+;"64;@;0{;{;{	; o;;o;	;
+@
+;i=;"vtss_dp_level_t      ;@;!o;;o;	;
+@
+;iR;"dscp_dp_level_map;@;[{;"o;;o;	;
+@
+;id;"64;@;0{;{;{	; o;;o;	;
+@
+;iµ;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;i ;"dscp_qos_map;@;[{;"o;;o;	;
+@
+;i◊;"VTSS_PRIO_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;iD;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;iY;"dscp_qos_map_dp1;@;[{;"o;;o;	;
+@
+;ij;"VTSS_PRIO_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;iŒ;"#if VTSS_DPLS == 4
+;@{;{;{	; o;;o;	;
+@
+;iÂ;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;i˙;"dscp_qos_map_dp2;@;[{;"o;;o;	;
+@
+;i;"VTSS_PRIO_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;is;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;ià;"dscp_qos_map_dp3;@;[{;"o;;o;	;
+@
+;iô;"VTSS_PRIO_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;i˝;""#endif /* VTSS_DPLS == 4 */
+
+;@{;{;{	; o;;o;	;
+@
+;i;"BOOL                 ;@;!o;;o;	;
+@
+;i3;"dscp_remark;@;[{;"o;;o;	;
+@
+;i?;"64;@;0{;{;{	; o;;o;	;
+@
+;i∂;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;iÀ;"dscp_translate_map;@;[{;"o;;o;	;
+@
+;iﬁ;"64;@;0{;{;{	; o;;o;	;
+@
+;iF;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;i[;"dscp_remap;@;[{;"o;;o;	;
+@
+;if;"64;@;0{;o;;o;	;
+@
+;iÀ;"8#if defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE)
+;@{;{;{	; o;;o;	;
+@
+;i;"vtss_dscp_t          ;@;!o;;o;	;
+@
+;i;"dscp_remap_dp1;@;[{;"o;;o;	;
+@
+;i&;"64;@;0{;o;;o;	;
+@
+;iÜ;"B#endif /* defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE) */
+
+;@{;{;{	; o;;o;	;
+@
+;i«;"vtss_packet_rate_t        ;@;!o;;o;	;
+@
+;i·;"policer_uc;@;[ ;0{;{;{	; o;;o;	;
+@
+;i.;"BOOL                      ;@;!o;;o;	;
+@
+;iH;"policer_uc_frame_rate;@;[ ;0{;{;{	; o;;o;	;
+@
+;iü;"vtss_storm_policer_mode_t ;@;!o;;o;	;
+@
+;iπ;"policer_uc_mode;@;[ ;0{;{;{	; o;;o;	;
+@
+;i;"vtss_packet_rate_t        ;@;!o;;o;	;
+@
+;i%;"policer_mc;@;[ ;0{;{;{	; o;;o;	;
+@
+;it;"BOOL                      ;@;!o;;o;	;
+@
+;ié;"policer_mc_frame_rate;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÂ;"vtss_storm_policer_mode_t ;@;!o;;o;	;
+@
+;iˇ;"policer_mc_mode;@;[ ;0{;{;{	; o;;o;	;
+@
+;iS;"vtss_packet_rate_t        ;@;!o;;o;	;
+@
+;im;"policer_bc;@;[ ;0{;{;{	; o;;o;	;
+@
+;iº;"BOOL                      ;@;!o;;o;	;
+@
+;i÷;"policer_bc_frame_rate;@;[ ;0{;{;{	; o;;o;	;
+@
+;i-;"vtss_storm_policer_mode_t ;@;!o;;o;	;
+@
+;iG;"policer_bc_mode;@;[ ;0{;o;;o;	;
+@
+;iò;"+#if defined(VTSS_FEATURE_QOS_WRED_V2)
+;@{;{;{	; o;;o;	;
+@
+;i¬;"vtss_wred_conf_t          ;@;!o;;o;	;
+@
+;i‹;"red_v2;@;[{;"o;;o;	;
+@
+;i„;"VTSS_QUEUE_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i˙;"2;@;0{;o;;o;	;
+@
+;iG;"5#endif /* defined(VTSS_FEATURE_QOS_WRED_V2) */
+
+;@{;o;;o;	;
+@
+;iw;"+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+;@{;{;{	; o;;o;	;
+@
+;i°;"vtss_wred_conf_t          ;@;!o;;o;	;
+@
+;iª;"red_v3;@;[{;"o;;o;	;
+@
+;i¬;"VTSS_QUEUE_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i=;"VTSS_WRED_DPL_CNT;@{;"o;;o;	;
+@
+;iU;"VTSS_WRED_GROUP_CNT;@;0{;o;;o;	;
+@
+;ik;"4#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+;@;o;;o;	;
+@
+;iú;"vtss_qos_conf_t;@;[ ;0{:func_proto{;{	; o;;o;	;
+@
+;iU;"vtss_rc ;@;!o;;o;	;
+@
+;i];"vtss_qos_conf_get;@;[ ;0:	args[{;{	; o;;o;	;
+@
+;io;"const vtss_inst_t  ;@;!o;;o;	;
+@
+;iÇ;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i¢;"vtss_qos_conf_t    *const ;@;!o;;o;	;
+@
+;iº;"	conf;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;ii;"vtss_rc ;@;!o;;o;	;
+@
+;iq;"vtss_qos_conf_set;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iÉ;"const vtss_inst_t      ;@;!o;;o;	;
+@
+;iö;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i∫;"#const vtss_qos_conf_t  *const ;@;!o;;o;	;
+@
+;iÿ;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;i;"%#if defined(VTSS_ARCH_SERVAL_T)
+;@{;o;;o;	;
+@
+;i9;"]#define VTSS_PORT_POLICERS 2 /**< Number of Port policers (per port) available in HW */
+;@{;o;;o;	;
+@
+;ië;"E#elif defined(VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i—;"]#define VTSS_PORT_POLICERS 4 /**< Number of Port policers (per port) available in HW */
+;@{;o;;o;	;
+@
+;i);"#else
+;@{;o;;o;	;
+@
+;i/;"]#define VTSS_PORT_POLICERS 1 /**< Number of Port policers (per port) available in HW */
+;@{;o;;o;	;
+@
+;iá;"#endif
+
+;@{
+;o;;o;	;
+@
+;i™;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iø;"vtss_burst_level_t ;@;!o;;o;	;
+@
+;i“;"
+level;@;[ ;0{;{;{	; o;;o;	;
+@
+;i˜;"vtss_bitrate_t     ;@;!o;;o;	;
+@
+;i
+;"	rate;@;[ ;0;o;;o;	;
+@
+;i.;"vtss_policer_t;@;[ ;0{;o;;o;	;
+@
+;i?;"Z#define VTSS_PORT_POLICER_CPU_QUEUES 8 /**< Number of cpu queues pr port policer */
+
+;@{
+;o;;o;	;
+@
+;i∫;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iœ;"BOOL               ;@;!o;;o;	;
+@
+;i‚;"frame_rate;@;[ ;0{;o;;o;	;
+@
+;i?;"9#if defined(VTSS_FEATURE_QOS_PORT_POLICER_EXT_DPBL)
+;@{;{;{	; o;;o;	;
+@
+;iw;"vtss_dp_level_t    ;@;!o;;o;	;
+@
+;iä;"dp_bypass_level;@;[ ;0{;o;;o;	;
+@
+;i√;"9#endif /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_DPBL */
+;@{;o;;o;	;
+@
+;i˜;";#if defined(VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2)
+;@{;{;{	; o;;o;	;
+@
+;i1;"BOOL               ;@;!o;;o;	;
+@
+;iD;"known_unicast;@;[ ;0{;{;{	; o;;o;	;
+@
+;iá;"BOOL               ;@;!o;;o;	;
+@
+;iö;"known_multicast;@;[ ;0{;{;{	; o;;o;	;
+@
+;iﬂ;"BOOL               ;@;!o;;o;	;
+@
+;iÚ;"known_broadcast;@;[ ;0{;{;{	; o;;o;	;
+@
+;i7;"BOOL               ;@;!o;;o;	;
+@
+;iJ;"unknown_unicast;@;[ ;0{;{;{	; o;;o;	;
+@
+;iè;"BOOL               ;@;!o;;o;	;
+@
+;i¢;"unknown_multicast;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÈ;"BOOL               ;@;!o;;o;	;
+@
+;i¸;"unknown_broadcast;@;[ ;0{;{;{	; o;;o;	;
+@
+;iC;"BOOL               ;@;!o;;o;	;
+@
+;iV;"learning;@;[ ;0{;{;{	; o;;o;	;
+@
+;iî;"BOOL               ;@;!o;;o;	;
+@
+;iß;"to_cpu;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÁ;"BOOL               ;@;!o;;o;	;
+@
+;i˙;"cpu_queue;@;[{;"o;;o;	;
+@
+;i ;"!VTSS_PORT_POLICER_CPU_QUEUES;@;0{;{;{	; o;;o;	;
+@
+;ic ;"BOOL               ;@;!o;;o;	;
+@
+;iv ;"limit_noncpu_traffic;@;[ ;0{;{;{	; o;;o;	;
+@
+;i‹ ;"BOOL               ;@;!o;;o;	;
+@
+;iÔ ;"limit_cpu_traffic;@;[ ;0{;o;;o;	;
+@
+;iO!;";#endif /* VTSS_FEATURE_QOS_PORT_POLICER_EXT_TTM_V2 */
+;@{;{;{	; o;;o;	;
+@
+;iâ!;"BOOL               ;@;!o;;o;	;
+@
+;iú!;"flow_control;@;[ ;0;o;;o;	;
+@
+;i‘!;"vtss_policer_ext_t;@;[ ;0{;o;;o;	;
+@
+;iÈ!;"/#if defined(VTSS_FEATURE_QOS_POLICER_DLB)
+;@{
+;o;;o;	;
+@
+;iJ";"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i_";"vtss_policer_type_t ;@;!o;;o;	;
+@
+;is";"	type;@;[ ;0{;{;{	; o;;o;	;
+@
+;ió";"BOOL                ;@;!o;;o;	;
+@
+;i´";"enable;@;[ ;0{;o;;o;	;
+@
+;i’";"C#if defined(VTSS_ARCH_JAGUAR_2) || defined (VTSS_ARCH_SPARX5)
+;@{;{;{	; o;;o;	;
+@
+;i#;"BOOL                ;@;!o;;o;	;
+@
+;i+#;"cm;@;[ ;0{;o;;o;	;
+@
+;id#;"%#endif /* VTSS_ARCH_JAGUAR_2 */
+;@{;{;{	; o;;o;	;
+@
+;ià#;"BOOL                ;@;!o;;o;	;
+@
+;iú#;"cf;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¡#;"BOOL                ;@;!o;;o;	;
+@
+;i’#;"line_rate;@;[ ;0{;{;{	; o;;o;	;
+@
+;i$;"vtss_bitrate_t      ;@;!o;;o;	;
+@
+;i3$;"cir;@;[ ;0{;{;{	; o;;o;	;
+@
+;ie$;"vtss_burst_level_t  ;@;!o;;o;	;
+@
+;iy$;"cbs;@;[ ;0{;{;{	; o;;o;	;
+@
+;i•$;"vtss_bitrate_t      ;@;!o;;o;	;
+@
+;iπ$;"eir;@;[ ;0{;{;{	; o;;o;	;
+@
+;iË$;"vtss_burst_level_t  ;@;!o;;o;	;
+@
+;i¸$;"ebs;@;[ ;0{;o;;o;	;
+@
+;i!%;"$#if defined(VTSS_FEATURE_PSFP)
+;@{;{;{	; o;;o;	;
+@
+;iD%;"BOOL                ;@;!o;;o;	;
+@
+;iX%;"drop_yellow;@;[ ;0{;{;{	; o;;o;	;
+@
+;ië%;"vtss_opt_bool_t     ;@;!o;;o;	;
+@
+;i•%;"mark_all_red;@;[ ;0{;o;;o;	;
+@
+;i&;"#endif
+;@;o;;o;	;
+@
+;i&;"vtss_dlb_policer_conf_t;@;[ ;0{;o;;o;	;
+@
+;i&&;"0#endif /* VTSS_FEATURE_QOS_POLICER_DLB */
+
+;@{;o;;o;	;
+@
+;iQ&;"$#if defined(VTSS_ARCH_CARACAL)
+;@{;#{;{	; o;;o;	;
+@
+;i/);"vtss_rc ;@;!o;;o;	;
+@
+;i7);"vtss_mep_policer_conf_get;@;[ ;0;$[	{;{	; o;;o;	;
+@
+;iQ);"const vtss_inst_t       ;@;!o;;o;	;
+@
+;ii);"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ië);"const vtss_port_no_t    ;@;!o;;o;	;
+@
+;i©);"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i‘);"const vtss_prio_t       ;@;!o;;o;	;
+@
+;iÏ);"	prio;@;[ ;0{;{	; o;;o;	;
+@
+;i*;"$vtss_dlb_policer_conf_t *const ;@;!o;;o;	;
+@
+;i3*;"	conf;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i]+;"vtss_rc ;@;!o;;o;	;
+@
+;ie+;"vtss_mep_policer_conf_set;@;[ ;0;$[	{;{	; o;;o;	;
+@
+;i+;"#const vtss_inst_t             ;@;!o;;o;	;
+@
+;iù+;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i≈+;"#const vtss_port_no_t          ;@;!o;;o;	;
+@
+;i„+;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;i,;"#const vtss_prio_t             ;@;!o;;o;	;
+@
+;i,,;"	prio;@;[ ;0{;{	; o;;o;	;
+@
+;iT,;"*const vtss_dlb_policer_conf_t *const ;@;!o;;o;	;
+@
+;iy,;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;iÄ,;".#endif /* defined(VTSS_ARCH_CARACAL) */
+
+;@{;o;;o;	;
+@
+;i©,;"5#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_RT)
+;@{
+;o;;o;	;
+@
+;i-;"typedef;@;{;o;;o;	;
+@
+;i-;"	enum;@;[
+{;{;o;;o;	;
+@
+;i-;"VTSS_SHAPER_MODE_LINE;@;0{;{;o;;o;	;
+@
+;iV-;"VTSS_SHAPER_MODE_DATA;@;0{;o;;o;	;
+@
+;ií-;"7#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPER_FRAME)
+;@{;{;o;;o;	;
+@
+;i»-;"VTSS_SHAPER_MODE_FRAME  ;@;0{;o;;o;	;
+@
+;i.;"#endif
+;@;o;;o;	;
+@
+;i.;"vtss_shaper_mode_t;@;[ ;0{;o;;o;	;
+@
+;i#.;"#endif
+
+;@{
+;o;;o;	;
+@
+;iE.;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iZ.;"vtss_burst_level_t ;@;!o;;o;	;
+@
+;im.;"
+level;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÕ.;"vtss_bitrate_t     ;@;!o;;o;	;
+@
+;i‡.;"	rate;@;[ ;0{;o;;o;	;
+@
+;ii/;"6#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_DLB)
+;@{;{;{	; o;;o;	;
+@
+;iû/;"vtss_burst_level_t ;@;!o;;o;	;
+@
+;i±/;"ebs;@;[ ;0{;{;{	; o;;o;	;
+@
+;i˚/;"vtss_bitrate_t     ;@;!o;;o;	;
+@
+;i0;"eir;@;[ ;0{;o;;o;	;
+@
+;i}0;"6#endif /* VTSS_FEATURE_QOS_EGRESS_SHAPERS_DLB */
+;@{;o;;o;	;
+@
+;iÆ0;"5#if defined(VTSS_FEATURE_QOS_EGRESS_SHAPERS_RT)
+;@{;{;{	; o;;o;	;
+@
+;i‚0;"vtss_shaper_mode_t ;@;!o;;o;	;
+@
+;iı0;"	mode;@;[ ;0{;o;;o;	;
+@
+;iZ1;"#endif
+;@{;o;;o;	;
+@
+;ia1;"<#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_CRB)
+;@{;{;{	; o;;o;	;
+@
+;iú1;"BOOL               ;@;!o;;o;	;
+@
+;iØ1;"credit_enable;@;[ ;0{;o;;o;	;
+@
+;iÔ1;"=#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_CRB */
+
+;@;o;;o;	;
+@
+;i)2;"vtss_shaper_t;@;[ ;0{
+;o;;o;	;
+@
+;iW2;"typedef;@;{;o;;o;	;
+@
+;i_2;"	enum;@;[{;{	;o;;o;	;
+@
+;ij2;"%VTSS_TAG_REMARK_MODE_CLASSIFIED ;@:operatoro;;o;	;
+@
+;iä2;"=;@;"o;;o;	;
+@
+;iå2;"0;@;0{;{	;o;;o;	;
+@
+;iπ2;"%VTSS_TAG_REMARK_MODE_DEFAULT    ;@;%o;;o;	;
+@
+;iŸ2;"=;@;"o;;o;	;
+@
+;i€2;"2;@;0{;{	;o;;o;	;
+@
+;i3;"%VTSS_TAG_REMARK_MODE_MAPPED     ;@;%o;;o;	;
+@
+;i23;"=;@;"o;;o;	;
+@
+;i43;"3  ;@;0;o;;o;	;
+@
+;iz3;"vtss_tag_remark_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i¡3;"typedef;@;{;o;;o;	;
+@
+;i…3;"	enum;@;[	{;{;o;;o;	;
+@
+;i‘3;"VTSS_DSCP_MODE_NONE;@;0{;{;o;;o;	;
+@
+;i	4;"VTSS_DSCP_MODE_ZERO;@;0{;{;o;;o;	;
+@
+;iE4;"VTSS_DSCP_MODE_SEL;@;0{;{;o;;o;	;
+@
+;iû4;"VTSS_DSCP_MODE_ALL     ;@;0;o;;o;	;
+@
+;i‹4;"vtss_dscp_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i5;"typedef;@;{;o;;o;	;
+@
+;i$5;"	enum;@;[{;{;o;;o;	;
+@
+;i/5;"VTSS_DSCP_EMODE_DISABLE;@;0{;{;o;;o;	;
+@
+;ih5;"VTSS_DSCP_EMODE_REMARK;@;0{;{;o;;o;	;
+@
+;iª5;"VTSS_DSCP_EMODE_REMAP;@;0{;o;;o;	;
+@
+;i/6;"8#if defined(VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE)
+;@{;{;o;;o;	;
+@
+;if6;" VTSS_DSCP_EMODE_REMAP_DPA  ;@;0{;o;;o;	;
+@
+;i„6;"8#endif /* VTSS_FEATURE_QOS_DSCP_REMARK_DP_AWARE */
+;@;o;;o;	;
+@
+;i7;"vtss_dscp_emode_t;@;[ ;0{
+;o;;o;	;
+@
+;i∑8;"typedef;@;{;[7{;{;{	; o;;o;	;
+@
+;iÃ8;"vtss_policer_t ;@;!o;;o;	;
+@
+;i€8;"policer_port;@;[{;"o;;o;	;
+@
+;iË8;"VTSS_PORT_POLICERS;@;0{;{;{	; o;;o;	;
+@
+;i,9;"vtss_policer_ext_t ;@;!o;;o;	;
+@
+;i?9;"policer_ext_port;@;[{;"o;;o;	;
+@
+;iP9;"VTSS_PORT_POLICERS;@;0{;{;{	; o;;o;	;
+@
+;ió9;"vtss_policer_t     ;@;!o;;o;	;
+@
+;i™9;"policer_queue;@;[{;"o;;o;	;
+@
+;i∏9;"VTSS_QUEUE_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;i¯9;"vtss_shaper_t  ;@;!o;;o;	;
+@
+;i:;"shaper_port;@;[ ;0{;{;{	; o;;o;	;
+@
+;iU:;"vtss_shaper_t ;@;!o;;o;	;
+@
+;ic:;"shaper_queue;@;[{;"o;;o;	;
+@
+;ip:;"VTSS_QUEUE_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;iØ:;";#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_EB)
+;@{;{;{	; o;;o;	;
+@
+;iÈ:;"BOOL          ;@;!o;;o;	;
+@
+;i˜:;"excess_enable;@;[{;"o;;o;	;
+@
+;i;;"VTSS_QUEUE_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;iW;;"<#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_SHAPERS_EB */
+
+;@{;o;;o;	;
+@
+;ié;;"<#if defined(VTSS_FEATURE_QOS_EGRESS_QUEUE_CUT_THROUGH)
+;@{;{;{	; o;;o;	;
+@
+;i…;;"BOOL          ;@;!o;;o;	;
+@
+;i◊;;"cut_through_enable;@;[{;"o;;o;	;
+@
+;iÍ;;"VTSS_QUEUE_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;i:<;"=#endif /* VTSS_FEATURE_QOS_EGRESS_QUEUE_CUT_THROUGH */
+
+;@{;{;{	; o;;o;	;
+@
+;iv<;"vtss_prio_t    ;@;!o;;o;	;
+@
+;iÖ<;"default_prio;@;[ ;0{;{;{	; o;;o;	;
+@
+;i·<;"vtss_tagprio_t ;@;!o;;o;	;
+@
+;i<;"usr_prio;@;[ ;0{;{;{	; o;;o;	;
+@
+;iS=;"vtss_dp_level_t   ;@;!o;;o;	;
+@
+;ie=;"default_dpl;@;[ ;0{;{;{	; o;;o;	;
+@
+;i–=;"vtss_dei_t        ;@;!o;;o;	;
+@
+;i‚=;"default_dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;iB>;"BOOL              ;@;!o;;o;	;
+@
+;iT>;"tag_class_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i‹>;"vtss_prio_t       ;@;!o;;o;	;
+@
+;iÓ>;"qos_class_map;@;[{;"o;;o;	;
+@
+;i¸>;"VTSS_PCP_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i?;"VTSS_DEI_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;it?;"vtss_dp_level_t   ;@;!o;;o;	;
+@
+;iÜ?;"dp_level_map;@;[{;"o;;o;	;
+@
+;iì?;"VTSS_PCP_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i®?;"VTSS_DEI_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;i
+@;"BOOL              ;@;!o;;o;	;
+@
+;i@;"dscp_class_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i°@;"vtss_dscp_mode_t  ;@;!o;;o;	;
+@
+;i≥@;"dscp_mode;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÒ@;"vtss_dscp_emode_t ;@;!o;;o;	;
+@
+;iA;"dscp_emode;@;[ ;0{;{;{	; o;;o;	;
+@
+;i@A;"BOOL              ;@;!o;;o;	;
+@
+;iRA;"dscp_translate;@;[ ;0{;{;{	; o;;o;	;
+@
+;i≈A;"vtss_tag_remark_mode_t ;@;!o;;o;	;
+@
+;i‹A;"tag_remark_mode;@;[ ;0{;{;{	; o;;o;	;
+@
+;i%B;"vtss_tagprio_t         ;@;!o;;o;	;
+@
+;i<B;"tag_default_pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iêB;"vtss_dei_t             ;@;!o;;o;	;
+@
+;ißB;"tag_default_dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;i˚B;"vtss_tagprio_t         ;@;!o;;o;	;
+@
+;iC;"tag_pcp_map;@;[{;"o;;o;	;
+@
+;iC;"VTSS_PRIO_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i4C;"2;@;0{;{;{	; o;;o;	;
+@
+;i~C;"vtss_dei_t             ;@;!o;;o;	;
+@
+;iïC;"tag_dei_map;@;[{;"o;;o;	;
+@
+;i°C;"VTSS_PRIO_ARRAY_SIZE;@{;"o;;o;	;
+@
+;i∑C;"2;@;0{;{;{	; o;;o;	;
+@
+;iD;"BOOL       ;@;!o;;o;	;
+@
+;iD;"dwrr_enable;@;[ ;0{;o;;o;	;
+@
+;iiD;"6#if defined(VTSS_FEATURE_QOS_SCHEDULER_DWRR_CNT)
+;@{;{;{	; o;;o;	;
+@
+;iûD;"u8         ;@;!o;;o;	;
+@
+;i©D;"dwrr_cnt;@;[ ;0{;o;;o;	;
+@
+;i!E;"6#endif /* VTSS_FEATURE_QOS_SCHEDULER_DWRR_CNT */
+;@{;{;{	; o;;o;	;
+@
+;iVE;"vtss_pct_t ;@;!o;;o;	;
+@
+;iaE;"queue_pct;@;[{;"o;;o;	;
+@
+;ikE;"VTSS_QUEUE_ARRAY_SIZE;@;0{;o;;o;	;
+@
+;iÆE;",#if defined(VTSS_FEATURE_QCL_DMAC_DIP)
+;@{;{;{	; o;;o;	;
+@
+;iŸE;"BOOL       ;@;!o;;o;	;
+@
+;i‰E;"dmac_dip;@;[ ;0{;o;;o;	;
+@
+;iRF;"-#endif /* VTSS_FEATURE_QCL_DMAC_DIP */
+
+;@{;o;;o;	;
+@
+;izF;",#if defined(VTSS_FEATURE_QCL_KEY_TYPE)
+;@{;{;{	; o;;o;	;
+@
+;i•F;"vtss_vcap_key_type_t ;@;!o;;o;	;
+@
+;i∫F;"key_type;@;[ ;0{;o;;o;	;
+@
+;iG;"6#endif /* defined(VTSS_FEATURE_QCL_KEY_TYPE) */
+
+;@{;o;;o;	;
+@
+;i8G;"+#if defined(VTSS_FEATURE_QOS_WRED_V3)
+;@{;{;{	; o;;o;	;
+@
+;ibG;"vtss_wred_group_t ;@;!o;;o;	;
+@
+;itG;"wred_group;@;[ ;0{;o;;o;	;
+@
+;i∆G;"5#endif /* defined(VTSS_FEATURE_QOS_WRED_V3) */
+
+;@{;o;;o;	;
+@
+;iˆG;"9#if (defined VTSS_FEATURE_QOS_COSID_CLASSIFICATION)
+;@{;{;{	; o;;o;	;
+@
+;i.H;"vtss_cosid_t ;@;!o;;o;	;
+@
+;i;H;"
+cosid;@;[ ;0{;o;;o;	;
+@
+;iÅH;"9#endif /* VTSS_FEATURE_QOS_COSID_CLASSIFICATION */
+
+;@{;o;;o;	;
+@
+;iµH;"0#if (defined VTSS_FEATURE_QOS_INGRESS_MAP)
+;@{;{;{	; o;;o;	;
+@
+;i‰H;"vtss_qos_ingress_map_id_t ;@;!o;;o;	;
+@
+;i˛H;"ingress_map;@;[ ;0{;o;;o;	;
+@
+;iaI;"0#endif /* VTSS_FEATURE_QOS_INGRESS_MAP */
+
+;@{;o;;o;	;
+@
+;iåI;"/#if (defined VTSS_FEATURE_QOS_EGRESS_MAP)
+;@{;{;{	; o;;o;	;
+@
+;i∫I;"vtss_qos_egress_map_id_t ;@;!o;;o;	;
+@
+;i”I;"egress_map;@;[ ;0{;o;;o;	;
+@
+;i1J;".#endif /* VTSS_FEATURE_QOS_EGRESS_MAP */
+;@;o;;o;	;
+@
+;i\J;"vtss_qos_port_conf_t;@;[ ;0{;#{;{	; o;;o;	;
+@
+;iAK;"vtss_rc ;@;!o;;o;	;
+@
+;iIK;"vtss_qos_port_conf_get;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i`K;"const vtss_inst_t     ;@;!o;;o;	;
+@
+;ivK;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iõK;"const vtss_port_no_t  ;@;!o;;o;	;
+@
+;i±K;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;iŸK;""vtss_qos_port_conf_t  *const ;@;!o;;o;	;
+@
+;iˆK;"	conf;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i…L;"vtss_rc ;@;!o;;o;	;
+@
+;i—L;"vtss_qos_port_conf_set;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iËL;"!const vtss_inst_t           ;@;!o;;o;	;
+@
+;iM;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i)M;"!const vtss_port_no_t        ;@;!o;;o;	;
+@
+;iEM;"port_no;@;[ ;0{;{	; o;;o;	;
+@
+;imM;"(const vtss_qos_port_conf_t  *const ;@;!o;;o;	;
+@
+;iêM;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i≥M;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i»M;"vtss_event_t        ;@;!o;;o;	;
+@
+;i‹M;"
+storm;@;[ ;0;o;;o;	;
+@
+;i%N;"vtss_qos_status_t;@;[ ;0{;#{;{	; o;;o;	;
+@
+;i›N;"vtss_rc ;@;!o;;o;	;
+@
+;iÂN;"vtss_qos_status_get;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i˘N;"const vtss_inst_t ;@;!o;;o;	;
+@
+;iO;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i-O;"vtss_qos_status_t *const ;@;!o;;o;	;
+@
+;iFO;"status;@;[ ;0;0{;o;;o;	;
+@
+;iPO;"##if defined(VTSS_FEATURE_QCL)
+;@{
+;o;;o;	;
+@
+;ihS;"typedef;@;o;;o;	;
+@
+;ipS;"	u32 ;@;o;;o;	;
+@
+;itS;"vtss_qcl_id_t;@;[ ;0{;o;;o;	;
+@
+;iÑS;"[#define VTSS_QCL_IDS        1                                  /**< Number of QCLs */
+;@{;o;;o;	;
+@
+;i⁄S;"`#define VTSS_QCL_ID_START   0                                  /**< QCL ID start number */
+;@{;o;;o;	;
+@
+;i5T;"^#define VTSS_QCL_ID_END     (VTSS_QCL_ID_START + VTSS_QCL_IDS) /**< QCL ID end number */
+;@{;o;;o;	;
+@
+;iéT;"_#define VTSS_QCL_ARRAY_SIZE VTSS_QCL_ID_END                    /**< QCL ID array size */
+
+;@{;o;;o;	;
+@
+;iËT;"P#define VTSS_QCE_ID_LAST 0 /**< Special value used to add last in list */
+
+;@{
+;o;;o;	;
+@
+;iXU;"typedef;@;{;o;;o;	;
+@
+;i`U;"	enum;@;[{;{;o;;o;	;
+@
+;ikU;"VTSS_QCE_TYPE_ANY;@;0{;{;o;;o;	;
+@
+;iùU;"VTSS_QCE_TYPE_ETYPE;@;0{;{;o;;o;	;
+@
+;iŒU;"VTSS_QCE_TYPE_LLC;@;0{;{;o;;o;	;
+@
+;iıU;"VTSS_QCE_TYPE_SNAP;@;0{;{;o;;o;	;
+@
+;iV;"VTSS_QCE_TYPE_IPV4;@;0{;{;o;;o;	;
+@
+;iEV;"VTSS_QCE_TYPE_IPV6     ;@;0;o;;o;	;
+@
+;ikV;"vtss_qce_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iüV;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i¥V;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;iƒV;"dmac_mc;@;[ ;0{;{;{	; o;;o;	;
+@
+;iËV;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;i¯V;"dmac_bc;@;[ ;0{;o;;o;	;
+@
+;iW;",#if defined(VTSS_FEATURE_QCL_KEY_DMAC)
+;@{;{;{	; o;;o;	;
+@
+;iCW;"vtss_vcap_u48_t ;@;!o;;o;	;
+@
+;iSW;"	dmac;@;[ ;0{;o;;o;	;
+@
+;iäW;"5#endif /* defined(VTSS_FEATURE_QCL_KEY_DMAC) */
+;@{;{;{	; o;;o;	;
+@
+;iæW;"vtss_vcap_u48_t ;@;!o;;o;	;
+@
+;iŒW;"	smac;@;[ ;0;o;;o;	;
+@
+;i=X;"vtss_qce_mac_t;@;[ ;0{
+;o;;o;	;
+@
+;ipX;"typedef;@;{;[
+{;{;{	; o;;o;	;
+@
+;iÖX;"vtss_vcap_vr_t  ;@;!o;;o;	;
+@
+;iïX;"vid;@;[ ;0{;{;{	; o;;o;	;
+@
+;i∫X;"vtss_vcap_u8_t  ;@;!o;;o;	;
+@
+;i X;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÍX;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;i˙X;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;iY;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;i"Y;"tagged;@;[ ;0{;{;{	; o;;o;	;
+@
+;iLY;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;i\Y;"
+s_tag;@;[ ;0;o;;o;	;
+@
+;iÜY;"vtss_qce_tag_t;@;[ ;0{
+;o;;o;	;
+@
+;i»Y;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i›Y;"vtss_vcap_u16_t ;@;!o;;o;	;
+@
+;iÌY;"
+etype;@;[ ;0{;{;{	; o;;o;	;
+@
+;iZ;"vtss_vcap_u32_t ;@;!o;;o;	;
+@
+;i$Z;"	data;@;[ ;0;o;;o;	;
+@
+;i>Z;"vtss_qce_frame_etype_t;@;[ ;0{
+;o;;o;	;
+@
+;iÜZ;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iõZ;"vtss_vcap_u48_t ;@;!o;;o;	;
+@
+;i´Z;"	data;@;[ ;0;o;;o;	;
+@
+;i¿Z;"vtss_qce_frame_llc_t;@;[ ;0{
+;o;;o;	;
+@
+;i[;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i[;"vtss_vcap_u48_t ;@;!o;;o;	;
+@
+;i,[;"	data;@;[ ;0;o;;o;	;
+@
+;iA[;"vtss_qce_frame_snap_t;@;[ ;0{
+;o;;o;	;
+@
+;iâ[;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iû[;"vtss_vcap_bit_t ;@;!o;;o;	;
+@
+;iÆ[;"fragment;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÕ[;"vtss_vcap_vr_t  ;@;!o;;o;	;
+@
+;i›[;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;i\;"vtss_vcap_u8_t  ;@;!o;;o;	;
+@
+;i\;"
+proto;@;[ ;0{;{;{	; o;;o;	;
+@
+;i5\;"vtss_vcap_ip_t  ;@;!o;;o;	;
+@
+;iE\;"sip;@;[ ;0{;o;;o;	;
+@
+;iû\;"+#if defined(VTSS_FEATURE_QCL_KEY_DIP)
+;@{;{;{	; o;;o;	;
+@
+;i»\;"vtss_vcap_ip_t  ;@;!o;;o;	;
+@
+;iÿ\;"dip;@;[ ;0{;o;;o;	;
+@
+;i.];"4#endif /* defined(VTSS_FEATURE_QCL_KEY_DIP) */
+;@{;{;{	; o;;o;	;
+@
+;ia];"vtss_vcap_vr_t  ;@;!o;;o;	;
+@
+;iq];"
+sport;@;[ ;0{;{;{	; o;;o;	;
+@
+;i—];"vtss_vcap_vr_t  ;@;!o;;o;	;
+@
+;i·];"
+dport;@;[ ;0;o;;o;	;
+@
+;iH^;"vtss_qce_frame_ipv4_t;@;[ ;0{
+;o;;o;	;
+@
+;iê^;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i•^;"vtss_vcap_vr_t   ;@;!o;;o;	;
+@
+;i∂^;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iﬁ^;"vtss_vcap_u8_t   ;@;!o;;o;	;
+@
+;iÔ^;"
+proto;@;[ ;0{;{;{	; o;;o;	;
+@
+;i_;"vtss_vcap_u128_t ;@;!o;;o;	;
+@
+;i_;"sip;@;[ ;0{;o;;o;	;
+@
+;iÜ_;"+#if defined(VTSS_FEATURE_QCL_KEY_DIP)
+;@{;{;{	; o;;o;	;
+@
+;i∞_;"vtss_vcap_u128_t ;@;!o;;o;	;
+@
+;i¡_;"dip;@;[ ;0{;o;;o;	;
+@
+;i`;"4#endif /* defined(VTSS_FEATURE_QCL_KEY_DIP) */
+;@{;{;{	; o;;o;	;
+@
+;iK`;"vtss_vcap_vr_t   ;@;!o;;o;	;
+@
+;i\`;"
+sport;@;[ ;0{;{;{	; o;;o;	;
+@
+;iª`;"vtss_vcap_vr_t   ;@;!o;;o;	;
+@
+;iÃ`;"
+dport;@;[ ;0;o;;o;	;
+@
+;i2a;"vtss_qce_frame_ipv6_t;@;[ ;0{
+;o;;o;	;
+@
+;iea;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iza;"BOOL            ;@;!o;;o;	;
+@
+;iäa;"port_list;@;[{;"o;;o;	;
+@
+;iîa;"VTSS_PORT_ARRAY_SIZE;@;0{;{;{	; o;;o;	;
+@
+;i¡a;"vtss_qce_mac_t  ;@;!o;;o;	;
+@
+;i—a;"mac;@;[ ;0{;{;{	; o;;o;	;
+@
+;ib;"vtss_qce_tag_t  ;@;!o;;o;	;
+@
+;ib;"tag;@;[ ;0{;o;;o;	;
+@
+;i?b;"1#if defined(VTSS_FEATURE_QCL_KEY_INNER_TAG)
+;@{;{;{	; o;;o;	;
+@
+;iob;"vtss_qce_tag_t  ;@;!o;;o;	;
+@
+;ib;"inner_tag;@;[ ;0{;o;;o;	;
+@
+;i≤b;":#endif /* defined(VTSS_FEATURE_QCL_KEY_INNER_TAG) */
+;@{;{;{	; o;;o;	;
+@
+;iÎb;"vtss_qce_type_t ;@;!o;;o;	;
+@
+;i˚b;"	type;@;[ ;0{:member_union{:union_type_declare{;o;;o;	;
+@
+;i4c;"
+union;@:union_members[
+{;{;{	; o;;o;	;
+@
+;ixc;"vtss_qce_frame_etype_t ;@;!o;;o;	;
+@
+;ièc;"
+etype;@;[ ;0{;{;{	; o;;o;	;
+@
+;i∫c;"vtss_qce_frame_llc_t   ;@;!o;;o;	;
+@
+;i—c;"llc;@;[ ;0{;{;{	; o;;o;	;
+@
+;i˙c;"vtss_qce_frame_snap_t  ;@;!o;;o;	;
+@
+;id;"	snap;@;[ ;0{;{;{	; o;;o;	;
+@
+;i;d;"vtss_qce_frame_ipv4_t  ;@;!o;;o;	;
+@
+;iRd;"	ipv4;@;[ ;0{;{;{	; o;;o;	;
+@
+;i|d;"vtss_qce_frame_ipv6_t  ;@;!o;;o;	;
+@
+;iìd;"	ipv6;@;[ ;0;!o;;o;	;
+@
+;iªd;"
+frame;@;[ ;o;;o;	;
+@
+;iÂd;"vtss_qce_key_t;@;[ ;0{
+;o;;o;	;
+@
+;ie;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i)e;"BOOL                      ;@;!o;;o;	;
+@
+;iCe;"prio_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÄe;"vtss_prio_t               ;@;!o;;o;	;
+@
+;iöe;"	prio;@;[ ;0{;{;{	; o;;o;	;
+@
+;i«e;"BOOL                      ;@;!o;;o;	;
+@
+;i·e;"dp_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;if;"vtss_dp_level_t           ;@;!o;;o;	;
+@
+;i2f;"dp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iYf;"BOOL                      ;@;!o;;o;	;
+@
+;isf;"dscp_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¨f;"vtss_dscp_t               ;@;!o;;o;	;
+@
+;i∆f;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÔf;"BOOL                      ;@;!o;;o;	;
+@
+;i	g;"pcp_dei_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;iIg;"vtss_tagprio_t            ;@;!o;;o;	;
+@
+;icg;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iãg;"vtss_dei_t                ;@;!o;;o;	;
+@
+;i•g;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÕg;"BOOL                      ;@;!o;;o;	;
+@
+;iÁg;"policy_no_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i&h;"vtss_acl_policy_no_t      ;@;!o;;o;	;
+@
+;i@h;"policy_no;@;[ ;0{;o;;o;	;
+@
+;ilh;"/#if (defined VTSS_FEATURE_QCL_MAP_ACTION)
+;@{;{;{	; o;;o;	;
+@
+;iöh;"BOOL                      ;@;!o;;o;	;
+@
+;i¥h;"map_id_enable;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¯h;"vtss_qos_ingress_map_id_t ;@;!o;;o;	;
+@
+;ii;"map_id;@;[ ;0{;o;;o;	;
+@
+;iRi;".#endif /* VTSS_FEATURE_QCL_MAP_ACTION */
+;@;o;;o;	;
+@
+;i}i;"vtss_qce_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i∂i;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iÀi;"vtss_qce_id_t     ;@;!o;;o;	;
+@
+;i›i;"id;@;[ ;0{;{;{	; o;;o;	;
+@
+;i˛i;"vtss_qce_key_t    ;@;!o;;o;	;
+@
+;ij;"key;@;[ ;0{;{;{	; o;;o;	;
+@
+;i0j;"vtss_qce_action_t ;@;!o;;o;	;
+@
+;iBj;"action;@;[ ;0;o;;o;	;
+@
+;icj;"vtss_qce_t;@;[ ;0{;#{;{	; o;;o;	;
+@
+;i6k;"vtss_rc ;@;!o;;o;	;
+@
+;i>k;"vtss_qce_init;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iLk;"const vtss_inst_t      ;@;!o;;o;	;
+@
+;ick;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ik;"const vtss_qce_type_t  ;@;!o;;o;	;
+@
+;iñk;"	type;@;[ ;0{;{	; o;;o;	;
+@
+;i≤k;"#vtss_qce_t             *const ;@;!o;;o;	;
+@
+;i–k;"qce;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i+m;"vtss_rc ;@;!o;;o;	;
+@
+;i3m;"vtss_qce_add;@;[ ;0;$[	{;{	; o;;o;	;
+@
+;i@m;"const vtss_inst_t    ;@;!o;;o;	;
+@
+;iUm;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ipm;"const vtss_qcl_id_t  ;@;!o;;o;	;
+@
+;iÖm;"qcl_id;@;[ ;0{;{	; o;;o;	;
+@
+;i¢m;"const vtss_qce_id_t  ;@;!o;;o;	;
+@
+;i∑m;"qce_id;@;[ ;0{;{	; o;;o;	;
+@
+;i‘m;"!const vtss_qce_t     *const ;@;!o;;o;	;
+@
+;im;"qce;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i≠n;"vtss_rc ;@;!o;;o;	;
+@
+;iµn;"vtss_qce_del;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i¬n;"const vtss_inst_t    ;@;!o;;o;	;
+@
+;i◊n;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÚn;"const vtss_qcl_id_t  ;@;!o;;o;	;
+@
+;io;"qcl_id;@;[ ;0{;{	; o;;o;	;
+@
+;i$o;"const vtss_qce_id_t  ;@;!o;;o;	;
+@
+;i9o;"qce_id;@;[ ;0;0{;o;;o;	;
+@
+;iBo;"!#endif // VTSS_FEATURE_QCL
+
+;@{;o;;o;	;
+@
+;i^o;"W#if defined(VTSS_FEATURE_QOS_INGRESS_MAP) || defined(VTSS_FEATURE_QOS_EGRESS_MAP)
+;@{
+;o;;o;	;
+@
+;i‡o;"typedef;@;{;o;;o;	;
+@
+;iËo;"	enum;@;[
+{;{;o;;o;	;
+@
+;iÛo;"!VTSS_QOS_INGRESS_MAP_KEY_PCP;@;0{;{;o;;o;	;
+@
+;i_p;"%VTSS_QOS_INGRESS_MAP_KEY_PCP_DEI;@;0{;{;o;;o;	;
+@
+;iœp;""VTSS_QOS_INGRESS_MAP_KEY_DSCP;@;0{;{;o;;o;	;
+@
+;i?q;"*VTSS_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI;@;0{;{;o;;o;	;
+@
+;i q;"5VTSS_QOS_INGRESS_MAP_KEY_MPLS_TC                ;@;0;o;;o;	;
+@
+;i=r;"vtss_qos_ingress_map_key_t;@;[ ;0{
+;o;;o;	;
+@
+;i±r;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i∆r;"
+BOOL ;@;!o;;o;	;
+@
+;iÀr;"cos;@;[ ;0{;{;{	; o;;o;	;
+@
+;i+s;"
+BOOL ;@;!o;;o;	;
+@
+;i0s;"dpl;@;[ ;0{;{;{	; o;;o;	;
+@
+;iês;"
+BOOL ;@;!o;;o;	;
+@
+;iïs;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iıs;"
+BOOL ;@;!o;;o;	;
+@
+;i˙s;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;iZt;"
+BOOL ;@;!o;;o;	;
+@
+;i_t;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;i¿t;"
+BOOL ;@;!o;;o;	;
+@
+;i≈t;"
+cosid;@;[ ;0{;{;{	; o;;o;	;
+@
+;i(u;"
+BOOL ;@;!o;;o;	;
+@
+;i-u;"	path;@;[ ;0{;{;{	; o;;o;	;
+@
+;iïu;"
+BOOL ;@;!o;;o;	;
+@
+;iöu;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;i¸u;""vtss_qos_ingress_map_action_t;@;[ ;0{
+;o;;o;	;
+@
+;iyv;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;iév;"vtss_cos_t     ;@;!o;;o;	;
+@
+;iùv;"cos;@;[ ;0{;{;{	; o;;o;	;
+@
+;iw;"vtss_dpl_t     ;@;!o;;o;	;
+@
+;iw;"dpl;@;[ ;0{;{;{	; o;;o;	;
+@
+;itw;"vtss_pcp_t     ;@;!o;;o;	;
+@
+;iÉw;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÁw;"vtss_dei_t     ;@;!o;;o;	;
+@
+;iˆw;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;iZx;"vtss_dscp_t    ;@;!o;;o;	;
+@
+;iix;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;i–x;"vtss_cosid_t   ;@;!o;;o;	;
+@
+;iﬂx;"
+cosid;@;[ ;0{;{;{	; o;;o;	;
+@
+;iJy;"vtss_cosid_t   ;@;!o;;o;	;
+@
+;iYy;"path_cosid;@;[ ;0{;{;{	; o;;o;	;
+@
+;iøy;"vtss_mpls_tc_t ;@;!o;;o;	;
+@
+;iŒy;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;i7z;""vtss_qos_ingress_map_values_t;@;[ ;0{
+;o;;o;	;
+@
+;iìz;"typedef;@;{;[{;{;{	; o;;o;	;
+@
+;i®z;"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;i∆z;"	dscp;@;[{;"o;;o;	;
+@
+;iÀz;"64;@;0{;{;{	; o;;o;	;
+@
+;i{;"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;i${;"pcp_dei;@;[{;"o;;o;	;
+@
+;i,{;"8;@{;"o;;o;	;
+@
+;i/{;"2;@;0;o;;o;	;
+@
+;ie{;"vtss_qos_ingress_map_dpd_t;@;[ ;0{
+;o;;o;	;
+@
+;i∫{;"typedef;@;'{;o;;o;	;
+@
+;i¬{;"
+union;@;([
+{;{;{	; o;;o;	;
+@
+;iŒ{;"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;iÏ{;"pcp;@;[{;"o;;o;	;
+@
+;i{;"8;@;0{;{;{	; o;;o;	;
+@
+;i'|;"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;iE|;"pcp_dei;@;[{;"o;;o;	;
+@
+;iM|;"8;@{;"o;;o;	;
+@
+;iP|;"2;@;0{;{;{	; o;;o;	;
+@
+;iÑ|;"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;i¢|;"	dscp;@;[{;"o;;o;	;
+@
+;iß|;"64;@;0{;{;{	; o;;o;	;
+@
+;iﬁ|;"#vtss_qos_ingress_map_dpd_t    ;@;!o;;o;	;
+@
+;i¸|;"dpd;@;[ ;0{;{;{	; o;;o;	;
+@
+;i@};"#vtss_qos_ingress_map_values_t ;@;!o;;o;	;
+@
+;i^};"mpls_tc;@;[{;"o;;o;	;
+@
+;if};"8;@;0;o;;o;	;
+@
+;iõ};" vtss_qos_ingress_map_maps_t;@;[ ;0{
+;o;;o;	;
+@
+;i˙};"typedef;@;{;[	{;{;{	; o;;o;	;
+@
+;i~;"#vtss_qos_ingress_map_id_t     ;@;!o;;o;	;
+@
+;i-~;"id;@;[ ;0{;{;{	; o;;o;	;
+@
+;i]~;"#vtss_qos_ingress_map_key_t    ;@;!o;;o;	;
+@
+;i{~;"key;@;[ ;0{;{;{	; o;;o;	;
+@
+;i§~;"#vtss_qos_ingress_map_action_t ;@;!o;;o;	;
+@
+;i¬~;"action;@;[ ;0{;{;{	; o;;o;	;
+@
+;iˆ~;"#vtss_qos_ingress_map_maps_t   ;@;!o;;o;	;
+@
+;i;"	maps;@;[ ;0;o;;o;	;
+@
+;iF;"vtss_qos_ingress_map_t;@;[ ;0{
+;o;;o;	;
+@
+;iè;"typedef;@;{;o;;o;	;
+@
+;ió;"	enum;@;[{;{;o;;o;	;
+@
+;i¢;""VTSS_QOS_EGRESS_MAP_KEY_COSID;@;0{;{;o;;o;	;
+@
+;iÙ;"&VTSS_QOS_EGRESS_MAP_KEY_COSID_DPL;@;0{;{;o;;o;	;
+@
+;iNÄ;"!VTSS_QOS_EGRESS_MAP_KEY_DSCP;@;0{;{;o;;o;	;
+@
+;iüÄ;"%VTSS_QOS_EGRESS_MAP_KEY_DSCP_DPL;@;0{;{;o;;o;	;
+@
+;i˜Ä;"$VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC;@;0{;{;o;;o;	;
+@
+;iEÅ;"5VTSS_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL             ;@;0;o;;o;	;
+@
+;iôÅ;"vtss_qos_egress_map_key_t;@;[ ;0{
+;o;;o;	;
+@
+;iÇ;"typedef;@;{;[
+{;{;{	; o;;o;	;
+@
+;iÇ;"
+BOOL ;@;!o;;o;	;
+@
+;iÇ;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;ixÇ;"
+BOOL ;@;!o;;o;	;
+@
+;i}Ç;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;i◊Ç;"
+BOOL ;@;!o;;o;	;
+@
+;i‹Ç;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;i7É;"
+BOOL ;@;!o;;o;	;
+@
+;i<É;"	path;@;[ ;0{;{;{	; o;;o;	;
+@
+;iûÉ;"
+BOOL ;@;!o;;o;	;
+@
+;i£É;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;iˇÉ;"!vtss_qos_egress_map_action_t;@;[ ;0{
+;o;;o;	;
+@
+;i{Ñ;"typedef;@;{;[
+{;{;{	; o;;o;	;
+@
+;iêÑ;"vtss_pcp_t     ;@;!o;;o;	;
+@
+;iüÑ;"pcp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÖ;"vtss_dei_t     ;@;!o;;o;	;
+@
+;iÖ;"dei;@;[ ;0{;{;{	; o;;o;	;
+@
+;ivÖ;"vtss_dscp_t    ;@;!o;;o;	;
+@
+;iÖÖ;"	dscp;@;[ ;0{;{;{	; o;;o;	;
+@
+;iÏÖ;"vtss_cosid_t   ;@;!o;;o;	;
+@
+;i˚Ö;"path_cosid;@;[ ;0{;{;{	; o;;o;	;
+@
+;iaÜ;"vtss_mpls_tc_t ;@;!o;;o;	;
+@
+;ipÜ;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;iŸÜ;"!vtss_qos_egress_map_values_t;@;[ ;0{
+;o;;o;	;
+@
+;i0á;"typedef;@;'{;o;;o;	;
+@
+;i8á;"
+union;@;([{;{;{	; o;;o;	;
+@
+;iDá;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;iaá;"
+cosid;@;[{;"o;;o;	;
+@
+;igá;"8;@;0{;{;{	; o;;o;	;
+@
+;iûá;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;iªá;"cosid_dpl;@;[{;"o;;o;	;
+@
+;i≈á;"8;@{;"o;;o;	;
+@
+;i»á;"4;@;0{;{;{	; o;;o;	;
+@
+;i¸á;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;ià;"	dscp;@;[{;"o;;o;	;
+@
+;ià;"64;@;0{;{;{	; o;;o;	;
+@
+;iUà;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;irà;"dscp_dpl;@;[{;"o;;o;	;
+@
+;i{à;"64;@{;"o;;o;	;
+@
+;ià;"4;@;0{;{;{	; o;;o;	;
+@
+;i≤à;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;iœà;"mpls_tc;@;[{;"o;;o;	;
+@
+;i◊à;"8;@;0{;{;{	; o;;o;	;
+@
+;iâ;""vtss_qos_egress_map_values_t ;@;!o;;o;	;
+@
+;i+â;"mpls_tc_dpl;@;[{;"o;;o;	;
+@
+;i7â;"8;@{;"o;;o;	;
+@
+;i:â;"4;@;0;o;;o;	;
+@
+;ilâ;"vtss_qos_egress_map_maps_t;@;[ ;0{
+;o;;o;	;
+@
+;i â;"typedef;@;{;[	{;{;{	; o;;o;	;
+@
+;iﬂâ;""vtss_qos_egress_map_id_t     ;@;!o;;o;	;
+@
+;i¸â;"id;@;[ ;0{;{;{	; o;;o;	;
+@
+;i-ä;""vtss_qos_egress_map_key_t    ;@;!o;;o;	;
+@
+;iJä;"key;@;[ ;0{;{;{	; o;;o;	;
+@
+;itä;""vtss_qos_egress_map_action_t ;@;!o;;o;	;
+@
+;iëä;"action;@;[ ;0{;{;{	; o;;o;	;
+@
+;i∆ä;""vtss_qos_egress_map_maps_t   ;@;!o;;o;	;
+@
+;i„ä;"	maps;@;[ ;0;o;;o;	;
+@
+;iã;"vtss_qos_egress_map_t;@;[ ;0{;o;;o;	;
+@
+;i-ã;"a#endif /* defined(VTSS_FEATURE_QOS_INGRESS_MAP) || defined(VTSS_FEATURE_QOS_EGRESS_MAP) */
+
+;@{;o;;o;	;
+@
+;iâã;"/#if defined(VTSS_FEATURE_QOS_INGRESS_MAP)
+;@{;#{;{	; o;;o;	;
+@
+;iè;"vtss_rc ;@;!o;;o;	;
+@
+;i"è;"vtss_qos_ingress_map_init;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i<è;"&const vtss_inst_t                ;@;!o;;o;	;
+@
+;i]è;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iÖè;"&const vtss_qos_ingress_map_key_t ;@;!o;;o;	;
+@
+;i¶è;"key;@;[ ;0{;{	; o;;o;	;
+@
+;iÕè;"-vtss_qos_ingress_map_t           *const ;@;!o;;o;	;
+@
+;iıè;"map;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i¢ê;"vtss_rc ;@;!o;;o;	;
+@
+;i™ê;"vtss_qos_ingress_map_add;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i√ê;""const vtss_inst_t            ;@;!o;;o;	;
+@
+;i‡ê;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ië;")const vtss_qos_ingress_map_t *const ;@;!o;;o;	;
+@
+;i+ë;"map;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i«ë;"vtss_rc ;@;!o;;o;	;
+@
+;iœë;"vtss_qos_ingress_map_del;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iËë;"%const vtss_inst_t               ;@;!o;;o;	;
+@
+;ií;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i/í;"%const vtss_qos_ingress_map_id_t ;@;!o;;o;	;
+@
+;iOí;"id;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;iŒí;"vtss_rc ;@;!o;;o;	;
+@
+;i÷í;"!vtss_qos_ingress_map_del_all;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iÛí;"const vtss_inst_t ;@;!o;;o;	;
+@
+;iì;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;iì;"0#endif /* VTSS_FEATURE_QOS_INGRESS_MAP */
+
+;@{;o;;o;	;
+@
+;i7ì;".#if defined(VTSS_FEATURE_QOS_EGRESS_MAP)
+;@{;#{;{	; o;;o;	;
+@
+;i¥ñ;"vtss_rc ;@;!o;;o;	;
+@
+;iºñ;"vtss_qos_egress_map_init;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i’ñ;"%const vtss_inst_t               ;@;!o;;o;	;
+@
+;iıñ;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;ió;"%const vtss_qos_egress_map_key_t ;@;!o;;o;	;
+@
+;i<ó;"key;@;[ ;0{;{	; o;;o;	;
+@
+;ibó;",vtss_qos_egress_map_t           *const ;@;!o;;o;	;
+@
+;iâó;"map;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;i4ò;"vtss_rc ;@;!o;;o;	;
+@
+;i<ò;"vtss_qos_egress_map_add;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iTò;"!const vtss_inst_t           ;@;!o;;o;	;
+@
+;ipò;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iñò;"(const vtss_qos_egress_map_t *const ;@;!o;;o;	;
+@
+;iπò;"map;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;iTô;"vtss_rc ;@;!o;;o;	;
+@
+;i\ô;"vtss_qos_egress_map_del;@;[ ;0;$[{;{	; o;;o;	;
+@
+;itô;"$const vtss_inst_t              ;@;!o;;o;	;
+@
+;iìô;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iπô;"$const vtss_qos_egress_map_id_t ;@;!o;;o;	;
+@
+;iÿô;"id;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;iVö;"vtss_rc ;@;!o;;o;	;
+@
+;i^ö;" vtss_qos_egress_map_del_all;@;[ ;0;$[{;{	; o;;o;	;
+@
+;izö;"const vtss_inst_t ;@;!o;;o;	;
+@
+;iåö;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;iìö;"/#endif /* VTSS_FEATURE_QOS_EGRESS_MAP */
+
+;@{;o;;o;	;
+@
+;iΩö;"##if defined(VTSS_ARCH_OCELOT)
+;@{;#{;{	; o;;o;	;
+@
+;iù;"vtss_rc ;@;!o;;o;	;
+@
+;iù;"vtss_qos_shaper_calibrate;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i7ù;"const vtss_inst_t ;@;!o;;o;	;
+@
+;iIù;"	inst;@;[ ;0;0{;o;;o;	;
+@
+;iPù;"-#endif /* defined(VTSS_ARCH_OCELOT) */
+
+;@{;o;;o;	;
+@
+;ixù;"/#if defined(VTSS_FEATURE_QOS_POLICER_DLB)
+;@{
+;o;;o;	;
+@
+;i ù;"typedef;@;o;;o;	;
+@
+;i“ù;"vtss_dlb_policer_conf_t ;@;o;;o;	;
+@
+;iÍù;"vtss_evc_policer_conf_t;@;[ ;0{;o;;o;	;
+@
+;iû;"0#endif /* VTSS_FEATURE_QOS_POLICER_DLB */
+
+;@{;o;;o;	;
+@
+;i.û;"-#if defined(VTSS_FEATURE_EVC_POLICERS)
+
+;@{;o;;o;	;
+@
+;iVû;"##if defined(VTSS_CHIP_SERVAL)
+;@{;o;;o;	;
+@
+;itû;"U#define VTSS_EVC_POLICERS           1022 /**< Maximum number of EVC policers */
+;@{;o;;o;	;
+@
+;iƒû;"H#elif defined(VTSS_ARCH_LUTON26) || defined(VTSS_CHIP_SERVAL_LITE)
+;@{;o;;o;	;
+@
+;iü;"U#define VTSS_EVC_POLICERS           256  /**< Maximum number of EVC policers */
+;@{;o;;o;	;
+@
+;iWü;"%#elif defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;iwü;"U#define VTSS_EVC_POLICERS           64   /**< Maximum number of EVC policers */
+;@{;o;;o;	;
+@
+;i«ü;"#endif
+
+;@{;o;;o;	;
+@
+;iœü;"##if defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;iÌü;"[#define VTSS_EVC_POLICER_ID_DISCARD 4094 /**< EVC/ECE: Policer discards all frames */
+;@{;o;;o;	;
+@
+;iC†;"[#define VTSS_EVC_POLICER_ID_NONE    4095 /**< EVC/ECE: Policer forwards all frames */
+;@{;o;;o;	;
+@
+;iô†;"P#define VTSS_EVC_POLICER_ID_EVC     4096 /**< ECE only: Use EVC policer */
+;@{;o;;o;	;
+@
+;i‰†;"$#endif /* VTSS_ARCH_OCELOT */
+
+;@{;#{;{	; o;;o;	;
+@
+;i‚°;"vtss_rc ;@;!o;;o;	;
+@
+;iÍ°;"vtss_evc_policer_conf_get;@;[ ;0;$[{;{	; o;;o;	;
+@
+;i¢;"!const vtss_inst_t           ;@;!o;;o;	;
+@
+;i ¢;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;iH¢;"!const vtss_evc_policer_id_t ;@;!o;;o;	;
+@
+;id¢;"policer_id;@;[ ;0{;{	; o;;o;	;
+@
+;ií¢;"(vtss_evc_policer_conf_t     *const ;@;!o;;o;	;
+@
+;iµ¢;"	conf;@;[ ;0;0{;#{;{	; o;;o;	;
+@
+;iú£;"vtss_rc ;@;!o;;o;	;
+@
+;i§£;"vtss_evc_policer_conf_set;@;[ ;0;$[{;{	; o;;o;	;
+@
+;iæ£;"#const vtss_inst_t             ;@;!o;;o;	;
+@
+;i‹£;"	inst;@;[ ;0{;{	; o;;o;	;
+@
+;i§;"#const vtss_evc_policer_id_t   ;@;!o;;o;	;
+@
+;i"§;"policer_id;@;[ ;0{;{	; o;;o;	;
+@
+;iP§;"*const vtss_evc_policer_conf_t *const ;@;!o;;o;	;
+@
+;iu§;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;i|§;"-#endif /* VTSS_FEATURE_EVC_POLICERS */
+
+;@{;o;;o;	;
+@
+;i§§;"$#endif /* VTSS_FEATURE_QOS */
+
+;@{;o;;o;	;
+@
+;i√§;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;iÿ§;"#endif
+;@{;o;;o;	;
+@
+;iﬂ§;"##endif /* _VTSS_QOS_API_H_ */
+;@

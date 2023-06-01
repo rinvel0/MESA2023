@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/codrin/mesa/mesa/demo/btsig.c
+stdio.h
+-
+stdlib.h
+-
+signal.h
+-
+string.h
+-
+execinfo.h
+-
+unistd.h
+-
+sys/syscall.h
+-
+linux/limits.h
+-
+time.h
+-
+

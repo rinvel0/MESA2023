@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "vtss_api.h": "c",
+        "vtss_jaguar2_pll5g_setup.h": "c",
+        "options.h": "c",
+        "vtss_jaguar2_inc.h": "c",
+        "vtss_jaguar2_cil.h": "c"
+    }
+}

@@ -1,0 +1,2416 @@
+{:	root[Z{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"KÖ// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+#ifndef _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+#define _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+
+#include <microchip/ethernet/switch/api/types.h>
+#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+// QoS configuration per (DSCP, DPL)
+typedef struct {
+    mesa_dscp_t dscp; // Egress map from DSCP,DPL to DSCP value
+} mesa_qos_dscp_dpl_conf_t;
+
+// Set global QoS egress configuration per (DSCP, DPL).
+// On egress the classified DSCP,DPL is mapped to DSCP if egress port mesa_qos_port_dscp_conf_t.emode == (MESA_DSCP_EMODE_REMAP || MESA_DSCP_EMODE_REMAP_DPA)
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [IN]     Configuration. Array[64][dpl_cnt].
+mesa_rc mesa_qos_dscp_dpl_conf_set(const mesa_inst_t              inst,
+                                   const uint32_t                 dpl_cnt,
+                                   const mesa_qos_dscp_dpl_conf_t *const conf);
+
+// Get global QoS egress configuration per (DSCP, DPL)
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [OUT]    Configuration. Array[64][dpl_cnt].
+mesa_rc mesa_qos_dscp_dpl_conf_get(const mesa_inst_t        inst,
+                                   const uint32_t           dpl_cnt,
+                                   mesa_qos_dscp_dpl_conf_t *const conf);
+
+// QoS ingress configuration per DPL
+typedef struct {
+    mesa_dscp_t dscp[MESA_PRIO_ARRAY_SIZE]; // Ingress map from priority (QoS class) to DSCP
+} mesa_qos_dpl_conf_t;
+
+// Set global QoS ingress configuration per DPL
+// On ingress the classified priority,DPL is mapped to DSCP depending on ingress port mesa_qos_port_dscp_conf_t.mode and DSCP mesa_qos_dscp_conf_t.remark
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [IN]     Configuration. Array[dpl_cnt].
+mesa_rc mesa_qos_dpl_conf_set(const mesa_inst_t         inst,
+                              const uint32_t            dpl_cnt,
+                              const mesa_qos_dpl_conf_t *const conf);
+
+// Get clobal QoS ingress configuration per DPL
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [OUT]    Configuration. Array[dpl_cnt].
+mesa_rc mesa_qos_dpl_conf_get(const mesa_inst_t   inst,
+                              const uint32_t      dpl_cnt,
+                              mesa_qos_dpl_conf_t *const conf);
+
+// Select if max means max drop probability or max fill level
+typedef enum {
+    MESA_WRED_MAX_DP, // Unit for max is drop probability
+    MESA_WRED_MAX_FL  // Unit for max is fill level
+} mesa_wred_max_t CAP(QOS_WRED);
+
+// Weighted Random Early Detection configuration
+typedef struct {
+    mesa_bool_t     enable;   // Enable/disable RED
+    mesa_pct_t      min_fl;   // Minimum fill level
+    mesa_pct_t      max;      // Maximum drop probability or fill level - selected by max_unit
+    mesa_wred_max_t max_unit; // Selects the unit for max
+} mesa_wred_conf_t CAP(QOS_WRED);
+
+// QoS configuration per (DPL, GROUP)
+typedef struct {
+    mesa_wred_conf_t wred[MESA_QUEUE_ARRAY_SIZE] CAP(QOS_WRED); // WRED configuration per priority
+} mesa_qos_dpl_group_conf_t;
+
+// Get QoS configuration per (DPL, GROUP)
+// dpl_cnt [IN]    Number of DPLs supported.
+// group_cnt [IN]  Number of groups supported.
+// conf [OUT]      Configuration. Array[dpl_cnt][group_cnt]
+mesa_rc mesa_qos_dpl_group_conf_get(const mesa_inst_t         inst,
+                                    const uint32_t            dpl_cnt,
+                                    const uint32_t            group_cnt,
+                                    mesa_qos_dpl_group_conf_t *const conf);
+
+// Set QoS configuration per (DPL, GROUP)
+// dpl_cnt [IN]    Number of DPLs supported.
+// group_cnt [IN]  Number of groups supported.
+// conf [IN]       Configuration. Array[dpl_cnt][group_cnt]
+mesa_rc mesa_qos_dpl_group_conf_set(const mesa_inst_t               inst,
+                                    const uint32_t                  dpl_cnt,
+                                    const uint32_t                  group_cnt,
+                                    const mesa_qos_dpl_group_conf_t *const conf);
+
+// QoS configuration per DSCP value on ingress
+typedef struct {
+    mesa_bool_t     trust;  // Enable mapping of DSCP value to classified priority (QOS class) and DP level ('prio' and 'pdl')
+    mesa_prio_t     prio;   // Map DSCP value to this classified priority (QOS class)
+    mesa_dp_level_t dpl;    // Map DSCP value to this classified DP level
+    mesa_bool_t     remark; // Map classified priority,DPL through global table (mesa_qos_dpl_conf_t)
+                            // if ingress port is configured mesa_qos_port_dscp_conf_t.mode == MESA_DSCP_MODE_SEL
+    mesa_dscp_t     dscp;   // translate DSCP value to this value if ingress port is configured mesa_qos_port_dscp_conf_t.translate == TRUE
+} mesa_qos_dscp_conf_t;
+
+// QoS storm policer configuration
+typedef struct {
+    mesa_packet_rate_t        rate;       // Policer rate
+    mesa_bool_t               frame_rate; // FALSE: Unit is kbps. TRUE: Unit is fps
+    mesa_storm_policer_mode_t mode;       // Unicast packet storm policer mode
+} mesa_qos_storm_policer_conf_t;
+
+// All parameters below are defined per chip
+typedef struct {
+    mesa_prio_t                   prios;      // Number of priorities (1/2/4/8) ---- Only for Luton28 - should return error on other platforms
+    mesa_qos_dscp_conf_t          dscp[64];   // DSCP configuration
+    mesa_qos_storm_policer_conf_t policer_uc; // Unicast storm policer
+    mesa_qos_storm_policer_conf_t policer_mc; // Multicast storm policer
+    mesa_qos_storm_policer_conf_t policer_bc; // Broadcast storm policer
+} mesa_qos_conf_t;
+
+// Set global QoS configuration for switch.
+// conf [IN]  QoS configuration structure.
+mesa_rc mesa_qos_conf_set(const mesa_inst_t     inst,
+                          const mesa_qos_conf_t *const conf);
+
+// Get global QoS configuration for switch.
+// conf [OUT]  QoS configuration structure.
+mesa_rc mesa_qos_conf_get(const mesa_inst_t inst,
+                          mesa_qos_conf_t   *const conf);
+
+// QoS status
+typedef struct {
+    mesa_event_t storm; // Storm policing active since last call.
+} mesa_qos_status_t;
+
+// Get QoS status for switch.
+// status [OUT]  QoS status structure.
+mesa_rc mesa_qos_status_get(const mesa_inst_t inst,
+                            mesa_qos_status_t *const status);
+
+// Policer
+typedef struct {
+    mesa_burst_level_t level;       // Burst level
+    mesa_bitrate_t     rate;        // Maximum rate
+} mesa_policer_t;
+
+// QoS configuration per (port, policer)
+typedef struct {
+    mesa_policer_t  policer;     // Basic policer config
+    mesa_bool_t     frame_rate;  // Measure rates in frames per seconds instead of bits per second
+    mesa_dp_level_t dp_bypass_level CAP(QOS_PORT_POLICER_EXT_DPBL); // Drop Predence bypass level
+
+    mesa_bool_t known_unicast         CAP(QOS_PORT_POLICER_EXT_TTM); // Known unicast frames are policed
+    mesa_bool_t known_multicast       CAP(QOS_PORT_POLICER_EXT_TTM); // Known multicast frames are policed
+    mesa_bool_t known_broadcast       CAP(QOS_PORT_POLICER_EXT_TTM); // Known broadcast frames are policed
+    mesa_bool_t unknown_unicast       CAP(QOS_PORT_POLICER_EXT_TTM); // Unknown unicast frames are policed
+    mesa_bool_t unknown_multicast     CAP(QOS_PORT_POLICER_EXT_TTM); // Unknown multicast frames are policed
+    mesa_bool_t unknown_broadcast     CAP(QOS_PORT_POLICER_EXT_TTM); // Unknown broadcast frames are policed
+    mesa_bool_t learning              CAP(QOS_PORT_POLICER_EXT_TTM); // Learning frames are policed
+    mesa_bool_t limit_noncpu_traffic  CAP(QOS_PORT_POLICER_EXT_TTM); // Remove the front ports from the destination set for a policed frame
+    mesa_bool_t limit_cpu_traffic     CAP(QOS_PORT_POLICER_EXT_TTM); // Remove the CPU ports from the destination set for a policed frame
+
+    mesa_bool_t flow_control;         // Flow control is enabled
+} mesa_qos_port_policer_conf_t;
+
+// Get port policer configuration
+// port_no [IN]  Port number.
+// cnt [IN]      Number of policers supported.
+// conf [OUT]    Configuration.
+mesa_rc mesa_qos_port_policer_conf_get(const mesa_inst_t            inst,
+                                       const mesa_port_no_t         port_no,
+                                       const uint32_t               cnt,
+                                       mesa_qos_port_policer_conf_t *const conf);
+
+// Set port policer configuration
+// port_no [IN]  Port number.
+// cnt [IN]      Number of policers supported.
+// conf [IN]     Configuration.
+mesa_rc mesa_qos_port_policer_conf_set(const mesa_inst_t                  inst,
+                                       const mesa_port_no_t               port_no,
+                                       const uint32_t                     cnt,
+                                       const mesa_qos_port_policer_conf_t *const conf);
+
+// QoS egress configuration per (PORT, DPL)
+typedef struct {
+    mesa_tagprio_t pcp[MESA_PRIO_ARRAY_SIZE]; // Mapping from priority (QOS class) to tag PCP
+    mesa_dei_t     dei[MESA_PRIO_ARRAY_SIZE]; // Mapping from priority (QOS class) to tag DEI
+} mesa_qos_port_dpl_conf_t;
+
+// Set QoS egress configuration per (PORT, DPL)
+// On egress the classified priority,DPL is mapped to tag PCP,DEI if egress port mesa_qos_port_tag_conf_t.remark_mode == MESA_TAG_REMARK_MODE_MAPPED
+// port_no [IN]  Port number.
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [IN]     Configuration. Array[dpl_cnt].
+mesa_rc mesa_qos_port_dpl_conf_set(const mesa_inst_t              inst,
+                                   const mesa_port_no_t           port_no,
+                                   const uint32_t                 dpl_cnt,
+                                   const mesa_qos_port_dpl_conf_t *const conf);
+
+// Get QoS egress configuration per (PORT, DPL)
+// port_no [IN]  Port number.
+// dpl_cnt [IN]  Number of DPLs supported.
+// conf [OUT]    Configuration. Array[dpl_cnt].
+mesa_rc mesa_qos_port_dpl_conf_get(const mesa_inst_t        inst,
+                                   const mesa_port_no_t     port_no,
+                                   const uint32_t           dpl_cnt,
+                                   mesa_qos_port_dpl_conf_t *const conf);
+
+// DSCP mode for ingress port controlling which DSCP values are mapped through global table (mesa_qos_dpl_conf_t)
+typedef enum {
+    MESA_DSCP_MODE_NONE,   // DSCP not mapped
+    MESA_DSCP_MODE_ZERO,   // DSCP value zero mapped
+    MESA_DSCP_MODE_SEL,    // DSCP values with mesa_qos_dscp_conf_t.remark == TRUE are mapped
+    MESA_DSCP_MODE_ALL     // All DSCP values are mapped.
+} mesa_dscp_mode_t;
+
+// DSCP mode for egress port controlling the DSCP value update on egress
+typedef enum {
+    MESA_DSCP_EMODE_DISABLE,   // DSCP not remarked
+    MESA_DSCP_EMODE_REMARK,    // DSCP remarked with classified DSCP
+    MESA_DSCP_EMODE_REMAP,     // DSCP remarked with classified DSCP value mapped through global table (see mesa_qos_dscp_dpl_conf_t)
+    MESA_DSCP_EMODE_REMAP_DPA CAP(QOS_DSCP_REMARK_DP_AWARE) // DSCP remarked with classified DSCP value mapped through global DPL aware table (see mesa_qos_dscp_dpl_conf_t)
+} mesa_dscp_emode_t;
+
+// QoS DSCP configuration per PORT
+typedef struct {
+    mesa_bool_t       class_enable; // Enable ingress mapping of DSCP to classified priority (QoS class) and DP level through global table ('mesa_qos_dscp_conf_t')
+    mesa_dscp_mode_t  mode;         // Ingress DSCP mode controlling which DSCP values are mapped through global table (mesa_qos_dpl_conf_t).
+    mesa_dscp_emode_t emode;        // Egress port DSCP mode
+    mesa_bool_t       translate;    // Enable Ingress translate of IP frame DSCP value to classified DSCP through global table ('mesa_qos_dscp_conf_t')
+} mesa_qos_port_dscp_conf_t;
+
+// QoS configuration per (PORT, PCP, DEI)
+typedef struct {
+    mesa_prio_t     prio; // Ingress mapping for tagged frames from PCP and DEI to priority (QOS class)
+    mesa_dp_level_t dpl;  // Ingress mapping for tagged frames from PCP and DEI to DP level
+} mesa_qos_port_pcp_dei_conf_t;
+
+// Egress Tag Remark Mode
+typedef enum {
+    MESA_TAG_REMARK_MODE_CLASSIFIED = 0, // Use classified PCP/DEI values as tag PCP/DEI
+    MESA_TAG_REMARK_MODE_DEFAULT    = 2, // Use configured default egress PCP/DEI values as tag PCP/DEI
+    MESA_TAG_REMARK_MODE_MAPPED     = 3  // Use mapped versions of classified QOS class and DP level (see mesa_qos_port_dpl_conf_t) as tag PCP/DEI
+} mesa_tag_remark_mode_t;
+
+// QoS VLAN tag configuration per PORT
+typedef struct {
+    mesa_tagprio_t         pcp;          // Default ingress PCP
+    mesa_dei_t             dei;          // Default ingress DEI
+    mesa_bool_t            class_enable; // Ingress classification of priority (QoS class) and DP level, based on PCP and DEI through lookup in 'pcp_dei_map' table
+    mesa_qos_port_pcp_dei_conf_t pcp_dei_map[MESA_PCP_ARRAY_SIZE][MESA_DEI_ARRAY_SIZE]; // Ingress mapping for tagged frames from PCP and DEI to priority and DPL
+    mesa_tag_remark_mode_t remark_mode;  // Egress tag remark mode
+    mesa_tagprio_t         egress_pcp;   // Default egress PCP
+    mesa_dei_t             egress_dei;   // Default egress DEI
+} mesa_qos_port_tag_conf_t;
+
+// Shaper Accounting Mode
+typedef enum {
+    MESA_SHAPER_MODE_LINE, // Use line-rate for the shaper
+    MESA_SHAPER_MODE_DATA, // Use data-rate for the shaper
+    MESA_SHAPER_MODE_FRAME CAP(QOS_EGRESS_SHAPER_FRAME) // Use frame-rate for the shaper
+} mesa_shaper_mode_t CAP(QOS_EGRESS_SHAPERS_RT);
+
+// Shaper
+typedef struct {
+    // CBS (Committed Burst Size).
+    // Unit: bytes
+    //
+    // If mode is set to MESA_SHAPER_MODE_FRAME, then unit is number-of-frames
+    mesa_burst_level_t level;
+
+    // CIR (Committed Information Rate).
+    // Unit: kbps. Use MESA_BITRATE_DISABLED to disable shaper
+    //
+    // If mode is set to MESA_SHAPER_MODE_FRAME, then unit is frames/s
+    mesa_bitrate_t     rate;
+
+    mesa_burst_level_t ebs CAP(QOS_EGRESS_SHAPERS_DLB); // EBS (Excess Burst Size).  Unit: bytes
+    mesa_bitrate_t     eir CAP(QOS_EGRESS_SHAPERS_DLB); // EIR (Excess Information Rate). Unit: kbps. Use MESA_BITRATE_DISABLED to disable DLB
+    mesa_shaper_mode_t mode CAP(QOS_EGRESS_SHAPERS_RT); // RT (Rate type)
+    mesa_bool_t        credit_enable CAP(QOS_EGRESS_QUEUE_SHAPERS_CRB); // Queue shaper only: Credit-based shaping
+} mesa_shaper_t;
+
+// QoS configuration per (port, queue)
+typedef struct {
+    mesa_policer_t policer; // Ingress queue policer
+    mesa_shaper_t  shaper;  // Egress queue shapers
+    mesa_pct_t     pct;     // The DWRR Queue percentage if DWRR is enabled ('dwrr_enable')
+    mesa_bool_t    excess_enable       CAP(QOS_EGRESS_QUEUE_SHAPERS_EB);  // Allow this queue to use excess bandwidth
+    mesa_bool_t    cut_through_enable  CAP(QOS_EGRESS_QUEUE_CUT_THROUGH); // Allow this queue to use cut through feature
+} mesa_qos_port_queue_conf_t;
+
+// QoS configuration per PORT
+typedef struct {
+    mesa_shaper_t              shaper;       // Egress port shaper
+    mesa_prio_t                default_prio; // Default ingress priority (QoS class)
+    mesa_dp_level_t            default_dpl;  // Default ingress drop precedence level
+    mesa_qos_port_tag_conf_t   tag;          // VLAN tag configuration
+    mesa_qos_port_dscp_conf_t  dscp;         // DSCP configuration
+    mesa_bool_t                dwrr_enable;                          // Enable Deficit Weighted Round Robin (DWRR) fairness scheduling.
+    uint8_t                    dwrr_cnt CAP(QOS_SCHEDULER_CNT_DWRR); // Number of queues running in DWRR mode starting from queue 0.
+                                                                     // Value 3 means that queue 0 to 2 is running DWRR scheduling.
+    mesa_bool_t                dmac_dip CAP(QOS_QCL_DMAC_DIP);       // QCL lookup matching on DMAC/DIP (default is SMAC/SIP)
+    mesa_vcap_key_type_t       key_type CAP(QOS_QCL_KEY_TYPE);       // QCL lookup key type for received frames
+    mesa_wred_group_t          wred_group CAP(QOS_WRED_GROUP_CNT);   // WRED group number of this port - zero based
+    mesa_cosid_t               cosid CAP(QOS_COSID_CLASSIFICATION);  // Default COSID
+    mesa_qos_ingress_map_id_t  ingress_map CAP(QOS_INGRESS_MAP_CNT); // Ingress map that all frames hit on ingress (see mesa_qos_ingress_map_t). Default is none.
+    mesa_qos_egress_map_id_t   egress_map CAP(QOS_EGRESS_MAP_CNT);   // Egress map that all frames hit on egress (see mesa_qos_egress_map_t). Default is none.
+    mesa_qos_port_queue_conf_t queue[MESA_QUEUE_ARRAY_SIZE];         // Per priority (QOS class/Queue) configuration
+} mesa_qos_port_conf_t;
+
+// Get QoS configuration for port.
+// port_no [IN]  Port number.
+// conf [OUT]    QoS configuration structure.
+mesa_rc mesa_qos_port_conf_get(const mesa_inst_t    inst,
+                               const mesa_port_no_t port_no,
+                               mesa_qos_port_conf_t *const conf);
+
+// Set QoS configuration for port.
+// port_no [IN] Port number.
+// conf [IN]    QoS configuration structure.
+mesa_rc mesa_qos_port_conf_set(const mesa_inst_t          inst,
+                               const mesa_port_no_t       port_no,
+                               const mesa_qos_port_conf_t *const conf);
+
+#define MESA_QCE_ID_LAST 0 // Special value used to add last in list
+
+// QoS Control Entry type
+typedef enum {
+    MESA_QCE_TYPE_ANY,     // Any frame type
+    MESA_QCE_TYPE_ETYPE,   // Ethernet Type
+    MESA_QCE_TYPE_LLC,     // LLC
+    MESA_QCE_TYPE_SNAP,    // SNAP
+    MESA_QCE_TYPE_IPV4,    // IPv4
+    MESA_QCE_TYPE_IPV6     // IPv6
+} mesa_qce_type_t;
+
+// QCE MAC information
+typedef struct {
+    mesa_vcap_bit_t dmac_mc; // Multicast DMAC
+    mesa_vcap_bit_t dmac_bc; // Broadcast DMAC
+    mesa_vcap_u48_t dmac CAP(QOS_QCL_KEY_DMAC); // DMAC - Serval: key_type = mac_ip_addr
+    mesa_vcap_u48_t smac;    // SMAC - Only the 24 most significant bits (OUI) are supported on Jaguar1, rest are wildcards
+} mesa_qce_mac_t;
+
+// QCE tag information
+typedef struct {
+    mesa_vcap_vr_t  vid;    // VLAN ID (12 bit)
+    mesa_vcap_u8_t  pcp;    // PCP (3 bit)
+    mesa_vcap_bit_t dei;    // DEI
+    mesa_vcap_bit_t tagged; // Tagged/untagged frame
+    mesa_vcap_bit_t s_tag;  // S-tagged/C-tagged frame
+} mesa_qce_tag_t;
+
+// Frame data for MESA_QCE_TYPE_ETYPE
+typedef struct {
+    mesa_vcap_u16_t etype; // Ethernet Type value
+    mesa_vcap_u32_t data;  // MAC data
+} mesa_qce_frame_etype_t;
+
+// Frame data for MESA_QCE_TYPE_LLC
+typedef struct {
+    mesa_vcap_u48_t data; // Data
+} mesa_qce_frame_llc_t;
+
+// Frame data for MESA_QCE_TYPE_SNAP
+typedef struct {
+    mesa_vcap_u48_t data; // Data
+} mesa_qce_frame_snap_t;
+
+// Frame data for MESA_QCE_TYPE_IPV4
+typedef struct {
+    mesa_vcap_bit_t fragment; // Fragment
+    mesa_vcap_vr_t  dscp;     // DSCP field (6 bit)
+    mesa_vcap_u8_t  proto;    // Protocol
+    mesa_vcap_ip_t  sip;      // Source IP address - Serval: key_type = normal, ip_addr and mac_ip_addr
+    mesa_vcap_ip_t  dip CAP(QOS_QCL_KEY_DIP); // Destination IP address - Serval: key_type = ip_addr and mac_ip_addr
+    mesa_vcap_vr_t  sport;    // UDP/TCP: Source port - Serval: key_type = normal, ip_addr and mac_ip_addr
+    mesa_vcap_vr_t  dport;    // UDP/TCP: Destination port - Serval: key_type = double_tag, ip_addr and mac_ip_addr
+} mesa_qce_frame_ipv4_t;
+
+// Frame data for MESA_QCE_TYPE_IPV6
+typedef struct {
+    mesa_vcap_vr_t   dscp;    // DSCP field (6 bit)
+    mesa_vcap_u8_t   proto;   // Protocol
+    mesa_vcap_u128_t sip;     // Source IP address (32 LSB on L26 and J1, 64 LSB on Serval when key_type = mac_ip_addr)
+    mesa_vcap_u128_t dip CAP(QOS_QCL_KEY_DIP); // Destination IP address - 64 LSB on Serval when key_type = mac_ip_addr
+    mesa_vcap_vr_t   sport;   // UDP/TCP: Source port - Serval: key_type = normal, ip_addr and mac_ip_addr
+    mesa_vcap_vr_t   dport;   // UDP/TCP: Destination port - Serval: key_type = double_tag, ip_addr and mac_ip_addr
+} mesa_qce_frame_ipv6_t;
+
+// QCE key
+typedef struct {
+    mesa_port_list_t port_list;                       // Port list
+    mesa_qce_mac_t   mac;                             // MAC
+    mesa_qce_tag_t   tag;                             // Tag
+    mesa_qce_tag_t   inner_tag CAP(QOS_QCL_KEY_INNER_TAG); // Inner tag
+    mesa_qce_type_t  type;                            // Frame type
+
+    union {
+        // MESA_QCE_TYPE_ANY: No specific fields
+        mesa_qce_frame_etype_t etype; // MESA_QCE_TYPE_ETYPE
+        mesa_qce_frame_llc_t   llc;   // MESA_QCE_TYPE_LLC
+        mesa_qce_frame_snap_t  snap;  // MESA_QCE_TYPE_SNAP
+        mesa_qce_frame_ipv4_t  ipv4;  // MESA_QCE_TYPE_IPV4
+        mesa_qce_frame_ipv6_t  ipv6;  // MESA_QCE_TYPE_IPV6
+    } frame; // Frame type specific data
+} mesa_qce_key_t;
+
+// QCE action
+typedef struct {
+    mesa_bool_t               prio_enable;      // Enable priority classification
+    mesa_prio_t               prio;             // Priority value
+    mesa_bool_t               dp_enable;        // Enable DP classification
+    mesa_dp_level_t           dp;               // DP value
+    mesa_bool_t               dscp_enable;      // Enable DSCP classification
+    mesa_dscp_t               dscp;             // DSCP value
+    mesa_bool_t               pcp_dei_enable;   // Enable PCP and DEI classification
+    mesa_tagprio_t            pcp;              // PCP value
+    mesa_dei_t                dei;              // DEI value
+    mesa_bool_t               policy_no_enable; // Enable ACL policy classification
+    mesa_acl_policy_no_t      policy_no;        // ACL policy number
+    mesa_bool_t               map_id_enable CAP(QOS_INGRESS_MAP_CNT); // Enable classification via ingress map
+    mesa_qos_ingress_map_id_t map_id        CAP(QOS_INGRESS_MAP_CNT); // Ingress map to use for classification
+} mesa_qce_action_t;
+
+// QoS Control Entry
+typedef struct {
+    mesa_qce_id_t     id;         // Entry ID
+    mesa_qce_key_t    key;        // QCE key
+    mesa_qce_action_t action;     // QCE action
+} mesa_qce_t;
+
+// Initialize QCE to default values.
+// type [IN]  QCE type.
+// qce [OUT]  QCE structure.
+mesa_rc mesa_qce_init(const mesa_inst_t     inst,
+                      const mesa_qce_type_t type,
+                      mesa_qce_t            *const qce);
+
+// Add QCE to QCL.
+// qcl_id [IN]  QCL ID.
+// qce_id [IN]  QCE ID. The QCE will be added before the entry with this ID.
+//              MESA_QCE_ID_LAST is reserved for inserting last.
+// qce [IN]     QCE structure.
+mesa_rc mesa_qce_add(const mesa_inst_t   inst,
+                     const mesa_qce_id_t qce_id,
+                     const mesa_qce_t    *const qce);
+
+// Delete QCE from QCL.
+// qcl_id [IN]  QCL ID.
+// qce_id [IN]  QCE ID.
+mesa_rc mesa_qce_del(const mesa_inst_t   inst,
+                     const mesa_qce_id_t qce_id);
+
+// Key that determines what to match
+typedef enum {
+    MESA_QOS_INGRESS_MAP_KEY_PCP,                   // Use PCP for tagged frames and none for the rest
+    MESA_QOS_INGRESS_MAP_KEY_PCP_DEI,               // Use PCP/DEI for tagged frames and none for the rest
+    MESA_QOS_INGRESS_MAP_KEY_DSCP,                  // Use DSCP as key for IP frames and none for the rest
+    MESA_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI,          // Use DSCP as key for IP frames, PCP/DEI for tagged frames and none for the rest
+    MESA_QOS_INGRESS_MAP_KEY_MPLS_TC                // Use MPLS TC as key for MPLS frames and none for the rest
+} mesa_qos_ingress_map_key_t CAP(QOS_INGRESS_MAP_CNT);
+
+// Actions that can be applied to classified values if the entry is matched
+typedef struct {
+    mesa_bool_t cos;                                // If TRUE, then replace the classified COS
+    mesa_bool_t dpl;                                // If TRUE, then replace the classified DPL
+    mesa_bool_t pcp;                                // If TRUE, then replace the classified PCP
+    mesa_bool_t dei;                                // If TRUE, then replace the classified DEI
+    mesa_bool_t dscp;                               // If TRUE, then replace the classified DSCP
+    mesa_bool_t cosid;                              // If TRUE, then replace the classified COS ID
+    mesa_bool_t path;                               // If TRUE, then replace the classified path COS ID
+    mesa_bool_t mpls_tc;                            // If TRUE, then replace the classified MPLS TC
+} mesa_qos_ingress_map_action_t CAP(QOS_INGRESS_MAP_CNT);
+
+// Mapped values that can be applied to classified values if the entry is matched
+typedef struct {
+    mesa_cos_t     cos;                             // The classified COS is set to cos if action.cos is TRUE
+    mesa_dpl_t     dpl;                             // The classified DPL is set to dpl if action.dpl is TRUE
+    mesa_pcp_t     pcp;                             // The classified PCP is set to pcp if action.pcp is TRUE
+    mesa_dei_t     dei;                             // The classified DEI is set to dei if action.dei is TRUE
+    mesa_dscp_t    dscp;                            // The classified DSCP is set to dscp if action.dscp is TRUE
+    mesa_cosid_t   cosid;                           // The classified COS ID is set to cosid if action.cosid is TRUE
+    mesa_cosid_t   path_cosid;                      // Path COS ID value used by OAM MEP if action.path is TRUE
+    mesa_mpls_tc_t mpls_tc;                         // The classified TC is set to mpls_tc if action.mpls_tc is TRUE
+} mesa_qos_ingress_map_values_t CAP(QOS_INGRESS_MAP_CNT);
+
+// Values for a combination of DSCP, PCP and DEI
+typedef struct {
+    mesa_qos_ingress_map_values_t dscp[64];         // Mapped values for each DSCP value
+    mesa_qos_ingress_map_values_t pcp_dei[8][2];    // Mapped values for each PCP/DEI value
+} mesa_qos_ingress_map_dpd_t CAP(QOS_INGRESS_MAP_CNT);
+
+// Union of mapped values for different keys
+typedef union {
+    mesa_qos_ingress_map_values_t pcp[8];           // MESA_QOS_INGRESS_MAP_KEY_PCP
+    mesa_qos_ingress_map_values_t pcp_dei[8][2];    // MESA_QOS_INGRESS_MAP_KEY_PCP_DEI
+    mesa_qos_ingress_map_values_t dscp[64];         // MESA_QOS_INGRESS_MAP_KEY_DSCP
+    mesa_qos_ingress_map_dpd_t    dpd;              // MESA_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI
+    mesa_qos_ingress_map_values_t mpls_tc[8];       // MESA_QOS_INGRESS_MAP_KEY_MPLS_TC
+} mesa_qos_ingress_map_maps_t CAP(QOS_INGRESS_MAP_CNT);
+
+// The complete map. There is one of these per map id
+typedef struct {
+    mesa_qos_ingress_map_id_t     id;               // ID for this entry
+    mesa_qos_ingress_map_key_t    key;              // Lookup key
+    mesa_qos_ingress_map_action_t action;           // Action enable/disable
+    mesa_qos_ingress_map_maps_t   maps;             // Maps for specific key
+} mesa_qos_ingress_map_t CAP(QOS_INGRESS_MAP_CNT);
+
+// Initialize an ingress map to default values.
+// key  [IN]  Initialize to this key.
+// map [OUT]  Ingress map structure.
+mesa_rc mesa_qos_ingress_map_init(const mesa_inst_t                inst,
+                                  const mesa_qos_ingress_map_key_t key,
+                                  mesa_qos_ingress_map_t           *const map)
+    CAP(QOS_INGRESS_MAP_CNT);
+
+// Add/update an ingress map.
+// map  [IN] Ingress map structure.
+mesa_rc mesa_qos_ingress_map_add(const mesa_inst_t            inst,
+                                 const mesa_qos_ingress_map_t *const map)
+    CAP(QOS_INGRESS_MAP_CNT);
+
+// Delete an ingress map.
+// id   [IN]  Map ID.
+mesa_rc mesa_qos_ingress_map_del(const mesa_inst_t               inst,
+                                 const mesa_qos_ingress_map_id_t id)
+    CAP(QOS_INGRESS_MAP_CNT);
+
+// Delete all ingress maps.
+mesa_rc mesa_qos_ingress_map_del_all(const mesa_inst_t inst)
+    CAP(QOS_INGRESS_MAP_CNT);
+
+// Key that determines what to match
+typedef enum {
+    MESA_QOS_EGRESS_MAP_KEY_COSID,                   // Use classified COS ID
+    MESA_QOS_EGRESS_MAP_KEY_COSID_DPL,               // Use classified COS ID and DPL
+    MESA_QOS_EGRESS_MAP_KEY_DSCP,                    // Use classified DSCP
+    MESA_QOS_EGRESS_MAP_KEY_DSCP_DPL,                // Use classified DSCP and DPL
+    MESA_QOS_EGRESS_MAP_KEY_MPLS_TC,                 // Use classified TC
+    MESA_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL              // Use classified TC and DPL
+} mesa_qos_egress_map_key_t CAP(QOS_EGRESS_MAP_CNT);
+
+// Actions that can be applied to the frame if the entry is matched
+typedef struct {
+    mesa_bool_t pcp;                                 // If TRUE, then replace PCP in frame
+    mesa_bool_t dei;                                 // If TRUE, then replace DEI in frame
+    mesa_bool_t dscp;                                // If TRUE, then replace DSCP in frame
+    mesa_bool_t path;                                // If TRUE, then replace path COS ID in frame
+    mesa_bool_t mpls_tc;                             // If TRUE, then replace MPLS TC in frame
+} mesa_qos_egress_map_action_t CAP(QOS_EGRESS_MAP_CNT);
+
+// Mapped values that can be applied to classified values if the entry is matched
+typedef struct {
+    mesa_pcp_t     pcp;                              // The classified PCP is set to pcp if action.pcp is TRUE
+    mesa_dei_t     dei;                              // The classified DEI is set to dei if action.dei is TRUE
+    mesa_dscp_t    dscp;                             // The classified DSCP is set to dscp if action.dscp is TRUE
+    mesa_cosid_t   path_cosid;                       // Path COS ID value used by OAM MEP if action.path is TRUE
+    mesa_mpls_tc_t mpls_tc;                          // The classified TC is set to mpls_tc if action.mpls_tc is TRUE
+} mesa_qos_egress_map_values_t CAP(QOS_EGRESS_MAP_CNT);
+
+// Union of mapped values for different keys
+typedef union {
+    mesa_qos_egress_map_values_t cosid[8];           // MESA_QOS_EGRESS_MAP_KEY_COSID
+    mesa_qos_egress_map_values_t cosid_dpl[8][4];    // MESA_QOS_EGRESS_MAP_KEY_COSID_DPL
+    mesa_qos_egress_map_values_t dscp[64];           // MESA_QOS_EGRESS_MAP_KEY_DSCP
+    mesa_qos_egress_map_values_t dscp_dpl[64][4];    // MESA_QOS_EGRESS_MAP_KEY_DSCP_DPL
+    mesa_qos_egress_map_values_t mpls_tc[8];         // MESA_QOS_EGRESS_MAP_KEY_MPLS_TC
+    mesa_qos_egress_map_values_t mpls_tc_dpl[8][4];  // MESA_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL
+} mesa_qos_egress_map_maps_t CAP(QOS_EGRESS_MAP_CNT);
+
+// The complete map. There is one of these per map id
+typedef struct {
+    mesa_qos_egress_map_id_t     id;                 // ID for this entry
+    mesa_qos_egress_map_key_t    key;                // Lookup key
+    mesa_qos_egress_map_action_t action;             // Action enable/disable
+    mesa_qos_egress_map_maps_t   maps;               // Maps for specific key
+} mesa_qos_egress_map_t CAP(QOS_EGRESS_MAP_CNT);
+
+// Initialize an egress map to default values.
+// key  [IN]  Initialize to this key.
+// map [OUT]  Egress map structure.
+mesa_rc mesa_qos_egress_map_init(const mesa_inst_t               inst,
+                                 const mesa_qos_egress_map_key_t key,
+                                 mesa_qos_egress_map_t           *const map)
+    CAP(QOS_EGRESS_MAP_CNT);
+
+// Add/update an egress map.
+// map  [IN] Egress map structure.
+mesa_rc mesa_qos_egress_map_add(const mesa_inst_t           inst,
+                                const mesa_qos_egress_map_t *const map)
+    CAP(QOS_EGRESS_MAP_CNT);
+
+// Delete an egress map.
+// id   [IN]  Map ID.
+mesa_rc mesa_qos_egress_map_del(const mesa_inst_t              inst,
+                                const mesa_qos_egress_map_id_t id)
+    CAP(QOS_EGRESS_MAP_CNT);
+
+// Delete all egress maps.
+mesa_rc mesa_qos_egress_map_del_all(const mesa_inst_t inst)
+    CAP(QOS_EGRESS_MAP_CNT);
+
+// Calibrate egress shaper rates.
+//
+// This function calibrates the egress port and queue shapers on MESA_ARCH_SERVAL.
+// Calling this function periodically will enhance the accuracy of the egress
+// port and queue shapers.
+// Recommended rate is between 1 to 50 times per second.
+//
+// Returns MESA_RC_INCOMPLETE if calibration is still needed, MESA_RC_OK if not
+// needed anymore, MESA_RC_ERROR in case of an error.
+// NOTICE: Everytime a shaper is changed, this function must be invoked again.
+mesa_rc mesa_qos_shaper_calibrate(const mesa_inst_t inst)
+    CAP(QOS_SHAPER_CALIBRATE);
+
+// Dual leaky buckets policer configuration
+typedef struct {
+    mesa_policer_type_t type;         // Policer type
+    mesa_bool_t         enable;       // Enable/disable policer
+    mesa_bool_t         cm CAP(QOS_DLB_CM); // Colour Mode (TRUE means colour aware)
+    mesa_bool_t         cf;           // Coupling Flag
+    mesa_bool_t         line_rate;    // Line rate policing (default is data rate policing)
+    mesa_bitrate_t      cir;          // Committed Information Rate
+    mesa_burst_level_t  cbs;          // Committed Burst Size
+    mesa_bitrate_t      eir;          // Excess Information Rate
+    mesa_burst_level_t  ebs;          // Excess Burst Size
+    mesa_bool_t         drop_yellow;  // DropOnYellow: Discard yellow frames
+    mesa_opt_bool_t     mark_all_red; // MarkAllFramesRedEnable/MarkAllFramesRed: Discard all frames if red frame seen
+} mesa_dlb_policer_conf_t;
+
+// EVC policer configuration
+typedef mesa_dlb_policer_conf_t mesa_evc_policer_conf_t;
+
+#define MESA_EVC_POLICER_ID_DISCARD 4094 // EVC/ECE: Policer discards all frames
+#define MESA_EVC_POLICER_ID_NONE    4095 // EVC/ECE: Policer forwards all frames
+#define MESA_EVC_POLICER_ID_EVC     4096 // ECE only: Use EVC policer
+
+// Get EVC policer configuration.
+// policer_id [IN]  Policer ID.
+// conf [OUT]       Policer configuration.
+mesa_rc mesa_evc_policer_conf_get(const mesa_inst_t           inst,
+                                  const mesa_evc_policer_id_t policer_id,
+                                  mesa_evc_policer_conf_t     *const conf)
+    CAP(EVC_POLICER_CNT);
+
+// Set EVC policer configuration.
+// policer_id [IN]  Policer ID.
+// conf [IN]        Policer configuration.
+mesa_rc mesa_evc_policer_conf_set(const mesa_inst_t             inst,
+                                  const mesa_evc_policer_id_t   policer_id,
+                                  const mesa_evc_policer_conf_t *const conf)
+    CAP(EVC_POLICER_CNT);
+
+
+#include <microchip/ethernet/hdr_end.h>
+#endif // _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+:@byteposir:	@str"1#ifndef _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[åiPipiqiriôi≈i∆i˜iAiBigixi∏i‘i’ii´i÷i
+iRiùiÌiÓi%iPiÑi∆iiUiVi{iåiÈi ii1iÀiˆi&idi•iÎiÏiiGiwiØiÍi*	i+	ii	ix	i≤	iÊ	i
+i
+i9
+iJ
+i~
+i≤
+iiKiminiîi•ii%i&iPi}i¨iËi,isiºii	i3i`ièiÀiibi±iii3iDi√iici…i;i«iﬂi‡iiiNi¢iÒiii@iQi‡i$iki¥i˝iii=ihiûi‹i›i	i5igi°i¢i∞i¡iiii7i^iíi–i—i‹iÌi iTifigiêi°i⁄i=iüi†i	itiﬂiJi∑i$iàiiûiüi‡i ii#iAipiêi⁄i' ip i¬ i√ iÂ i!i2!iR!i¢!iı!iD"iú"iù"i…"i⁄"i8#iñ#i≤#i≥#i„#ix$iñ$i¡$iÒ$i9%iÑ%iœ%i&i &iP&in&iô&i…&i'iP'iï'iﬂ'i‡'iR(ia(iè(iƒ(i")i\)ip)iq)i∫)i…)i˝)iB*i»*iu+iä+iã+iÆ+iø+ic,iÒ,i.-i∆-i„-i‰-i.i.iá.i„.i/i/i/i-/iÜ/iÓ/iÅ0iõ0iú0i√0i‘0i1iT1i¯1iö2i›2i3i[3iw3ix3ií3i°3i‹3i4ip4i°4i¢4i¨4iΩ4i‡4iÛ4i˙4iI5ig5ih5ië5i–5i◊5i6i;6i<6iù6i,7iv7iÈ7i˙7i˚7i"8i38ih8iú8i¯8in9iÁ9i:i:i$:i5:ix:iÕ:i#;ij;i≠;i5<i∫<i>=iº=i,>i†>iˆ>iò?i7@i¨@iƒ@i≈@iË@iAi4AinAi´AiÌAiÓAiBi.Bi[BiõBiﬁBi&Ci'CilCimCiáCiñCi√CiÔCiDi4DiWDizDiçDiéDi•Di∂DiÂDiEimEiÈEi˚Ei¸EiFi$FiTFiFi¢Fi◊FiGi Gi!GiGGiXGiäGi±GiÀGiÃGiGiHi#Hi;Hi<HiaHirHiîHi≠HiÆHi”Hi‰HiIiBIilIi‘IiIJi¥Ji(KiAKiBKigKixKi¨Ki÷KiNLi∆Li1Mi•MiæMiøMi Mi€MiNi[NiòNi‡Ni$Oi%Oi1OibOiüOi⁄OiPiRPiéPi∑Pi…Pi PiÿPiÈPi;Qi}Qi…QiRiSRiëRiÊRi#Si`Si¥Si˘SihTi◊TiÏTiÌTiUiUiAUinUiûUi¨Ui≠Ui“UiÍUiVi9VikVi§Vi•Vi∏Vi–ViWi^Wi}Wi¨Wi›WiXiXi,XiDXi\XiãXiΩXiæXi„XiÚXiYYiƒYi/ZiµZi%[i\[i][i©[i∫[i\iz\i⁄\i:]iõ]i˛]if^i ^i_i_iW_ih_i÷_iD`i≤`i aiëaibivbiÎbi%ci&ciWcihci¡cidiTdiUdiÇdiídiÊdi>eiìeieiHfiÄfiÅfi∑fi»figiSgi†giÌgi hi!hiQhiwhiúhiÂhi-ii|iiöiiõiiπii›ii!jikjiâjiäji§ji∫jikiFkidkiekiÅkiæki‹ki›kilili_liµlimiUmiümiÒmi&ni'nikni|ni◊ni2oiéoiÒoiPpiàpiâpi€piÏpi[qi qi<ri≠ri#si[si\siâsiôsiÔsiItiûti˜tiOui´ui·ui‚uivi)visvi∂viwiRwiÉwiÑwi≥wiŸwi˝wiDxiäxi◊xiÙxiıxiyi5yiwyiøyi‹yi›yiˆyiziQziîzi±zi≤ziÕzi	{i&{i'{iI{iL{iü{iÌ{i|iA|iD|iî|i |i}iS}ir}is}iü}i∞}iÊ}i&~i{~i≤~iiRiêi—iÄiYÄi–ÄiÎÄiÏÄi	ÅiBÅiCÅiîÅiÂÅi+Çi,ÇiNÇinÇiôÇi›Çi'ÉirÉiåÉiçÉiØÉiœÉi˙Éi@ÑiåÑiŸÑiÛÑiÙÑiıÑiÖiKÖ:@last_line_endiKÖ{;o;;o;	;
+@
+;iô;"2#define _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+
+;@{;o;;o;	;
+@
+;i∆;"6#include <microchip/ethernet/switch/api/types.h>
+;@{;o;;o;	;
+@
+;i˜;"P#include <microchip/ethernet/hdr_start.h>  // ALL INCLUDE ABOVE THIS LINE
+
+;@{
+:keywordo;;o;	;
+@
+;ig;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i|;"mesa_dscp_t ;@:	nameo;;o;	;
+@
+;ià;"	dscp;@:
+array[ :cap0:typedef_nameo;;o;	;
+@
+;i∫;"mesa_qos_dscp_dpl_conf_t;@;[ ;0{:func_proto{;{	;o;;o;	;
+@
+;i
+;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_qos_dscp_dpl_conf_set;@;[ ;0:	args[{;{	;o;;o;	;
+@
+;i-;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;iL;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iu;"$const uint32_t                 ;@;o;;o;	;
+@
+;iî;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i¿;"+const mesa_qos_dscp_dpl_conf_t *const ;@;o;;o;	;
+@
+;iÊ;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iÑ;"mesa_rc ;@;o;;o;	;
+@
+;iå;"mesa_qos_dscp_dpl_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iß;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i¿;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÈ;"const uint32_t           ;@;o;;o;	;
+@
+;i;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i.;"%mesa_qos_dscp_dpl_conf_t *const ;@;o;;o;	;
+@
+;iN;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i{;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iê;"mesa_dscp_t ;@;o;;o;	;
+@
+;iú;"	dscp;@;[{:	expro;;o;	;
+@
+;i°;"MESA_PRIO_ARRAY_SIZE;@;0;o;;o;	;
+@
+;iÎ;"mesa_qos_dpl_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i&;"mesa_rc ;@;o;;o;	;
+@
+;i.;"mesa_qos_dpl_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iD;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i^;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÇ;"const uint32_t            ;@;o;;o;	;
+@
+;iú;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i√;"&const mesa_qos_dpl_conf_t *const ;@;o;;o;	;
+@
+;i‰;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iw;"mesa_rc ;@;o;;o;	;
+@
+;i;"mesa_qos_dpl_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iï;"const mesa_inst_t   ;@;o;;o;	;
+@
+;i©;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÕ;"const uint32_t      ;@;o;;o;	;
+@
+;i·;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i	;" mesa_qos_dpl_conf_t *const ;@;o;;o;	;
+@
+;i#	;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;ii	;"typedef;@:enum_type_declare{;o;;o;	;
+@
+;iq	;"	enum;@:
+enums[{:	enum{:enum_nameo;;o;	;
+@
+;i|	;"MESA_WRED_MAX_DP;@;0{;!{;"o;;o;	;
+@
+;i∂	;"MESA_WRED_MAX_FL  ;@;0;o;;o;	;
+@
+;iË	;"mesa_wred_max_t ;@;[ ;o;;o;	;
+@
+;i¯	;"CAP(QOS_WRED);@{
+;o;;o;	;
+@
+;i9
+;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iN
+;"mesa_bool_t     ;@;o;;o;	;
+@
+;i^
+;"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÇ
+;"mesa_pct_t      ;@;o;;o;	;
+@
+;ií
+;"min_fl;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂
+;"mesa_pct_t      ;@;o;;o;	;
+@
+;i∆
+;"max;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_wred_max_t ;@;o;;o;	;
+@
+;i%;"max_unit;@;[ ;0;o;;o;	;
+@
+;iM;"mesa_wred_conf_t ;@;[ ;o;;o;	;
+@
+;i^;"CAP(QOS_WRED);@{
+;o;;o;	;
+@
+;iî;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i©;"mesa_wred_conf_t ;@;o;;o;	;
+@
+;i∫;"	wred;@;[{;o;;o;	;
+@
+;iø;"MESA_QUEUE_ARRAY_SIZE;@;o;;o;	;
+@
+;i÷;"CAP(QOS_WRED);@;o;;o;	;
+@
+;i
+;"mesa_qos_dpl_group_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iË;"mesa_rc ;@;o;;o;	;
+@
+;i;" mesa_qos_dpl_group_conf_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i;"const mesa_inst_t         ;@;o;;o;	;
+@
+;i&;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iP;"const uint32_t            ;@;o;;o;	;
+@
+;ij;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ió;"const uint32_t            ;@;o;;o;	;
+@
+;i±;"group_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i‡;"&mesa_qos_dpl_group_conf_t *const ;@;o;;o;	;
+@
+;i;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iÀ;"mesa_rc ;@;o;;o;	;
+@
+;i”;" mesa_qos_dpl_group_conf_set;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iÔ;"%const mesa_inst_t               ;@;o;;o;	;
+@
+;i;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i9;"%const uint32_t                  ;@;o;;o;	;
+@
+;iY;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iÜ;"%const uint32_t                  ;@;o;;o;	;
+@
+;i¶;"group_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i’;",const mesa_qos_dpl_group_conf_t *const ;@;o;;o;	;
+@
+;i¸;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i3;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iH;"mesa_bool_t     ;@;o;;o;	;
+@
+;iX;"
+trust;@;[ ;0{;{;{	;o;;o;	;
+@
+;i«;"mesa_prio_t     ;@;o;;o;	;
+@
+;i◊;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_dp_level_t ;@;o;;o;	;
+@
+;i-;"dpl;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig;"mesa_bool_t     ;@;o;;o;	;
+@
+;iw;"remark;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?;"mesa_dscp_t     ;@;o;;o;	;
+@
+;iO;"	dscp;@;[ ;0;o;;o;	;
+@
+;i…;"mesa_qos_dscp_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i;"mesa_packet_rate_t        ;@;o;;o;	;
+@
+;i2;"	rate;@;[ ;0{;{;{	;o;;o;	;
+@
+;iR;"mesa_bool_t               ;@;o;;o;	;
+@
+;il;"frame_rate;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶;"mesa_storm_policer_mode_t ;@;o;;o;	;
+@
+;i¿;"	mode;@;[ ;0;o;;o;	;
+@
+;iÛ;""mesa_qos_storm_policer_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i@;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iU;"#mesa_prio_t                   ;@;o;;o;	;
+@
+;is;"
+prios;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‰;"#mesa_qos_dscp_conf_t          ;@;o;;o;	;
+@
+;i;"	dscp;@;[{;o;;o;	;
+@
+;i;"64;@;0{;{;{	;o;;o;	;
+@
+;i(;"#mesa_qos_storm_policer_conf_t ;@;o;;o;	;
+@
+;iF;"policer_uc;@;[ ;0{;{;{	;o;;o;	;
+@
+;io;"#mesa_qos_storm_policer_conf_t ;@;o;;o;	;
+@
+;iç;"policer_mc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏;"#mesa_qos_storm_policer_conf_t ;@;o;;o;	;
+@
+;i÷;"policer_bc;@;[ ;0;o;;o;	;
+@
+;iˇ;"mesa_qos_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;ih;"mesa_rc ;@;o;;o;	;
+@
+;ip;"mesa_qos_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÇ;"const mesa_inst_t     ;@;o;;o;	;
+@
+;iò;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∏;""const mesa_qos_conf_t *const ;@;o;;o;	;
+@
+;i’;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i5;"mesa_rc ;@;o;;o;	;
+@
+;i=;"mesa_qos_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iO;"const mesa_inst_t ;@;o;;o;	;
+@
+;ia;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÅ;"mesa_qos_conf_t   *const ;@;o;;o;	;
+@
+;iö;"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i∞;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i≈;"mesa_event_t ;@;o;;o;	;
+@
+;i“;"
+storm;@;[ ;0;o;;o;	;
+@
+;i;"mesa_qos_status_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i^;"mesa_rc ;@;o;;o;	;
+@
+;if;"mesa_qos_status_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iz;"const mesa_inst_t ;@;o;;o;	;
+@
+;iå;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iÆ;"mesa_qos_status_t *const ;@;o;;o;	;
+@
+;i«;"status;@;[ ;0;0{
+;o;;o;	;
+@
+;i‹;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÒ;"mesa_burst_level_t ;@;o;;o;	;
+@
+;i;"
+level;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$;"mesa_bitrate_t     ;@;o;;o;	;
+@
+;i7;"	rate;@;[ ;0;o;;o;	;
+@
+;iV;"mesa_policer_t;@;[ ;0{
+;o;;o;	;
+@
+;iê;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i•;"mesa_policer_t  ;@;o;;o;	;
+@
+;iµ;"policer;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬁ;"mesa_bool_t     ;@;o;;o;	;
+@
+;iÓ;"frame_rate;@;[ ;0{;{;{	;o;;o;	;
+@
+;iA;"mesa_dp_level_t ;@;o;;o;	;
+@
+;iQ;"dp_bypass_level ;@;[ ;o;;o;	;
+@
+;ia;"#CAP(QOS_PORT_POLICER_EXT_DPBL);@{;{;{	;o;;o;	;
+@
+;i§;"mesa_bool_t ;@;o;;o;	;
+@
+;i∞;"known_unicast         ;@;[ ;o;;o;	;
+@
+;i∆;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@;o;;o;	;
+@
+;i;"known_multicast       ;@;[ ;o;;o;	;
+@
+;i/;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;ix;"mesa_bool_t ;@;o;;o;	;
+@
+;iÑ;"known_broadcast       ;@;[ ;o;;o;	;
+@
+;iö;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;i„;"mesa_bool_t ;@;o;;o;	;
+@
+;iÔ;"unknown_unicast       ;@;[ ;o;;o;	;
+@
+;i;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;iN;"mesa_bool_t ;@;o;;o;	;
+@
+;iZ;"unknown_multicast     ;@;[ ;o;;o;	;
+@
+;ip;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;iª;"mesa_bool_t ;@;o;;o;	;
+@
+;i«;"unknown_broadcast     ;@;[ ;o;;o;	;
+@
+;i›;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;i(;"mesa_bool_t ;@;o;;o;	;
+@
+;i4;"learning              ;@;[ ;o;;o;	;
+@
+;iJ;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;iå;"mesa_bool_t ;@;o;;o;	;
+@
+;iò;"limit_noncpu_traffic  ;@;[ ;o;;o;	;
+@
+;iÆ;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;i;"mesa_bool_t ;@;o;;o;	;
+@
+;i$;"limit_cpu_traffic     ;@;[ ;o;;o;	;
+@
+;i:;""CAP(QOS_PORT_POLICER_EXT_TTM);@{;{;{	;o;;o;	;
+@
+;i£;"mesa_bool_t ;@;o;;o;	;
+@
+;iØ;"flow_control;@;[ ;0;o;;o;	;
+@
+;i‚;"!mesa_qos_port_policer_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iê;"mesa_rc ;@;o;;o;	;
+@
+;iò;"#mesa_qos_port_policer_conf_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i∑;""const mesa_inst_t            ;@;o;;o;	;
+@
+;i‘;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i ;""const mesa_port_no_t         ;@;o;;o;	;
+@
+;i ;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iN ;""const uint32_t               ;@;o;;o;	;
+@
+;ik ;"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ió ;")mesa_qos_port_policer_conf_t *const ;@;o;;o;	;
+@
+;iª ;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;iR!;"mesa_rc ;@;o;;o;	;
+@
+;iZ!;"#mesa_qos_port_policer_conf_set;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iy!;"(const mesa_inst_t                  ;@;o;;o;	;
+@
+;iú!;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i…!;"(const mesa_port_no_t               ;@;o;;o;	;
+@
+;iÏ!;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i";"(const uint32_t                     ;@;o;;o;	;
+@
+;i?";"cnt;@;[ ;0{;{	;o;;o;	;
+@
+;ik";"/const mesa_qos_port_policer_conf_t *const ;@;o;;o;	;
+@
+;iï";"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;i…";"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iﬁ";"mesa_tagprio_t ;@;o;;o;	;
+@
+;iÌ";"pcp;@;[{;o;;o;	;
+@
+;iÒ";"MESA_PRIO_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;i<#;"mesa_dei_t     ;@;o;;o;	;
+@
+;iK#;"dei;@;[{;o;;o;	;
+@
+;iO#;"MESA_PRIO_ARRAY_SIZE;@;0;o;;o;	;
+@
+;iò#;"mesa_qos_port_dpl_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÒ$;"mesa_rc ;@;o;;o;	;
+@
+;i˘$;"mesa_qos_port_dpl_conf_set;@;[ ;0;[	{;{	;o;;o;	;
+@
+;i%;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;i3%;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i\%;"$const mesa_port_no_t           ;@;o;;o;	;
+@
+;i{%;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;iß%;"$const uint32_t                 ;@;o;;o;	;
+@
+;i∆%;"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;iÚ%;"+const mesa_qos_port_dpl_conf_t *const ;@;o;;o;	;
+@
+;i&;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i…&;"mesa_rc ;@;o;;o;	;
+@
+;i—&;"mesa_qos_port_dpl_conf_get;@;[ ;0;[	{;{	;o;;o;	;
+@
+;iÏ&;"const mesa_inst_t        ;@;o;;o;	;
+@
+;i';"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i.';"const mesa_port_no_t     ;@;o;;o;	;
+@
+;iG';"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;is';"const uint32_t           ;@;o;;o;	;
+@
+;iå';"dpl_cnt;@;[ ;0{;{	;o;;o;	;
+@
+;i∏';"%mesa_qos_port_dpl_conf_t *const ;@;o;;o;	;
+@
+;iÿ';"	conf;@;[ ;0;0{
+;o;;o;	;
+@
+;iR(;"typedef;@;{;o;;o;	;
+@
+;iZ(;"	enum;@; [	{;!{;"o;;o;	;
+@
+;ie(;"MESA_DSCP_MODE_NONE;@;0{;!{;"o;;o;	;
+@
+;iì(;"MESA_DSCP_MODE_ZERO;@;0{;!{;"o;;o;	;
+@
+;i»(;"MESA_DSCP_MODE_SEL;@;0{;!{;"o;;o;	;
+@
+;i&);"MESA_DSCP_MODE_ALL     ;@;0;o;;o;	;
+@
+;i^);"mesa_dscp_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i∫);"typedef;@;{;o;;o;	;
+@
+;i¬);"	enum;@; [	{;!{;"o;;o;	;
+@
+;iÕ);"MESA_DSCP_EMODE_DISABLE;@;0{;!{;"o;;o;	;
+@
+;i*;"MESA_DSCP_EMODE_REMARK;@;0{;!{;"o;;o;	;
+@
+;iF*;"MESA_DSCP_EMODE_REMAP;@;0{;!{;"o;;o;	;
+@
+;iÃ*;"MESA_DSCP_EMODE_REMAP_DPA ;@;o;;o;	;
+@
+;iÊ*;"#CAP(QOS_DSCP_REMARK_DP_AWARE) ;@;o;;o;	;
+@
+;iw+;"mesa_dscp_emode_t;@;[ ;0{
+;o;;o;	;
+@
+;iÆ+;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i√+;"mesa_bool_t       ;@;o;;o;	;
+@
+;i’+;"class_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig,;"mesa_dscp_mode_t  ;@;o;;o;	;
+@
+;iy,;"	mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;iı,;"mesa_dscp_emode_t ;@;o;;o;	;
+@
+;i-;"
+emode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i2-;"mesa_bool_t       ;@;o;;o;	;
+@
+;iD-;"translate;@;[ ;0;o;;o;	;
+@
+;i»-;"mesa_qos_port_dscp_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i.;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i#.;"mesa_prio_t     ;@;o;;o;	;
+@
+;i3.;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;iã.;"mesa_dp_level_t ;@;o;;o;	;
+@
+;iõ.;"dpl;@;[ ;0;o;;o;	;
+@
+;iÂ.;"!mesa_qos_port_pcp_dei_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i/;"typedef;@;{;o;;o;	;
+@
+;i&/;"	enum;@; [{;!{	;"o;;o;	;
+@
+;i1/;"%MESA_TAG_REMARK_MODE_CLASSIFIED ;@:operatoro;;o;	;
+@
+;iQ/;"=;@;o;;o;	;
+@
+;iS/;"0;@;0{;!{	;"o;;o;	;
+@
+;iä/;"%MESA_TAG_REMARK_MODE_DEFAULT    ;@;#o;;o;	;
+@
+;i™/;"=;@;o;;o;	;
+@
+;i¨/;"2;@;0{;!{	;"o;;o;	;
+@
+;iÚ/;"%MESA_TAG_REMARK_MODE_MAPPED     ;@;#o;;o;	;
+@
+;i0;"=;@;o;;o;	;
+@
+;i0;"r3  // Use mapped versions of classified QOS class and DP level (see mesa_qos_port_dpl_conf_t) as tag PCP/DEI
+;@;0;o;;o;	;
+@
+;iÉ0;"mesa_tag_remark_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i√0;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÿ0;"mesa_tagprio_t         ;@;o;;o;	;
+@
+;iÔ0;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i1;"mesa_dei_t             ;@;o;;o;	;
+@
+;i/1;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;iX1;"mesa_bool_t            ;@;o;;o;	;
+@
+;io1;"class_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¸1;""mesa_qos_port_pcp_dei_conf_t ;@;o;;o;	;
+@
+;i2;"pcp_dei_map;@;[{;o;;o;	;
+@
+;i%2;"MESA_PCP_ARRAY_SIZE;@{;o;;o;	;
+@
+;i:2;"MESA_DEI_ARRAY_SIZE;@;0{;{;{	;o;;o;	;
+@
+;iû2;"mesa_tag_remark_mode_t ;@;o;;o;	;
+@
+;iµ2;"remark_mode;@;[ ;0{;{;{	;o;;o;	;
+@
+;i·2;"mesa_tagprio_t         ;@;o;;o;	;
+@
+;i¯2;"egress_pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i 3;"mesa_dei_t             ;@;o;;o;	;
+@
+;i73;"egress_dei;@;[ ;0;o;;o;	;
+@
+;i]3;"mesa_qos_port_tag_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;ií3;"typedef;@;{;o;;o;	;
+@
+;iö3;"	enum;@; [{;!{;"o;;o;	;
+@
+;i•3;"MESA_SHAPER_MODE_LINE;@;0{;!{;"o;;o;	;
+@
+;i‡3;"MESA_SHAPER_MODE_DATA;@;0{;!{;"o;;o;	;
+@
+;i4;"MESA_SHAPER_MODE_FRAME ;@;o;;o;	;
+@
+;i24;""CAP(QOS_EGRESS_SHAPER_FRAME) ;@;o;;o;	;
+@
+;ir4;"mesa_shaper_mode_t ;@;[ ;o;;o;	;
+@
+;iÖ4;"CAP(QOS_EGRESS_SHAPERS_RT);@{
+;o;;o;	;
+@
+;i¨4;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iM5;"mesa_burst_level_t ;@;o;;o;	;
+@
+;i`5;"
+level;@;[ ;0{;{;{	;o;;o;	;
+@
+;i"6;"mesa_bitrate_t     ;@;o;;o;	;
+@
+;i56;"	rate;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@6;"mesa_burst_level_t ;@;o;;o;	;
+@
+;iS6;"	ebs ;@;[ ;o;;o;	;
+@
+;iW6;" CAP(QOS_EGRESS_SHAPERS_DLB);@{;{;{	;o;;o;	;
+@
+;i°6;"mesa_bitrate_t     ;@;o;;o;	;
+@
+;i¥6;"	eir ;@;[ ;o;;o;	;
+@
+;i∏6;" CAP(QOS_EGRESS_SHAPERS_DLB);@{;{;{	;o;;o;	;
+@
+;i07;"mesa_shaper_mode_t ;@;o;;o;	;
+@
+;iC7;"
+mode ;@;[ ;o;;o;	;
+@
+;iH7;"CAP(QOS_EGRESS_SHAPERS_RT);@{;{;{	;o;;o;	;
+@
+;iz7;"mesa_bool_t        ;@;o;;o;	;
+@
+;iç7;"credit_enable ;@;[ ;o;;o;	;
+@
+;iõ7;"&CAP(QOS_EGRESS_QUEUE_SHAPERS_CRB);@;o;;o;	;
+@
+;iÎ7;"mesa_shaper_t;@;[ ;0{
+;o;;o;	;
+@
+;i"8;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i78;"mesa_policer_t ;@;o;;o;	;
+@
+;iF8;"policer;@;[ ;0{;{;{	;o;;o;	;
+@
+;il8;"mesa_shaper_t  ;@;o;;o;	;
+@
+;i{8;"shaper;@;[ ;0{;{;{	;o;;o;	;
+@
+;i†8;"mesa_pct_t     ;@;o;;o;	;
+@
+;iØ8;"pct;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¸8;"mesa_bool_t    ;@;o;;o;	;
+@
+;i9;"excess_enable       ;@;[ ;o;;o;	;
+@
+;i9;"%CAP(QOS_EGRESS_QUEUE_SHAPERS_EB);@{;{;{	;o;;o;	;
+@
+;ir9;"mesa_bool_t    ;@;o;;o;	;
+@
+;iÅ9;"cut_through_enable  ;@;[ ;o;;o;	;
+@
+;iï9;"&CAP(QOS_EGRESS_QUEUE_CUT_THROUGH);@;o;;o;	;
+@
+;iÈ9;"mesa_qos_port_queue_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i$:;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i9:;" mesa_shaper_t              ;@;o;;o;	;
+@
+;iT:;"shaper;@;[ ;0{;{;{	;o;;o;	;
+@
+;i|:;" mesa_prio_t                ;@;o;;o;	;
+@
+;ió:;"default_prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;i—:;" mesa_dp_level_t            ;@;o;;o;	;
+@
+;iÏ:;"default_dpl;@;[ ;0{;{;{	;o;;o;	;
+@
+;i';;" mesa_qos_port_tag_conf_t   ;@;o;;o;	;
+@
+;iB;;"tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;in;;" mesa_qos_port_dscp_conf_t  ;@;o;;o;	;
+@
+;iâ;;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±;;" mesa_bool_t                ;@;o;;o;	;
+@
+;iÃ;;"dwrr_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i9<;" uint8_t                    ;@;o;;o;	;
+@
+;iT<;"dwrr_cnt ;@;[ ;o;;o;	;
+@
+;i]<;" CAP(QOS_SCHEDULER_CNT_DWRR);@{;{;{	;o;;o;	;
+@
+;iB=;" mesa_bool_t                ;@;o;;o;	;
+@
+;i]=;"dmac_dip ;@;[ ;o;;o;	;
+@
+;if=;"CAP(QOS_QCL_DMAC_DIP);@{;{;{	;o;;o;	;
+@
+;i¿=;" mesa_vcap_key_type_t       ;@;o;;o;	;
+@
+;i€=;"key_type ;@;[ ;o;;o;	;
+@
+;i‰=;"CAP(QOS_QCL_KEY_TYPE);@{;{;{	;o;;o;	;
+@
+;i0>;" mesa_wred_group_t          ;@;o;;o;	;
+@
+;iK>;"wred_group ;@;[ ;o;;o;	;
+@
+;iV>;"CAP(QOS_WRED_GROUP_CNT);@{;{;{	;o;;o;	;
+@
+;i§>;" mesa_cosid_t               ;@;o;;o;	;
+@
+;iø>;"cosid ;@;[ ;o;;o;	;
+@
+;i≈>;""CAP(QOS_COSID_CLASSIFICATION);@{;{;{	;o;;o;	;
+@
+;i˙>;" mesa_qos_ingress_map_id_t  ;@;o;;o;	;
+@
+;i?;"ingress_map ;@;[ ;o;;o;	;
+@
+;i!?;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;iú?;" mesa_qos_egress_map_id_t   ;@;o;;o;	;
+@
+;i∑?;"egress_map ;@;[ ;o;;o;	;
+@
+;i¬?;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i;@;" mesa_qos_port_queue_conf_t ;@;o;;o;	;
+@
+;iV@;"
+queue;@;[{;o;;o;	;
+@
+;i\@;"MESA_QUEUE_ARRAY_SIZE;@;0;o;;o;	;
+@
+;iÆ@;"mesa_qos_port_conf_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;i4A;"mesa_rc ;@;o;;o;	;
+@
+;i<A;"mesa_qos_port_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iSA;"const mesa_inst_t    ;@;o;;o;	;
+@
+;ihA;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;içA;"const mesa_port_no_t ;@;o;;o;	;
+@
+;i¢A;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i A;"!mesa_qos_port_conf_t *const ;@;o;;o;	;
+@
+;iÊA;"	conf;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i[B;"mesa_rc ;@;o;;o;	;
+@
+;icB;"mesa_qos_port_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;izB;" const mesa_inst_t          ;@;o;;o;	;
+@
+;iïB;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i∫B;" const mesa_port_no_t       ;@;o;;o;	;
+@
+;i’B;"port_no;@;[ ;0{;{	;o;;o;	;
+@
+;i˝B;"'const mesa_qos_port_conf_t *const ;@;o;;o;	;
+@
+;iC;"	conf;@;[ ;0;0{;o;;o;	;
+@
+;i'C;"K#define MESA_QCE_ID_LAST 0 // Special value used to add last in list
+
+;@{
+;o;;o;	;
+@
+;iáC;"typedef;@;{;o;;o;	;
+@
+;ièC;"	enum;@; [{;!{;"o;;o;	;
+@
+;iöC;"MESA_QCE_TYPE_ANY;@;0{;!{;"o;;o;	;
+@
+;i«C;"MESA_QCE_TYPE_ETYPE;@;0{;!{;"o;;o;	;
+@
+;iÛC;"MESA_QCE_TYPE_LLC;@;0{;!{;"o;;o;	;
+@
+;iD;"MESA_QCE_TYPE_SNAP;@;0{;!{;"o;;o;	;
+@
+;i8D;"MESA_QCE_TYPE_IPV4;@;0{;!{;"o;;o;	;
+@
+;i[D;"MESA_QCE_TYPE_IPV6     ;@;0;o;;o;	;
+@
+;i|D;"mesa_qce_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i•D;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i∫D;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;i D;"dmac_mc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÈD;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;i˘D;"dmac_bc;@;[ ;0{;{;{	;o;;o;	;
+@
+;iE;"mesa_vcap_u48_t ;@;o;;o;	;
+@
+;i(E;"
+dmac ;@;[ ;o;;o;	;
+@
+;i-E;"CAP(QOS_QCL_KEY_DMAC);@{;{;{	;o;;o;	;
+@
+;iqE;"mesa_vcap_u48_t ;@;o;;o;	;
+@
+;iÅE;"	smac;@;[ ;0;o;;o;	;
+@
+;iÎE;"mesa_qce_mac_t;@;[ ;0{
+;o;;o;	;
+@
+;iF;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;i(F;"mesa_vcap_vr_t  ;@;o;;o;	;
+@
+;i8F;"vid;@;[ ;0{;{;{	;o;;o;	;
+@
+;iXF;"mesa_vcap_u8_t  ;@;o;;o;	;
+@
+;ihF;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÉF;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;iìF;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;i¶F;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;i∂F;"tagged;@;[ ;0{;{;{	;o;;o;	;
+@
+;i€F;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;iÎF;"
+s_tag;@;[ ;0;o;;o;	;
+@
+;iG;"mesa_qce_tag_t;@;[ ;0{
+;o;;o;	;
+@
+;iGG;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i\G;"mesa_vcap_u16_t ;@;o;;o;	;
+@
+;ilG;"
+etype;@;[ ;0{;{;{	;o;;o;	;
+@
+;iéG;"mesa_vcap_u32_t ;@;o;;o;	;
+@
+;iûG;"	data;@;[ ;0;o;;o;	;
+@
+;i≥G;"mesa_qce_frame_etype_t;@;[ ;0{
+;o;;o;	;
+@
+;iG;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iH;"mesa_vcap_u48_t ;@;o;;o;	;
+@
+;iH;"	data;@;[ ;0;o;;o;	;
+@
+;i%H;"mesa_qce_frame_llc_t;@;[ ;0{
+;o;;o;	;
+@
+;iaH;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ivH;"mesa_vcap_u48_t ;@;o;;o;	;
+@
+;iÜH;"	data;@;[ ;0;o;;o;	;
+@
+;iñH;"mesa_qce_frame_snap_t;@;[ ;0{
+;o;;o;	;
+@
+;i”H;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iËH;"mesa_vcap_bit_t ;@;o;;o;	;
+@
+;i¯H;"fragment;@;[ ;0{;{;{	;o;;o;	;
+@
+;iI;"mesa_vcap_vr_t  ;@;o;;o;	;
+@
+;i"I;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iFI;"mesa_vcap_u8_t  ;@;o;;o;	;
+@
+;iVI;"
+proto;@;[ ;0{;{;{	;o;;o;	;
+@
+;ipI;"mesa_vcap_ip_t  ;@;o;;o;	;
+@
+;iÄI;"sip;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÿI;"mesa_vcap_ip_t  ;@;o;;o;	;
+@
+;iËI;"	dip ;@;[ ;o;;o;	;
+@
+;iÏI;"CAP(QOS_QCL_KEY_DIP);@{;{;{	;o;;o;	;
+@
+;iMJ;"mesa_vcap_vr_t  ;@;o;;o;	;
+@
+;i]J;"
+sport;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏J;"mesa_vcap_vr_t  ;@;o;;o;	;
+@
+;i»J;"
+dport;@;[ ;0;o;;o;	;
+@
+;i*K;"mesa_qce_frame_ipv4_t;@;[ ;0{
+;o;;o;	;
+@
+;igK;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i|K;"mesa_vcap_vr_t   ;@;o;;o;	;
+@
+;içK;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∞K;"mesa_vcap_u8_t   ;@;o;;o;	;
+@
+;i¡K;"
+proto;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄K;"mesa_vcap_u128_t ;@;o;;o;	;
+@
+;iÎK;"sip;@;[ ;0{;{;{	;o;;o;	;
+@
+;iRL;"mesa_vcap_u128_t ;@;o;;o;	;
+@
+;icL;"	dip ;@;[ ;o;;o;	;
+@
+;igL;"CAP(QOS_QCL_KEY_DIP);@{;{;{	;o;;o;	;
+@
+;i L;"mesa_vcap_vr_t   ;@;o;;o;	;
+@
+;i€L;"
+sport;@;[ ;0{;{;{	;o;;o;	;
+@
+;i5M;"mesa_vcap_vr_t   ;@;o;;o;	;
+@
+;iFM;"
+dport;@;[ ;0;o;;o;	;
+@
+;ißM;"mesa_qce_frame_ipv6_t;@;[ ;0{
+;o;;o;	;
+@
+;i M;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iﬂM;"mesa_port_list_t ;@;o;;o;	;
+@
+;iM;"port_list;@;[ ;0{;{;{	;o;;o;	;
+@
+;i"N;"mesa_qce_mac_t   ;@;o;;o;	;
+@
+;i3N;"mac;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_N;"mesa_qce_tag_t   ;@;o;;o;	;
+@
+;ipN;"tag;@;[ ;0{;{;{	;o;;o;	;
+@
+;iúN;"mesa_qce_tag_t   ;@;o;;o;	;
+@
+;i≠N;"inner_tag ;@;[ ;o;;o;	;
+@
+;i∑N;"CAP(QOS_QCL_KEY_INNER_TAG);@{;{;{	;o;;o;	;
+@
+;i‰N;"mesa_qce_type_t  ;@;o;;o;	;
+@
+;iıN;"	type;@;[ ;0{:member_union{:union_type_declare{;o;;o;	;
+@
+;i)O;"
+union;@:union_members[
+{;{;{	;o;;o;	;
+@
+;ijO;"mesa_qce_frame_etype_t ;@;o;;o;	;
+@
+;iÅO;"
+etype;@;[ ;0{;{;{	;o;;o;	;
+@
+;ißO;"mesa_qce_frame_llc_t   ;@;o;;o;	;
+@
+;iæO;"llc;@;[ ;0{;{;{	;o;;o;	;
+@
+;i‚O;"mesa_qce_frame_snap_t  ;@;o;;o;	;
+@
+;i˘O;"	snap;@;[ ;0{;{;{	;o;;o;	;
+@
+;iP;"mesa_qce_frame_ipv4_t  ;@;o;;o;	;
+@
+;i5P;"	ipv4;@;[ ;0{;{;{	;o;;o;	;
+@
+;iZP;"mesa_qce_frame_ipv6_t  ;@;o;;o;	;
+@
+;iqP;"	ipv6;@;[ ;0;o;;o;	;
+@
+;iîP;"
+frame;@;[ ;o;;o;	;
+@
+;iπP;"mesa_qce_key_t;@;[ ;0{
+;o;;o;	;
+@
+;iÿP;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iÌP;"mesa_bool_t               ;@;o;;o;	;
+@
+;iQ;"prio_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i?Q;"mesa_prio_t               ;@;o;;o;	;
+@
+;iYQ;"	prio;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÅQ;"mesa_bool_t               ;@;o;;o;	;
+@
+;iõQ;"dp_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÕQ;"mesa_dp_level_t           ;@;o;;o;	;
+@
+;iÁQ;"dp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i	R;"mesa_bool_t               ;@;o;;o;	;
+@
+;i#R;"dscp_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iWR;"mesa_dscp_t               ;@;o;;o;	;
+@
+;iqR;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iïR;"mesa_bool_t               ;@;o;;o;	;
+@
+;iØR;"pcp_dei_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍR;"mesa_tagprio_t            ;@;o;;o;	;
+@
+;iS;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i'S;"mesa_dei_t                ;@;o;;o;	;
+@
+;iAS;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;idS;"mesa_bool_t               ;@;o;;o;	;
+@
+;i~S;"policy_no_enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∏S;"mesa_acl_policy_no_t      ;@;o;;o;	;
+@
+;i“S;"policy_no;@;[ ;0{;{;{	;o;;o;	;
+@
+;i˝S;"mesa_bool_t               ;@;o;;o;	;
+@
+;iT;"map_id_enable ;@;[ ;o;;o;	;
+@
+;i%T;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;ilT;"mesa_qos_ingress_map_id_t ;@;o;;o;	;
+@
+;iÜT;"map_id        ;@;[ ;o;;o;	;
+@
+;iîT;"CAP(QOS_INGRESS_MAP_CNT);@;o;;o;	;
+@
+;iŸT;"mesa_qce_action_t;@;[ ;0{
+;o;;o;	;
+@
+;iU;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iU;"mesa_qce_id_t     ;@;o;;o;	;
+@
+;i)U;"id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iEU;"mesa_qce_key_t    ;@;o;;o;	;
+@
+;iWU;"key;@;[ ;0{;{;{	;o;;o;	;
+@
+;irU;"mesa_qce_action_t ;@;o;;o;	;
+@
+;iÑU;"action;@;[ ;0;o;;o;	;
+@
+;i†U;"mesa_qce_t;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV;"mesa_rc ;@;o;;o;	;
+@
+;iV;"mesa_qce_init;@;[ ;0;[{;{	;o;;o;	;
+@
+;iV;"const mesa_inst_t     ;@;o;;o;	;
+@
+;i3V;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iOV;"const mesa_qce_type_t ;@;o;;o;	;
+@
+;ieV;"	type;@;[ ;0{;{	;o;;o;	;
+@
+;iÅV;""mesa_qce_t            *const ;@;o;;o;	;
+@
+;iûV;"qce;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i}W;"mesa_rc ;@;o;;o;	;
+@
+;iÖW;"mesa_qce_add;@;[ ;0;[{;{	;o;;o;	;
+@
+;iíW;"const mesa_inst_t   ;@;o;;o;	;
+@
+;i¶W;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i¡W;"const mesa_qce_id_t ;@;o;;o;	;
+@
+;i’W;"qce_id;@;[ ;0{;{	;o;;o;	;
+@
+;iÚW;" const mesa_qce_t    *const ;@;o;;o;	;
+@
+;iX;"qce;@;[ ;0;0{;{;{	;o;;o;	;
+@
+;i\X;"mesa_rc ;@;o;;o;	;
+@
+;idX;"mesa_qce_del;@;[ ;0;[{;{	;o;;o;	;
+@
+;iqX;"const mesa_inst_t   ;@;o;;o;	;
+@
+;iÖX;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i†X;"const mesa_qce_id_t ;@;o;;o;	;
+@
+;i¥X;"qce_id;@;[ ;0;0{
+;o;;o;	;
+@
+;i„X;"typedef;@;{;o;;o;	;
+@
+;iÎX;"	enum;@; [
+{;!{;"o;;o;	;
+@
+;iˆX;"!MESA_QOS_INGRESS_MAP_KEY_PCP;@;0{;!{;"o;;o;	;
+@
+;i]Y;"%MESA_QOS_INGRESS_MAP_KEY_PCP_DEI;@;0{;!{;"o;;o;	;
+@
+;i»Y;""MESA_QOS_INGRESS_MAP_KEY_DSCP;@;0{;!{;"o;;o;	;
+@
+;i3Z;"*MESA_QOS_INGRESS_MAP_KEY_DSCP_PCP_DEI;@;0{;!{;"o;;o;	;
+@
+;iπZ;"5MESA_QOS_INGRESS_MAP_KEY_MPLS_TC                ;@;0;o;;o;	;
+@
+;i'[;" mesa_qos_ingress_map_key_t ;@;[ ;o;;o;	;
+@
+;iB[;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;i©[;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;iæ[;"mesa_bool_t ;@;o;;o;	;
+@
+;i [;"cos;@;[ ;0{;{;{	;o;;o;	;
+@
+;i\;"mesa_bool_t ;@;o;;o;	;
+@
+;i*\;"dpl;@;[ ;0{;{;{	;o;;o;	;
+@
+;i~\;"mesa_bool_t ;@;o;;o;	;
+@
+;iä\;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iﬁ\;"mesa_bool_t ;@;o;;o;	;
+@
+;iÍ\;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;i>];"mesa_bool_t ;@;o;;o;	;
+@
+;iJ];"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iü];"mesa_bool_t ;@;o;;o;	;
+@
+;i´];"
+cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i^;"mesa_bool_t ;@;o;;o;	;
+@
+;i^;"	path;@;[ ;0{;{;{	;o;;o;	;
+@
+;ij^;"mesa_bool_t ;@;o;;o;	;
+@
+;iv^;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;iÃ^;"#mesa_qos_ingress_map_action_t ;@;[ ;o;;o;	;
+@
+;iÍ^;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;iW_;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;il_;"mesa_cos_t     ;@;o;;o;	;
+@
+;i{_;"cos;@;[ ;0{;{;{	;o;;o;	;
+@
+;i⁄_;"mesa_dpl_t     ;@;o;;o;	;
+@
+;iÈ_;"dpl;@;[ ;0{;{;{	;o;;o;	;
+@
+;iH`;"mesa_pcp_t     ;@;o;;o;	;
+@
+;iW`;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂`;"mesa_dei_t     ;@;o;;o;	;
+@
+;i≈`;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;i$a;"mesa_dscp_t    ;@;o;;o;	;
+@
+;i3a;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iïa;"mesa_cosid_t   ;@;o;;o;	;
+@
+;i§a;"
+cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i
+b;"mesa_cosid_t   ;@;o;;o;	;
+@
+;ib;"path_cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;izb;"mesa_mpls_tc_t ;@;o;;o;	;
+@
+;iâb;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;iÌb;"#mesa_qos_ingress_map_values_t ;@;[ ;o;;o;	;
+@
+;ic;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;iWc;"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;ilc;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;iäc;"	dscp;@;[{;o;;o;	;
+@
+;ièc;"64;@;0{;{;{	;o;;o;	;
+@
+;i≈c;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;i„c;"pcp_dei;@;[{;o;;o;	;
+@
+;iÎc;"8;@{;o;;o;	;
+@
+;iÓc;"2;@;0;o;;o;	;
+@
+;id;" mesa_qos_ingress_map_dpd_t ;@;[ ;o;;o;	;
+@
+;i:d;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;iÇd;"typedef;@;%{;o;;o;	;
+@
+;iäd;"
+union;@;&[
+{;{;{	;o;;o;	;
+@
+;iñd;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;i¥d;"pcp;@;[{;o;;o;	;
+@
+;i∏d;"8;@;0{;{;{	;o;;o;	;
+@
+;iÍd;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;ie;"pcp_dei;@;[{;o;;o;	;
+@
+;ie;"8;@{;o;;o;	;
+@
+;ie;"2;@;0{;{;{	;o;;o;	;
+@
+;iBe;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;i`e;"	dscp;@;[{;o;;o;	;
+@
+;iee;"64;@;0{;{;{	;o;;o;	;
+@
+;ióe;"#mesa_qos_ingress_map_dpd_t    ;@;o;;o;	;
+@
+;iµe;"dpd;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÙe;"#mesa_qos_ingress_map_values_t ;@;o;;o;	;
+@
+;if;"mpls_tc;@;[{;o;;o;	;
+@
+;if;"8;@;0;o;;o;	;
+@
+;iJf;"!mesa_qos_ingress_map_maps_t ;@;[ ;o;;o;	;
+@
+;iff;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;i∑f;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;iÃf;"#mesa_qos_ingress_map_id_t     ;@;o;;o;	;
+@
+;iÍf;"id;@;[ ;0{;{;{	;o;;o;	;
+@
+;ig;"#mesa_qos_ingress_map_key_t    ;@;o;;o;	;
+@
+;i3g;"key;@;[ ;0{;{;{	;o;;o;	;
+@
+;iWg;"#mesa_qos_ingress_map_action_t ;@;o;;o;	;
+@
+;iug;"action;@;[ ;0{;{;{	;o;;o;	;
+@
+;i§g;"#mesa_qos_ingress_map_maps_t   ;@;o;;o;	;
+@
+;i¬g;"	maps;@;[ ;0;o;;o;	;
+@
+;iÔg;"mesa_qos_ingress_map_t ;@;[ ;o;;o;	;
+@
+;ih;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;iúh;"mesa_rc ;@;o;;o;	;
+@
+;i§h;"mesa_qos_ingress_map_init;@;[ ;0;[{;{	;o;;o;	;
+@
+;iæh;"&const mesa_inst_t                ;@;o;;o;	;
+@
+;iﬂh;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ii;"&const mesa_qos_ingress_map_key_t ;@;o;;o;	;
+@
+;i(i;"key;@;[ ;0{;{	;o;;o;	;
+@
+;iOi;"-mesa_qos_ingress_map_t           *const ;@;o;;o;	;
+@
+;iwi;"map;@;[ ;0;o;;o;	;
+@
+;iÄi;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i›i;"mesa_rc ;@;o;;o;	;
+@
+;iÂi;"mesa_qos_ingress_map_add;@;[ ;0;[{;{	;o;;o;	;
+@
+;i˛i;""const mesa_inst_t            ;@;o;;o;	;
+@
+;ij;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iBj;")const mesa_qos_ingress_map_t *const ;@;o;;o;	;
+@
+;ifj;"map;@;[ ;0;o;;o;	;
+@
+;ioj;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i∫j;"mesa_rc ;@;o;;o;	;
+@
+;i¬j;"mesa_qos_ingress_map_del;@;[ ;0;[{;{	;o;;o;	;
+@
+;i€j;"%const mesa_inst_t               ;@;o;;o;	;
+@
+;i˚j;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;i"k;"%const mesa_qos_ingress_map_id_t ;@;o;;o;	;
+@
+;iBk;"id;@;[ ;0;o;;o;	;
+@
+;iJk;"CAP(QOS_INGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;iÅk;"mesa_rc ;@;o;;o;	;
+@
+;iâk;"!mesa_qos_ingress_map_del_all;@;[ ;0;[{;{	;o;;o;	;
+@
+;i¶k;"const mesa_inst_t ;@;o;;o;	;
+@
+;i∏k;"	inst;@;[ ;0;o;;o;	;
+@
+;i¬k;"CAP(QOS_INGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;il;"typedef;@;{;o;;o;	;
+@
+;i
+l;"	enum;@; [{;!{;"o;;o;	;
+@
+;il;""MESA_QOS_EGRESS_MAP_KEY_COSID;@;0{;!{;"o;;o;	;
+@
+;icl;"&MESA_QOS_EGRESS_MAP_KEY_COSID_DPL;@;0{;!{;"o;;o;	;
+@
+;iπl;"!MESA_QOS_EGRESS_MAP_KEY_DSCP;@;0{;!{;"o;;o;	;
+@
+;im;"%MESA_QOS_EGRESS_MAP_KEY_DSCP_DPL;@;0{;!{;"o;;o;	;
+@
+;iYm;"$MESA_QOS_EGRESS_MAP_KEY_MPLS_TC;@;0{;!{;"o;;o;	;
+@
+;i£m;"6MESA_QOS_EGRESS_MAP_KEY_MPLS_TC_DPL              ;@;0;o;;o;	;
+@
+;iÛm;"mesa_qos_egress_map_key_t ;@;[ ;o;;o;	;
+@
+;in;"CAP(QOS_EGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;ikn;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;iÄn;"mesa_bool_t ;@;o;;o;	;
+@
+;iån;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i€n;"mesa_bool_t ;@;o;;o;	;
+@
+;iÁn;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;i6o;"mesa_bool_t ;@;o;;o;	;
+@
+;iBo;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;iío;"mesa_bool_t ;@;o;;o;	;
+@
+;iûo;"	path;@;[ ;0{;{;{	;o;;o;	;
+@
+;iıo;"mesa_bool_t ;@;o;;o;	;
+@
+;ip;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;iRp;""mesa_qos_egress_map_action_t ;@;[ ;o;;o;	;
+@
+;iop;"CAP(QOS_EGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;i€p;"typedef;@;{;[
+{;{;{	;o;;o;	;
+@
+;ip;"mesa_pcp_t     ;@;o;;o;	;
+@
+;iˇp;"pcp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i_q;"mesa_dei_t     ;@;o;;o;	;
+@
+;inq;"dei;@;[ ;0{;{;{	;o;;o;	;
+@
+;iŒq;"mesa_dscp_t    ;@;o;;o;	;
+@
+;i›q;"	dscp;@;[ ;0{;{;{	;o;;o;	;
+@
+;i@r;"mesa_cosid_t   ;@;o;;o;	;
+@
+;iOr;"path_cosid;@;[ ;0{;{;{	;o;;o;	;
+@
+;i±r;"mesa_mpls_tc_t ;@;o;;o;	;
+@
+;i¿r;"mpls_tc;@;[ ;0;o;;o;	;
+@
+;i%s;""mesa_qos_egress_map_values_t ;@;[ ;o;;o;	;
+@
+;iBs;"CAP(QOS_EGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;iâs;"typedef;@;%{;o;;o;	;
+@
+;iës;"
+union;@;&[{;{;{	;o;;o;	;
+@
+;iùs;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;i∫s;"
+cosid;@;[{;o;;o;	;
+@
+;i¿s;"8;@;0{;{;{	;o;;o;	;
+@
+;iÛs;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;it;"cosid_dpl;@;[{;o;;o;	;
+@
+;it;"8;@{;o;;o;	;
+@
+;it;"4;@;0{;{;{	;o;;o;	;
+@
+;iMt;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;ijt;"	dscp;@;[{;o;;o;	;
+@
+;iot;"64;@;0{;{;{	;o;;o;	;
+@
+;i¢t;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;iøt;"dscp_dpl;@;[{;o;;o;	;
+@
+;i»t;"64;@{;o;;o;	;
+@
+;iÃt;"4;@;0{;{;{	;o;;o;	;
+@
+;i˚t;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;iu;"mpls_tc;@;[{;o;;o;	;
+@
+;i u;"8;@;0{;{;{	;o;;o;	;
+@
+;iSu;""mesa_qos_egress_map_values_t ;@;o;;o;	;
+@
+;ipu;"mpls_tc_dpl;@;[{;o;;o;	;
+@
+;i|u;"8;@{;o;;o;	;
+@
+;iu;"4;@;0;o;;o;	;
+@
+;i≠u;" mesa_qos_egress_map_maps_t ;@;[ ;o;;o;	;
+@
+;i»u;"CAP(QOS_EGRESS_MAP_CNT);@{
+;o;;o;	;
+@
+;iv;"typedef;@;{;[	{;{;{	;o;;o;	;
+@
+;i-v;""mesa_qos_egress_map_id_t     ;@;o;;o;	;
+@
+;iJv;"id;@;[ ;0{;{;{	;o;;o;	;
+@
+;iwv;""mesa_qos_egress_map_key_t    ;@;o;;o;	;
+@
+;iîv;"key;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∫v;""mesa_qos_egress_map_action_t ;@;o;;o;	;
+@
+;i◊v;"action;@;[ ;0{;{;{	;o;;o;	;
+@
+;iw;""mesa_qos_egress_map_maps_t   ;@;o;;o;	;
+@
+;i%w;"	maps;@;[ ;0;o;;o;	;
+@
+;iTw;"mesa_qos_egress_map_t ;@;[ ;o;;o;	;
+@
+;ijw;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i˝w;"mesa_rc ;@;o;;o;	;
+@
+;ix;"mesa_qos_egress_map_init;@;[ ;0;[{;{	;o;;o;	;
+@
+;ix;"%const mesa_inst_t               ;@;o;;o;	;
+@
+;i>x;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iex;"%const mesa_qos_egress_map_key_t ;@;o;;o;	;
+@
+;iÖx;"key;@;[ ;0{;{	;o;;o;	;
+@
+;i´x;",mesa_qos_egress_map_t           *const ;@;o;;o;	;
+@
+;i“x;"map;@;[ ;0;o;;o;	;
+@
+;i€x;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i5y;"mesa_rc ;@;o;;o;	;
+@
+;i=y;"mesa_qos_egress_map_add;@;[ ;0;[{;{	;o;;o;	;
+@
+;iUy;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;iqy;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ióy;"(const mesa_qos_egress_map_t *const ;@;o;;o;	;
+@
+;i∫y;"map;@;[ ;0;o;;o;	;
+@
+;i√y;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;iz;"mesa_rc ;@;o;;o;	;
+@
+;iz;"mesa_qos_egress_map_del;@;[ ;0;[{;{	;o;;o;	;
+@
+;i,z;"$const mesa_inst_t              ;@;o;;o;	;
+@
+;iKz;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iqz;"$const mesa_qos_egress_map_id_t ;@;o;;o;	;
+@
+;iêz;"id;@;[ ;0;o;;o;	;
+@
+;iòz;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;iÕz;"mesa_rc ;@;o;;o;	;
+@
+;i’z;" mesa_qos_egress_map_del_all;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÒz;"const mesa_inst_t ;@;o;;o;	;
+@
+;i{;"	inst;@;[ ;0;o;;o;	;
+@
+;i{;"CAP(QOS_EGRESS_MAP_CNT);@{;{;{	;o;;o;	;
+@
+;i};"mesa_rc ;@;o;;o;	;
+@
+;i!};"mesa_qos_shaper_calibrate;@;[ ;0;[{;{	;o;;o;	;
+@
+;i;};"const mesa_inst_t ;@;o;;o;	;
+@
+;iM};"	inst;@;[ ;0;o;;o;	;
+@
+;iW};"CAP(QOS_SHAPER_CALIBRATE);@{
+;o;;o;	;
+@
+;iü};"typedef;@;{;[{;{;{	;o;;o;	;
+@
+;i¥};"mesa_policer_type_t ;@;o;;o;	;
+@
+;i»};"	type;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÍ};"mesa_bool_t         ;@;o;;o;	;
+@
+;i˛};"enable;@;[ ;0{;{;{	;o;;o;	;
+@
+;i*~;"mesa_bool_t         ;@;o;;o;	;
+@
+;i>~;"cm ;@;[ ;o;;o;	;
+@
+;iA~;"CAP(QOS_DLB_CM);@{;{;{	;o;;o;	;
+@
+;i~;"mesa_bool_t         ;@;o;;o;	;
+@
+;iì~;"cf;@;[ ;0{;{;{	;o;;o;	;
+@
+;i∂~;"mesa_bool_t         ;@;o;;o;	;
+@
+;i ~;"line_rate;@;[ ;0{;{;{	;o;;o;	;
+@
+;i;"mesa_bitrate_t      ;@;o;;o;	;
+@
+;i&;"cir;@;[ ;0{;{;{	;o;;o;	;
+@
+;iV;"mesa_burst_level_t  ;@;o;;o;	;
+@
+;ij;"cbs;@;[ ;0{;{;{	;o;;o;	;
+@
+;iî;"mesa_bitrate_t      ;@;o;;o;	;
+@
+;i®;"eir;@;[ ;0{;{;{	;o;;o;	;
+@
+;i’;"mesa_burst_level_t  ;@;o;;o;	;
+@
+;iÈ;"ebs;@;[ ;0{;{;{	;o;;o;	;
+@
+;iÄ;"mesa_bool_t         ;@;o;;o;	;
+@
+;i$Ä;"drop_yellow;@;[ ;0{;{;{	;o;;o;	;
+@
+;i]Ä;"mesa_opt_bool_t     ;@;o;;o;	;
+@
+;iqÄ;"mark_all_red;@;[ ;0;o;;o;	;
+@
+;i“Ä;"mesa_dlb_policer_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;i	Å;"typedef;@:type_aliaso;;o;	;
+@
+;iÅ;"mesa_dlb_policer_conf_t ;@;o;;o;	;
+@
+;i)Å;"mesa_evc_policer_conf_t;@;[ ;0{;o;;o;	;
+@
+;iCÅ;"V#define MESA_EVC_POLICER_ID_DISCARD 4094 // EVC/ECE: Policer discards all frames
+;@{;o;;o;	;
+@
+;iîÅ;"V#define MESA_EVC_POLICER_ID_NONE    4095 // EVC/ECE: Policer forwards all frames
+;@{;o;;o;	;
+@
+;iÂÅ;"L#define MESA_EVC_POLICER_ID_EVC     4096 // ECE only: Use EVC policer
+
+;@{;{;{	;o;;o;	;
+@
+;iôÇ;"mesa_rc ;@;o;;o;	;
+@
+;i°Ç;"mesa_evc_policer_conf_get;@;[ ;0;[{;{	;o;;o;	;
+@
+;iªÇ;"!const mesa_inst_t           ;@;o;;o;	;
+@
+;i◊Ç;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;iˇÇ;"!const mesa_evc_policer_id_t ;@;o;;o;	;
+@
+;iÉ;"policer_id;@;[ ;0{;{	;o;;o;	;
+@
+;iIÉ;"(mesa_evc_policer_conf_t     *const ;@;o;;o;	;
+@
+;ilÉ;"	conf;@;[ ;0;o;;o;	;
+@
+;ivÉ;"CAP(EVC_POLICER_CNT);@{;{;{	;o;;o;	;
+@
+;i˙É;"mesa_rc ;@;o;;o;	;
+@
+;iÑ;"mesa_evc_policer_conf_set;@;[ ;0;[{;{	;o;;o;	;
+@
+;iÑ;"#const mesa_inst_t             ;@;o;;o;	;
+@
+;i:Ñ;"	inst;@;[ ;0{;{	;o;;o;	;
+@
+;ibÑ;"#const mesa_evc_policer_id_t   ;@;o;;o;	;
+@
+;iÄÑ;"policer_id;@;[ ;0{;{	;o;;o;	;
+@
+;iÆÑ;"*const mesa_evc_policer_conf_t *const ;@;o;;o;	;
+@
+;i”Ñ;"	conf;@;[ ;0;o;;o;	;
+@
+;i›Ñ;"CAP(EVC_POLICER_CNT);@{;o;;o;	;
+@
+;iıÑ;"-#include <microchip/ethernet/hdr_end.h>
+;@{;o;;o;	;
+@
+;iÖ;"3#endif // _MICROCHIP_ETHERNET_SWITCH_API_QOS_
+;@

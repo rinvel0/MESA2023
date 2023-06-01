@@ -1,0 +1,4308 @@
+{:	root[{:ppo:Parslet::Slice:@positiono:Parslet::Position:@string"ÒÎ// Copyright (c) 2004-2020 Microchip Technology Inc. and its subsidiaries.
+// SPDX-License-Identifier: MIT
+
+
+/**
+ * \file
+ * \brief Generic types API
+ * \details This header file describes generic types used in the API
+ */
+
+#ifndef _VTSS_API_TYPES_H_
+#define _VTSS_API_TYPES_H_
+
+#include <vtss/api/options.h>
+#include <vtss_os.h>            /* This defines the *runtime* OS environment */
+
+// TODO, all the _VTSS_MAIN_TYPES_H_ needs to be deleted then the API split is
+// complete
+#ifndef _VTSS_MAIN_TYPES_H_
+
+/** \brief Max/min values for 64 signed integer */
+#define VTSS_I64_MAX  0x7FFFFFFFFFFFFFFFLL  /**<  Max value for 64 bit signed integer */
+#define VTSS_I64_MIN -0x8000000000000000LL  /**<  Min value for 64 bit signed integer */
+#endif // _VTSS_MAIN_TYPES_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef _VTSS_MAIN_TYPES_H_
+/* Formatting defaults if no inttypes available */
+#if __INTPTR_MAX__ == __INT32_MAX__
+#    if !defined(PRIu64)
+#        define PRIu64 "llu"           /**< Fallback un-signed 64-bit formatting string */
+#    endif
+
+#    if !defined(PRIi64)
+#        define PRIi64 "lli"           /**< Fallback signed 64-bit formatting string */
+#    endif
+
+#    if !defined(PRIx64)
+#        define PRIx64 "llx"           /**< Fallback hex 64-bit formatting string */
+#    endif
+
+#elif __INTPTR_MAX__ == __INT64_MAX__
+#    if !defined(PRIu64)
+#        define PRIu64 "lu"           /**< Fallback un-signed 64-bit formatting string */
+#    endif
+
+#    if !defined(PRIi64)
+#        define PRIi64 "li"           /**< Fallback signed 64-bit formatting string */
+#    endif
+
+#    if !defined(PRIx64)
+#        define PRIx64 "lx"           /**< Fallback hex 64-bit formatting string */
+#    endif
+#else
+#    error "Environment not 32 or 64-bit."
+#endif
+
+#define VTSS_BIT64(x)                  (1ULL << (x))                           /**< Set one bit in a 64-bit mask               */
+#define VTSS_BITMASK64(x)              ((1ULL << (x)) - 1)                     /**< Get a bitmask consisting of x ones         */
+#define VTSS_EXTRACT_BITFIELD64(x,o,w) (((x) >> (o)) & VTSS_BITMASK64(w))      /**< Extract w bits from bit position o in x    */
+#define VTSS_ENCODE_BITFIELD64(x,o,w)  (((u64)(x) & VTSS_BITMASK64(w)) << (o)) /**< Place w bits of x at bit position o        */
+#define VTSS_ENCODE_BITMASK64(o,w)     (VTSS_BITMASK64(w) << (o))              /**< Create a bitmask of w bits positioned at o */
+
+#if !defined(TRUE)
+#define TRUE  1 /**< True boolean value */
+#endif
+#if !defined(FALSE)
+#define FALSE 0 /**< False boolean value */
+#endif
+
+/** \brief Error code type */
+typedef int vtss_rc;
+
+/** \brief Error codes */
+enum
+{
+    VTSS_RC_OK                                  =  0,  /**< Success */
+    VTSS_RC_ERROR                               = -1,  /**< Unspecified error */
+    VTSS_RC_INV_STATE                           = -2,  /**< Invalid state for operation */
+    VTSS_RC_INCOMPLETE                          = -3,  /**< Incomplete result */
+    VTSS_RC_NOT_IMPLEMENTED                     = -4,  /**< Not implemented */
+    VTSS_RC_ERR_PARM                            = -5,  /**< Invalid parameter */
+    VTSS_RC_ERR_NO_RES                          = -6,  /**< Out of resources */
+
+    VTSS_RC_ERR_KR_CONF_NOT_SUPPORTED           = -7,  /**< The PHY doesn't support 10GBASE_KR equalization */
+    VTSS_RC_ERR_KR_CONF_INVALID_PARAMETER       = -8,  /**< One of the parameters are out of range */
+
+    /**** 1G ERRORS ****/
+    VTSS_RC_ERR_PHY_BASE_NO_NOT_FOUND           = -50,  /**< Port base number (first port within a chip) is not found */
+    VTSS_RC_ERR_PHY_6G_MACRO_SETUP              = -51,  /**< Setup of 6G macro failed */
+    VTSS_RC_ERR_PHY_MEDIA_IF_NOT_SUPPORTED      = -52,  /**< PHY does not support the selected media mode */
+    VTSS_RC_ERR_PHY_CLK_CONF_NOT_SUPPORTED      = -53,  /**< The PHY doesn't support clock configuration (for SynceE) */
+    VTSS_RC_ERR_PHY_GPIO_ALT_MODE_NOT_SUPPORTED = -54,  /**< The PHY doesn't support the alternative mode for the selected GPIO pin*/
+    VTSS_RC_ERR_PHY_GPIO_PIN_NOT_SUPPORTED      = -55,  /**< The PHY doesn't support the selected GPIO pin */
+    VTSS_RC_ERR_PHY_PORT_OUT_RANGE              = -56,  /**< PHY API called with port number larger than VTSS_PORTS*/
+    VTSS_RC_ERR_PHY_PATCH_SETTING_NOT_SUPPORTED = -57,  /**< PHY API micro patch setting not supported for the port in question*/
+    VTSS_RC_ERR_PHY_LCPLL_NOT_SUPPORTED         = -58,  /**< PHY API LC-PLL status not supported for the port */
+    VTSS_RC_ERR_PHY_RCPLL_NOT_SUPPORTED         = -59,  /**< PHY API RC-PLL status not supported for the port */
+
+    /**** MACSEC ERRORS ****/
+    VTSS_RC_ERR_MACSEC_INVALID_SCI_MACADDR      = -60,  /**< From IEEE 802.1AE-2006, section 9.9 - The 64-bit value FF-FF-FF-FF-FF-FF is never used as an SCI and is reserved for use by implementations to indicate the absence of an SC or an SCI in contexts where an SC can be present */
+    VTSS_RC_ERR_MACSEC_NOT_ENABLED              = -61,  /**< Trying to access port where MACSEC is not enabled*/
+    VTSS_RC_ERR_MACSEC_SECY_ALREADY_IN_USE      = -63,  /**< Trying to use a secy which is already in use*/
+    VTSS_RC_ERR_MACSEC_NO_SECY_FOUND            = -64,  /**< No SecY found for the specific port*/
+    VTSS_RC_ERR_MACSEC_NO_SECY_VACANCY          = -65,  /**< No secy vacancy*/
+    VTSS_RC_ERR_MACSEC_INVALID_VALIDATE_FRM     = -66,  /**< Validate_frames value invalid*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_SA_MATCH   = -67,  /**< Could not program the SA match*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_SA_FLOW    = -68,  /**< Could not program the SA flow*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_ENA_SA         = -69,  /**< Could not enable the SA*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_SET_SA         = -70,  /**< Could not set SA to in use*/
+    VTSS_RC_ERR_MACSEC_INVALID_BYPASS_HDR_LEN   = -71,  /**< Invalid header bypass length*/
+    VTSS_RC_ERR_MACSEC_SC_NOT_FOUND             = -72,  /**< Could not find SC (from sci)*/
+    VTSS_RC_ERR_MACSEC_NO_CTRL_FRM_MATCH        = -73,  /**< No control frame match*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_SET_PATTERN    = -74,  /**< Could no set bypass pattern for CP rule*/
+    VTSS_RC_ERR_MACSEC_TIMEOUT_ISSUE            = -75,  /**< Internal timeout issue, bailing out*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_EMPTY_EGRESS   = -76,  /**< Could not empty the egress pipeline*/
+    VTSS_RC_ERR_MACSEC_AN_NOT_CREATED           = -77,  /**< AN not created.*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_EMPTY_INGRESS  = -78,  /**< Could not empty the ingress pipeline*/
+    VTSS_RC_ERR_MACSEC_TX_SC_NOT_EXIST          = -80,  /**< No tx SC found*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_DISABLE_SA     = -81,  /**< Could not disable sa*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_DEL_RX_SA      = -82,  /**< Could not delete rx sa*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_DEL_TX_SA      = -83,  /**< Could not delete tx sa*/
+    VTSS_RC_ERR_MACSEC_PATTERN_NOT_SET          = -84,  /**< Pattern not set*/
+    VTSS_RC_ERR_MACSEC_HW_RESOURCE_EXHUSTED     = -85,  /**< HW resources exhausted*/
+    VTSS_RC_ERR_MACSEC_SCI_ALREADY_EXISTS       = -86,  /**< SCI already exists*/
+    VTSS_RC_ERR_MACSEC_SC_RESOURCE_NOT_FOUND    = -87,  /**< Could not find SC resources*/
+    VTSS_RC_ERR_MACSEC_RX_AN_ALREADY_IN_USE     = -88,  /**< Rx AN is in use*/
+    VTSS_RC_ERR_MACSEC_EMPTY_RECORD             = -89,  /**< Could not get an empty record*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_XFORM      = -90,  /**< Could not program the xform record*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_TOGGLE_SA      = -91,  /**< Could not toggle SA*/
+    VTSS_RC_ERR_MACSEC_TX_AN_ALREADY_IN_USE     = -92,  /**< Tx AN is in use*/
+    VTSS_RC_ERR_MACSEC_ALL_AVAILABLE_SA_IN_USE  = -93,  /**< All available SA's are in use*/
+    VTSS_RC_ERR_MACSEC_MATCH_DISABLE            = -94,  /**< MACSEC match disabled*/
+    VTSS_RC_ERR_MACSEC_ALL_CP_RULES_IN_USE      = -95,  /**< All CP rules of the specific type are in use*/
+    VTSS_RC_ERR_MACSEC_PATTERN_PRIO_NOT_VALID   = -96,  /**< The pattern priority is not valid*/
+    VTSS_RC_ERR_MACSEC_BUFFER_TOO_SMALL         = -97,  /**< Buffer to small, must be greater than VTSS_MACSEC_FRAME_CAPTURE_SIZE_MAX*/
+    VTSS_RC_ERR_MACSEC_FRAME_TOO_LONG           = -98,  /**< Frame length is supposed to be less than the amount of data in the fifo*/
+    VTSS_RC_ERR_MACSEC_FRAME_TRUNCATED          = -99,  /**< Frame is Truncated*/
+    VTSS_RC_ERR_MACSEC_PHY_POWERED_DOWN         = -100, /**< Phy is powered down, i.e. the MacSec block is not accessible*/
+    VTSS_RC_ERR_MACSEC_PHY_NOT_MACSEC_CAPABLE   = -101, /**< Port/Phy is not MacSec capable*/
+    VTSS_RC_ERR_MACSEC_AN_NOT_EXIST             = -102, /**< AN does not exist*/
+    VTSS_RC_ERR_MACSEC_NO_PATTERN_CFG           = -103, /**< No pattern is configured*/
+    VTSS_RC_ERR_MACSEC_MAX_MTU                  = -105, /**< Maximum MTU allowed is 32761 (+ 4 bytes for VLAN)*/
+    VTSS_RC_ERR_MACSEC_UNEXPECT_CP_MODE         = -106, /**< Unexpected CP mode*/
+    VTSS_RC_ERR_MACSEC_COULD_NOT_DISABLE_AN     = -107, /**< Could not disable AN*/
+    VTSS_RC_ERR_MACSEC_RULE_OUT_OF_RANGE        = -108, /**< Rule id is out of range. Must not be larger than VTSS_MACSEC_CP_RULES*/
+    VTSS_RC_ERR_MACSEC_RULE_NOT_EXIST           = -109, /**< Rule does not exist*/
+    VTSS_RC_ERR_MACSEC_CSR_READ                 = -110, /**< Could not do CSR read*/
+    VTSS_RC_ERR_MACSEC_CSR_WRITE                = -111, /**< Could not do CSR write*/
+    VTSS_RC_ERR_PHY_6G_RCPLL_ON_BASE_PORT_ONLY  = -112, /**< PHY API 6G RC-PLL status support only on Base port */
+
+
+    /**** MISC ERRORS ****/
+    VTSS_RC_ERR_INVALID_NULL_PTR                = -200, /**< A pointer was unexpected NULL */
+
+    /*** Clause 37 ERRORS ***/
+    VTSS_RC_ERR_PCS_BLOCK_NOT_SUPPORTED         = -300 /**< Invalid access to PCS block */
+}; // Leave it anonymous.
+#endif // _VTSS_MAIN_TYPES_H_
+
+/****************************************************************************
+ * Common types
+ ****************************************************************************/
+/** \brief Chip number used for targets with multiple chips */
+typedef u32 vtss_chip_no_t;
+
+/** \brief Instance identifier */
+typedef struct vtss_state_s *vtss_inst_t;
+
+/**
+ * \brief Description: Event type.
+ * When a variable of this type is used as an input parameter, the API will set the variable if the event has occured.
+ * The API will never clear the variable. If is up to the application to clear the variable, when the event has been handled.
+ **/
+#ifndef _VTSS_MAIN_TYPES_H_
+typedef BOOL vtss_event_t;
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Policer packet rate in PPS */
+typedef u32 vtss_packet_rate_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_PACKET_RATE_DISABLED 0xffffffff /**< Special value for disabling packet policer */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Port Number */
+typedef u32 vtss_port_no_t;
+
+/** \brief Physical port number */
+typedef u32 vtss_phys_port_no_t;
+
+/**
+ * \brief Memory allocation flags.
+ *
+ * The VTSS API asks the application to
+ * allocate dynamic memory for its internal structures
+ * through calls to VTSS_OS_MALLOC().
+ *
+ * The application should normally just associate
+ * this with a call to malloc() or kmalloc()
+ * depending on the OS and the runtime model (API running
+ * in Kernel or User space).
+ *
+ * However, on some OSs, it's required to allocate
+ * specially if the memory is going to be associated
+ * with DMA, hence the VTSS_MEM_FLAGS_DMA enumeration.
+ *
+ * Also, to be able to support warm restart, another
+ * enumeration, VTSS_MEM_FLAGS_PERSIST, tells
+ * the application to allocate the memory in a part
+ * of RAM that won't be affected by a subsequent boot.
+ *
+ * VTSS_OS_MALLOC() must not block or make waiting points
+ * if called with flags != VTSS_MEM_FLAGS_NONE.
+ *
+ * Each of the enumerations are ORed together to form
+ * the final flags that are used in a call to VTSS_OS_MALLOC().
+ *
+ * The same set of flags are used in calls to VTSS_OS_FREE().
+ */
+typedef enum {
+    VTSS_MEM_FLAGS_NONE    = 0x0, /**< Allocate normally according to runtime model (User or Kernel space). */
+    VTSS_MEM_FLAGS_DMA     = 0x1, /**< Allocate memory that can be used with a DMA.                         */
+    VTSS_MEM_FLAGS_PERSIST = 0x2, /**< Allocate memory that will survive a warm restart.                    */
+} vtss_mem_flags_t;
+
+#define VTSS_PORT_COUNT 1 /**< Default number of ports */
+
+#if defined(VTSS_CHIP_SERVAL_LITE) || defined(VTSS_CHIP_CARACAL_LITE)
+#if (VTSS_PORT_COUNT < 7)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 7 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 7 */
+#endif /* SERVAL_LITE/CARACAL_LITE */
+
+#if defined(VTSS_CHIP_7513)
+#if (VTSS_PORT_COUNT < 9)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 9 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 9 */
+#endif /* 7513 */
+
+#if defined(VTSS_CHIP_SPARX_III_10) || defined(VTSS_CHIP_SPARX_III_10_UM) || \
+    defined(VTSS_CHIP_SPARX_III_10_01)
+#if (VTSS_PORT_COUNT < 10)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 10 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 10 */
+#endif /* SPARX_III_10 */
+
+#if defined(VTSS_CHIP_7511)
+#if (VTSS_PORT_COUNT < 4)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 4 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 4 */
+#endif /* 7511 */
+
+#if defined(VTSS_CHIP_CARACAL_1) || defined(VTSS_CHIP_SERVAL) || \
+    defined(VTSS_CHIP_SPARX_III_11) || defined(VTSS_CHIP_7512) || defined(VTSS_CHIP_7514)
+#if (VTSS_PORT_COUNT < 11)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 11 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 11 */
+#endif /* CARACAL_1/SERVAL/7514 */
+
+#if defined(VTSS_CHIP_SPARX_III_17_UM)
+#if (VTSS_PORT_COUNT < 17)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 17 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 17 */
+#endif /* SPARX_III_17_UM */
+
+#if defined(VTSS_CHIP_SPARX_III_18)
+#if (VTSS_PORT_COUNT < 18)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 18 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 18 */
+#endif /* SPARX_III_18 */
+
+#if defined(VTSS_CHIP_SPARX_III_24)
+#if (VTSS_PORT_COUNT < 24)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 24 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 24 */
+#endif /* SPARX_III_24 */
+
+#if defined(VTSS_CHIP_SPARX_III_25_UM)
+#if (VTSS_PORT_COUNT < 25)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 25 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 25 */
+#endif /* SPARX_III_25_UM */
+
+#if defined(VTSS_CHIP_SPARX_III_26) || defined(VTSS_CHIP_CARACAL_2)
+#if (VTSS_PORT_COUNT < 26)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 26 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 26 */
+#endif /* SPARX_III_26 */
+
+#if defined(VTSS_CHIP_SERVAL_2)
+/* 12x1G + 2x10G + NPI */
+#if (VTSS_PORT_COUNT < 15)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 15 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 15 */
+#endif /* VTSS_CHIP_SERVAL_2 */
+
+#if defined(VTSS_CHIP_LYNX_2) || defined(VTSS_CHIP_SPARX_IV_44)
+/* 24x1G + 2x10G + NPI */
+#if (VTSS_PORT_COUNT < 27)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 27 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 27 */
+#endif /* VTSS_CHIP_LYNX_2/SPARX_IV_44 */
+
+#if defined(VTSS_CHIP_JAGUAR_2) || defined(VTSS_CHIP_SPARX_IV_52) || defined(VTSS_CHIP_SPARX_IV_80) || defined(VTSS_CHIP_SPARX_IV_90)
+/* 48x1G + 4x1G + NPI */
+#if (VTSS_PORT_COUNT < 53)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 53 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 53 */
+#endif /* VTSS_CHIP_JAGUAR_2/SPARX_IV_52/SPARX_IV_80/SPARX_IV_90 */
+
+#if defined(VTSS_CHIP_SERVAL_T) || defined(VTSS_CHIP_SERVAL_TP) || defined(VTSS_CHIP_SERVAL_TE) || defined(VTSS_CHIP_SERVAL_TEP)
+/* 4x1G + 2x2.5G + NPI */
+#if (VTSS_PORT_COUNT < 7)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 7 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 7 */
+#endif /* VTSS_CHIP_SERVAL_T/SERVAL_TE */
+
+#if defined(VTSS_CHIP_SERVAL_2_LITE) || defined(VTSS_CHIP_SPARX_IV_34)
+/* 4x1G + 4x2.5G + 2x10G + NPI */
+#if (VTSS_PORT_COUNT < 11)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 11 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 11 */
+#endif /* VTSS_CHIP_SERVAL_2_LITE/SPARX_IV_34 */
+
+#if defined(VTSS_CHIP_SERVAL_TE10)
+/* 4x1G + 2x2.5G + 2x10G + NPI */
+#if (VTSS_PORT_COUNT < 9)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 9 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 9 */
+#endif /* VTSS_CHIP_SERVAL_TE10 */
+
+#if defined(VTSS_ARCH_SPARX5)
+#if (VTSS_PORT_COUNT < 65)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 65 /**< Number of ports */
+#endif /* VTSS_PORT_COUNT < 65 */
+#endif
+
+#if defined(VTSS_CHIP_966X)
+#if (VTSS_PORT_COUNT < 8)
+#undef VTSS_PORT_COUNT
+#define VTSS_PORT_COUNT 8 /**< Number of ports */
+#endif
+#endif
+
+/* Number of ports may optionally be less than number of chip ports */
+#if VTSS_OPT_PORT_COUNT && ((VTSS_PORT_COUNT == 1) || (VTSS_OPT_PORT_COUNT < VTSS_PORT_COUNT))
+#define VTSS_PORTS VTSS_OPT_PORT_COUNT /**< Number of ports */
+#else
+#define VTSS_PORTS VTSS_PORT_COUNT     /**< Number of ports */
+#endif /* VTSS_OPT_PORT_COUNT */
+
+/* The first logical port number is 0. */
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_PORT_NO_NONE    (0xffffffff) /**< Port number none */
+#define VTSS_PORT_NO_CPU     (0xfffffffe) /**< Port number for CPU for special purposes */
+#define VTSS_PORT_NO_START   (0)          /**< Port start number */
+#endif // _VTSS_MAIN_TYPES_H_
+#define VTSS_PORT_NO_END     (VTSS_PORT_NO_START+VTSS_PORTS) /**< Port end number */
+#define VTSS_PORT_ARRAY_SIZE VTSS_PORT_NO_END /**< Port number array size */
+
+#define VTSS_PORT_IS_PORT(x) ((x)<VTSS_PORT_NO_END) /**< Valid port number */
+
+/** \brief The different interfaces for connecting MAC and PHY */
+typedef enum
+{
+    VTSS_PORT_INTERFACE_NO_CONNECTION, /**< No connection */
+    VTSS_PORT_INTERFACE_LOOPBACK,      /**< Internal loopback in MAC */
+    VTSS_PORT_INTERFACE_INTERNAL,      /**< Internal interface */
+    VTSS_PORT_INTERFACE_MII,           /**< MII (RMII does not exist) */
+    VTSS_PORT_INTERFACE_GMII,          /**< GMII */
+    VTSS_PORT_INTERFACE_RGMII,         /**< RGMII with no internal delay */
+    VTSS_PORT_INTERFACE_RGMII_ID,      /**< RGMII with 2ns internal RX+TX delay */
+    VTSS_PORT_INTERFACE_RGMII_RXID,    /**< RGMII with 2ns internal RX delay */
+    VTSS_PORT_INTERFACE_RGMII_TXID,    /**< RGMII with 2ns internal TX delay */
+    VTSS_PORT_INTERFACE_TBI,           /**< TBI */
+    VTSS_PORT_INTERFACE_RTBI,          /**< RTBI */
+    VTSS_PORT_INTERFACE_SGMII,         /**< SGMII */
+    VTSS_PORT_INTERFACE_SGMII_2G5,     /**< SGMII, 2G5 */
+    VTSS_PORT_INTERFACE_SGMII_CISCO,   /**< SGMII using Cisco aneg  */
+    VTSS_PORT_INTERFACE_SERDES,        /**< SERDES 1G,2G5. 8B/10B PCS */
+    VTSS_PORT_INTERFACE_VAUI,          /**< VAUI 2G5 */
+    VTSS_PORT_INTERFACE_100FX,         /**< 100FX */
+    VTSS_PORT_INTERFACE_XAUI,          /**< XAUI */
+    VTSS_PORT_INTERFACE_RXAUI,         /**< RXAUI */
+    VTSS_PORT_INTERFACE_XGMII,         /**< XGMII */
+    VTSS_PORT_INTERFACE_SPI4,          /**< SPI4 */
+    VTSS_PORT_INTERFACE_QSGMII,        /**< QSGMII */
+    VTSS_PORT_INTERFACE_SFI,           /**< SFI/LAN, 5G-25G, 64B/66B PCS */
+    VTSS_PORT_INTERFACE_SXGMII,        /**< 1x10G or 1x5G device.    Uses primary device. 64B/66B PCS. Experimental unsupported mode!  */
+    VTSS_PORT_INTERFACE_USGMII,        /**< 8x2G5 devices. Mode 'X'. Uses 2G5 device. Experimental unsupported mode!  */
+    VTSS_PORT_INTERFACE_QXGMII,        /**< 4x2G5 devices. Mode 'R'. Uses 2G5 device.    */
+    VTSS_PORT_INTERFACE_DXGMII_5G,     /**< 2x2G5 devices. Mode 'F'. Uses 2G5 device. Experimental unsupported mode!  */
+    VTSS_PORT_INTERFACE_DXGMII_10G,    /**< 2x5G devices.  Mode 'U'. Uses primary device. Experimental unsupported mode!  */
+    VTSS_PORT_INTERFACE_CPU,           /**< Exposed CPU port. Not connected to switch */
+} vtss_port_interface_t;
+
+
+/** \brief Auto negotiation struct */
+typedef struct
+{
+    BOOL obey_pause;               /**< This port should obey PAUSE frames */
+    BOOL generate_pause;           /**< Link partner obeys PAUSE frames */
+} vtss_aneg_t;                     /**< Auto negotiation result */
+
+/** \brief Serdes macro mode */
+typedef enum
+{
+    VTSS_SERDES_MODE_DISABLE,   /**< Disable serdes */
+    VTSS_SERDES_MODE_NONE,      /**< No serdes connected */
+    VTSS_SERDES_MODE_XAUI_12G,  /**< XAUI 12G mode  */
+    VTSS_SERDES_MODE_XAUI,      /**< XAUI 10G mode  */
+    VTSS_SERDES_MODE_RXAUI,     /**< RXAUI 10G mode */
+    VTSS_SERDES_MODE_RXAUI_12G, /**< RXAUI 12G mode */
+    VTSS_SERDES_MODE_2G5,       /**< 2.5G mode      */
+    VTSS_SERDES_MODE_QSGMII,    /**< QSGMII mode    */
+    VTSS_SERDES_MODE_SGMII,     /**< SGMII mode     */
+    VTSS_SERDES_MODE_100FX,     /**< 100FX mode     */
+    VTSS_SERDES_MODE_1000BaseX, /**< 1000BaseX mode */
+    VTSS_SERDES_MODE_SFI,       /**< LAN/10G mode   */
+    VTSS_SERDES_MODE_SFI_DAC,   /**< LAN/10G DAC(CU)*/
+    VTSS_SERDES_MODE_SFI_SR,    /**< Short Range > */
+    VTSS_SERDES_MODE_SFI_ZR,    /**< ZR with APC hardware algorithm > */
+    VTSS_SERDES_MODE_SFI_BP,    /**< Backplane > */
+    VTSS_SERDES_MODE_SFI_B2B,   /**< Bord to Board > */
+    VTSS_SERDES_MODE_SFI_KR,    /**< 10G KR        > */
+    VTSS_SERDES_MODE_SFI_PR_NONE, /**< No preset > */
+    VTSS_SERDES_MODE_IDLE,      /**< Send idles (port appears as down for LP) */
+    VTSS_SERDES_MODE_TEST_MODE, /**< Send fixed test pattern (port appears as up for LP, but no frame rx/tx) */
+    VTSS_SERDES_MODE_USXGMII,   /**< 1 x USXGMII in 5G/10G mode */
+    VTSS_SERDES_MODE_USGMII,    /**< 8 x USGMII in 1G mode */
+    VTSS_SERDES_MODE_QXGMII,    /**< 4 x QXGMII in 2G5 mode.     Mode 'R'  */
+    VTSS_SERDES_MODE_DXGMII_10G,/**< 2 x DXGMII_10G in 5G mode.  Mode 'U'  */
+    VTSS_SERDES_MODE_DXGMII_5G  /**< 2 x DXGMII_5G in 2G5 mode.  Mode 'F'  */
+
+} vtss_serdes_mode_t;
+
+/** \brief VOE index */
+typedef u32 vtss_voe_idx_t;
+
+#define VTSS_VOE_IDX_NONE 0xFFFFFFFF /**< Special value meaning no VOE */
+
+/** \brief MIP (MIP) index */
+typedef u32 vtss_voi_idx_t;
+
+#define VTSS_VOI_IDX_NONE 0xFFFFFFFF /**< Special value meaning no VOI (MIP) */
+
+// MRP index
+typedef u32 vtss_mrp_idx_t;
+
+#define VTSS_MRP_IDX_NONE 0xFFFFFFFF /**< Special value meaning no MRP */
+
+/****************************************************************************
+ * QoS types
+ ****************************************************************************/
+/** \brief Priority number */
+typedef u32 vtss_prio_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_PRIOS           8                              /**< Number of priorities */
+#define VTSS_PRIO_NO_NONE    0xffffffff                     /**< Priority number none (= undefined) */
+#define VTSS_PRIO_START      0                              /**< Priority start number (lowest) */
+#define VTSS_PRIO_END        (VTSS_PRIO_START + VTSS_PRIOS) /**< Priority end number */
+#define VTSS_PRIO_ARRAY_SIZE VTSS_PRIO_END                  /**< Priority number array size */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Queue number */
+typedef u32 vtss_queue_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_QUEUES           VTSS_PRIOS                       /**< Number of queues */
+#define VTSS_QUEUE_START      0                                /**< Queue start number */
+#define VTSS_QUEUE_END        (VTSS_QUEUE_START + VTSS_QUEUES) /**< Queue end number */
+#define VTSS_QUEUE_ARRAY_SIZE VTSS_QUEUE_END                   /**< Queue number array size */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Tag Priority or Priority Code Point (PCP) */
+typedef u32 vtss_tagprio_t;
+/** \brief Priority Code Point (PCP) */
+typedef u8  vtss_pcp_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_PCPS           8                            /**< Number of PCP values */
+#define VTSS_PCP_START      0                            /**< PCP start number */
+#define VTSS_PCP_END        (VTSS_PCP_START + VTSS_PCPS) /**< PCP end number */
+#define VTSS_PCP_ARRAY_SIZE VTSS_PCP_END                 /**< PCP array size */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Drop Eligible Indicator (DEI) */
+typedef BOOL vtss_dei_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_DEIS           2                            /**< Number of DEI values */
+#define VTSS_DEI_START      0                            /**< DEI start number */
+#define VTSS_DEI_END        (VTSS_DEI_START + VTSS_DEIS) /**< DEI end number */
+#define VTSS_DEI_ARRAY_SIZE VTSS_DEI_END                 /**< DEI array size */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Drop Precedence Level (DPL) */
+typedef u8 vtss_dp_level_t;
+/** \brief Drop Precedence Level (DPL) */
+typedef vtss_dp_level_t vtss_dpl_t;
+#define VTSS_DPLS 2 /**< Default number of drop precedence levels */
+
+#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+#undef VTSS_DPLS
+#define VTSS_DPLS 4 /**< Number of drop precedence levels */
+#endif /* defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5) */
+
+#define VTSS_DPL_START      0                            /**< DPL start number */
+#define VTSS_DPL_END        (VTSS_DPL_START + VTSS_DPLS) /**< DPL end number */
+#define VTSS_DPL_ARRAY_SIZE VTSS_DPL_END                 /**< DPL array size */
+
+/** \brief Class of Service. Same as QoS class */
+typedef u8 vtss_cos_t;
+
+/** \brief Percentage, 0-100 */
+typedef u8 vtss_pct_t;
+
+/**
+ * \brief Policer/Shaper bit rate in kbps (1000 bits per second).
+ * The rate will be rounded to the nearest value supported by the chip
+ **/
+typedef u32 vtss_bitrate_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_BITRATE_DISABLED 0xffffffff /**< Bitrate disabled */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/**
+ * \brief Policer/shaper burst level in bytes.
+ * The level will be rounded to the nearest value supported by the chip
+ **/
+typedef u32 vtss_burst_level_t;
+
+/** \brief Storm policer mode configuration */
+typedef enum
+{
+    VTSS_STORM_POLICER_MODE_PORTS_AND_CPU, /**< Police both CPU and front port destinations */
+    VTSS_STORM_POLICER_MODE_PORTS_ONLY,    /**< Police front port destinations only */
+    VTSS_STORM_POLICER_MODE_CPU_ONLY       /**< Police CPU destination only */
+} vtss_storm_policer_mode_t;
+
+/** \brief DSCP value (0-63) */
+typedef u8 vtss_dscp_t;
+
+/** \brief QoS Control Entry ID */
+typedef u32 vtss_qce_id_t;
+
+/** \brief Dual leaky buckets policer configuration */
+typedef enum
+{
+    VTSS_POLICER_TYPE_MEF,    /**< MEF bandwidth profile */
+    VTSS_POLICER_TYPE_SINGLE  /**< Single bucket policer (CIR/CBS) */
+} vtss_policer_type_t;
+
+/** \brief EVC policer index */
+typedef u16 vtss_evc_policer_id_t;
+
+/** \brief WRED group number */
+typedef u32 vtss_wred_group_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_QOS_MAP_ID_NONE  0xfff                                                              /**< ID for unallocated/unused ingress or egress map */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Ingress map ID */
+typedef u16 vtss_qos_ingress_map_id_t;
+
+#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+#define VTSS_QOS_INGRESS_MAP_IDS      256                                                        /**< Number of IDs */
+#else
+#define VTSS_QOS_INGRESS_MAP_IDS      128                                                        /**< Number of IDs */
+#endif /* defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) */
+
+#define VTSS_QOS_INGRESS_MAP_ID_START 0                                                          /**< ID start number */
+#define VTSS_QOS_INGRESS_MAP_ID_END   (VTSS_QOS_INGRESS_MAP_ID_START + VTSS_QOS_INGRESS_MAP_IDS) /**< ID end number */
+#define VTSS_QOS_INGRESS_MAP_ID_NONE  VTSS_QOS_MAP_ID_NONE                                       /**< ID for unallocated/unused */
+
+/** \brief Egress map ID */
+typedef u16 vtss_qos_egress_map_id_t;
+
+#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+#define VTSS_QOS_EGRESS_MAP_IDS       512                                                        /**< Number of IDs */
+#else
+#define VTSS_QOS_EGRESS_MAP_IDS       256                                                        /**< Number of IDs */
+#endif /* defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) */
+
+#define VTSS_QOS_EGRESS_MAP_ID_START  0                                                          /**< ID start number */
+#define VTSS_QOS_EGRESS_MAP_ID_END    (VTSS_QOS_EGRESS_MAP_ID_START + VTSS_QOS_EGRESS_MAP_IDS)   /**< ID end number */
+#define VTSS_QOS_EGRESS_MAP_ID_NONE   VTSS_QOS_MAP_ID_NONE                                       /**< ID for unallocated/unused */
+
+// TBD_VK: Check the defined values when the FA datasheet is available
+#if defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+#define VTSS_QOS_TAS_GCL_LEN_MAX     256 /**< Maximum supported length of TAS gate control list */
+#define VTSS_QOS_TAS_CT_MIN          256 /**< Minimum supported Gate CycleTime in nS. This is due to STARTUP_TIME register resolution */
+#define VTSS_QOS_TAS_CT_MAX   (1000000000-1) /**< Maximum supported Gate CycleTime in nS. Must be less than one second */
+#define VTSS_QOS_TAS_MAX_SDU_MAX  (255*64) /**< Maximum supported MAX SDU size */
+#define VTSS_QOS_TAS_MAX_SDU_MIN  64       /**< Minimum supported MAX SDU size */
+#endif /* defined(VTSS_ARCH_SPARX5) */
+
+// Enable and boolean value
+typedef struct {
+    BOOL enable; // Enable/disable value
+    BOOL value;  // Value
+} vtss_opt_bool_t;
+
+// Enable and priority value
+typedef struct {
+    BOOL        enable; // Enable/disable value
+    vtss_prio_t value;  // Value
+} vtss_opt_prio_t;
+
+// Cycle time
+typedef struct {
+    u32 nsec;     // Nanoseconds
+    u32 nsec_ext; // Nanoseconds extension
+} vtss_cycle_time_t;
+
+/****************************************************************************
+ * VLAN types
+ ****************************************************************************/
+
+/** \brief VLAN Identifier */
+typedef u16 vtss_vid_t; /* 0-4095 */
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_VID_NULL     ((const vtss_vid_t)0)     /**< NULL VLAN ID */
+#define VTSS_VID_DEFAULT  ((const vtss_vid_t)1)     /**< Default VLAN ID */
+#define VTSS_VID_RESERVED ((const vtss_vid_t)0xFFF) /**< Reserved VLAN ID */
+#define VTSS_VIDS         ((const vtss_vid_t)4096)  /**< Number of VLAN IDs */
+#define VTSS_VID_ALL      ((const vtss_vid_t)0x1000)/**< Untagged VID: All VLAN IDs */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/**
+ * \brief VLAN acceptable frame type
+ */
+typedef enum
+{
+    VTSS_VLAN_FRAME_ALL,      /**< Accept all frames */
+    VTSS_VLAN_FRAME_TAGGED,   /**< Accept tagged frames only */
+    VTSS_VLAN_FRAME_UNTAGGED  /**< Accept untagged frames only */
+} vtss_vlan_frame_t;
+
+/** \brief Ethernet Type **/
+typedef u16 vtss_etype_t;
+
+/**
+ * VLAN tag with "arbitrary" TPID.
+ */
+typedef struct {
+    vtss_etype_t   tpid; /**< Tag Protocol Identifier */
+    vtss_tagprio_t pcp;  /**< Priority Code Point     */
+    BOOL           dei;  /**< Drop Eligible Indicator */
+    vtss_vid_t     vid;  /**< VLAN Identifier         */
+} vtss_vlan_tag_t;
+
+#define VTSS_ETYPE_VTSS 0x8880 /**< Vitesse Ethernet Type */
+
+/** \brief MAC Address */
+typedef struct
+{
+    u8 addr[6];   /**< Network byte order */
+} vtss_mac_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_MAC_ADDR_SZ_BYTES    6                 /**< Number of bytes for representing MAC address (SMAC/DMAC) type */
+#endif // _VTSS_MAIN_TYPES_H_
+
+typedef u8 vtss_mac_addr_t[VTSS_MAC_ADDR_SZ_BYTES]; /**< MAC address (SMAC/DMAC) */
+
+/** \brief MAC Address in specific VLAN */
+typedef struct
+{
+    vtss_vid_t  vid;   /**< VLAN ID */
+    vtss_mac_t  mac;   /**< MAC address */
+} vtss_vid_mac_t;
+
+#define MAC_ADDR_BROADCAST {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}  /**< Broadcast address used for addr in the vtss_mac_t struct */
+
+#ifndef _VTSS_MAIN_TYPES_H_
+typedef u32 vtss_isdx_t;   /**< Ingress Service Index type */
+#define VTSS_ISDX_NONE (0) /**< Ingress Service Index number none */
+#define VTSS_VSI_NONE  (0) /**< Virtual Switching Instance number none */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/* Ingress flow ID */
+typedef u16 vtss_iflow_id_t;
+
+#define VTSS_IFLOW_ID_NONE 0 /**< No flow ID allocated */
+
+/** \brief Aggregation Number. */
+typedef u32 vtss_aggr_no_t;
+#define VTSS_AGGRS           (VTSS_PORTS/2) /**< Number of LLAGs */
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_AGGR_NO_NONE    0xffffffff     /**< Aggregation number none */
+#define VTSS_AGGR_NO_START   0              /**< Aggregation start number */
+#endif // _VTSS_MAIN_TYPES_H_
+#define VTSS_AGGR_NO_END     (VTSS_AGGR_NO_START+VTSS_AGGRS) /**< Aggregation number end */
+
+/** \brief Description: GLAG number */
+typedef u32 vtss_glag_no_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_GLAGS         32         /**< Number of GLAGs */
+#define VTSS_GLAG_NO_NONE  0xffffffff /**< GLAG number none */
+#define VTSS_GLAG_NO_START 0          /**< GLAG start number */
+#define VTSS_GLAG_NO_END   (VTSS_GLAG_NO_START+VTSS_GLAGS) /**< GLAG end number */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/* Maximum 8 ports per GLAG */
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_GLAG_PORTS           8 /**< Number of GLAG ports */
+#define VTSS_GLAG_PORT_START      0 /**< GLAG port start number */
+#define VTSS_GLAG_PORT_END        (VTSS_GLAG_PORT_START+VTSS_GLAG_PORTS) /**< GLAG port end number */
+#define VTSS_GLAG_PORT_ARRAY_SIZE VTSS_GLAG_PORT_END /**< GLAG port array size */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/****************************************************************************
+ * CPU queue types
+ ****************************************************************************/
+/** \brief Description: CPU Rx queue number */
+typedef u32 vtss_packet_rx_queue_t;
+
+/** \brief Description: CPU Rx group number
+ *  \details This is a value in range [0; VTSS_PACKET_RX_GRP_CNT[.
+ */
+typedef u32 vtss_packet_rx_grp_t;
+
+/** \brief Description: CPU Tx group number
+ *  \details This is a value in range [0; VTSS_PACKET_TX_GRP_CNT[.
+ */
+typedef u32 vtss_packet_tx_grp_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT)
+#undef  VTSS_PACKET_RX_QUEUE_CNT
+#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+#undef  VTSS_PACKET_RX_GRP_CNT
+#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+#undef  VTSS_PACKET_TX_GRP_CNT
+#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+#endif /* VTSS_ARCH_LUTON26/SERVAL */
+
+#if defined(VTSS_ARCH_JAGUAR_2)
+#undef  VTSS_PACKET_RX_QUEUE_CNT
+#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+#undef  VTSS_PACKET_RX_GRP_CNT
+#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+#undef  VTSS_PACKET_TX_GRP_CNT
+#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+#endif /* VTSS_ARCH_JAGUAR_2 */
+
+#if defined(VTSS_ARCH_SPARX5)
+#undef  VTSS_PACKET_RX_QUEUE_CNT
+#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+#undef  VTSS_PACKET_RX_GRP_CNT
+#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+#undef  VTSS_PACKET_TX_GRP_CNT
+#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+#endif /* VTSS_ARCH_SPARX5 */
+
+#if defined(VTSS_ARCH_LAN966X)
+#undef  VTSS_PACKET_RX_QUEUE_CNT
+#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+#undef  VTSS_PACKET_RX_GRP_CNT
+#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+#undef  VTSS_PACKET_TX_GRP_CNT
+#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+#endif /* VTSS_ARCH_LAN966X */
+
+#define VTSS_PACKET_RX_QUEUE_NONE  (0xffffffff) /**< Rx queue not selected for a particular type of frames */
+#define VTSS_PACKET_RX_QUEUE_START (0)          /**< Rx queue start number */
+#define VTSS_PACKET_RX_QUEUE_END   (VTSS_PACKET_RX_QUEUE_START + VTSS_PACKET_RX_QUEUE_CNT) /**< Rx queue end number */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief COSID number */
+typedef u8 vtss_cosid_t;
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_COSIDS 8 /**< Number of COSIDs */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/** \brief Packet registration type */
+typedef enum {
+    VTSS_PACKET_REG_NORMAL,   /**< Global registration configuration is used */
+    VTSS_PACKET_REG_FORWARD,  /**< Forward normally */
+#if defined(VTSS_FEATURE_PACKET_PORT_REG_DISCARD)
+    VTSS_PACKET_REG_DISCARD,  /**< Discard */
+    VTSS_PACKET_REG_CPU_COPY, /**< Copy to CPU */
+#endif /* VTSS_FEATURE_PACKET_PORT_REG_DISCARD */
+    VTSS_PACKET_REG_CPU_ONLY  /**< Redirect to CPU */
+} vtss_packet_reg_type_t;
+
+#if defined(VTSS_FEATURE_PACKET_PORT_L2CP_REG)
+/** \brief Registration per port and L2CP */
+typedef struct {
+    BOOL         cosid_enable; /**< Enable COSID */
+    vtss_cosid_t cosid;        /**< COSID */
+} vtss_packet_rx_port_l2cp_conf_t;
+#endif /* VTSS_FEATURE_PACKET_PORT_L2CP_REG */
+
+/** \brief Packet registration per port */
+typedef struct {
+#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
+    vtss_packet_reg_type_t          ipmc_ctrl_reg; /**< IP MC Control, NORMAL/FORWARD/CPU_COPY supported */
+    vtss_packet_reg_type_t          igmp_reg;      /**< IGMP, NORMAL/FORWARD/CPU_ONLY supported */
+    vtss_packet_reg_type_t          mld_reg;       /**< MLD, NORMAL/FORWARD/CPU_ONLY supported */
+#endif
+    vtss_packet_reg_type_t          bpdu_reg[16];  /**< BPDU range: 01-80-C2-00-00-0X */
+    vtss_packet_reg_type_t          garp_reg[16];  /**< GARP range: 01-80-C2-00-00-2X */
+#if defined(VTSS_FEATURE_PACKET_PORT_L2CP_REG)
+    vtss_packet_rx_port_l2cp_conf_t bpdu[16];      /**< BPDU range: 01-80-C2-00-00-0X */
+    vtss_packet_rx_port_l2cp_conf_t garp[16];      /**< GARP range: 01-80-C2-00-00-2X */
+#endif /* VTSS_FEATURE_PACKET_PORT_L2CP_REG */
+} vtss_packet_rx_port_conf_t;
+
+/** \brief VDD power supply */
+typedef enum {
+    VTSS_VDD_1V0,               /**< 1.0V (default) */
+    VTSS_VDD_1V2,               /**< 1.2V */
+} vtss_vdd_t;
+
+/****************************************************************************
+ * L3 types
+ ****************************************************************************/
+/** \brief Description: UDP/TCP port number */
+typedef u16 vtss_udp_tcp_t;
+
+/** \brief IPv4 address/mask */
+typedef u32 vtss_ip_t;
+
+/** \brief IPv4 address/mask */
+typedef vtss_ip_t vtss_ipv4_t;
+
+/** \brief Prefix size */
+typedef u32 vtss_prefix_size_t;
+
+/** \brief IPv6 address/mask */
+typedef struct
+{
+    u8 addr[16]; /**< Address */
+} vtss_ipv6_t;
+
+/* NOTE: This type may be used directly in SNMP
+ * InetAddressType types.  */
+
+/** \brief Router leg ID */
+typedef u32 vtss_l3_rleg_id_t;
+
+/** \brief IP address type */
+typedef enum {
+    VTSS_IP_TYPE_NONE = 0, /**< Matches "InetAddressType_unknown" */
+    VTSS_IP_TYPE_IPV4 = 1, /**< Matches "InetAddressType_ipv4"    */
+    VTSS_IP_TYPE_IPV6 = 2, /**< Matches "InetAddressType_ipv6"    */
+} vtss_ip_type_t;
+
+/** \brief Either an IPv4 or IPv6 address  */
+typedef struct {
+    vtss_ip_type_t  type; /**< Union type */
+    union {
+        vtss_ipv4_t ipv4; /**< IPv4 address */
+        vtss_ipv6_t ipv6; /**< IPv6 address */
+    } addr;               /**< IP address */
+} vtss_ip_addr_t;
+
+/** \brief IPv4 network */
+typedef struct
+{
+    vtss_ipv4_t        address;     /**< Network address */
+    vtss_prefix_size_t prefix_size; /**< Prefix size */
+} vtss_ipv4_network_t;
+
+/** \brief IPv6 network */
+typedef struct
+{
+    vtss_ipv6_t        address;     /**< Network address */
+    vtss_prefix_size_t prefix_size; /**< Prefix size */
+} vtss_ipv6_network_t;
+
+/** \brief IPv6 network */
+typedef struct
+{
+    vtss_ip_addr_t     address;     /**< Network address */
+    vtss_prefix_size_t prefix_size; /**< Prefix size */
+} vtss_ip_network_t;
+
+/** \brief Routing entry type */
+typedef enum
+{
+    VTSS_ROUTING_ENTRY_TYPE_INVALID = 0,
+    VTSS_ROUTING_ENTRY_TYPE_IPV6_UC = 1,
+    VTSS_ROUTING_ENTRY_TYPE_IPV4_MC = 2, /* obsolete */
+    VTSS_ROUTING_ENTRY_TYPE_IPV4_UC = 3,
+} vtss_routing_entry_type_t;
+
+/** \brief IPv4 multicast routing entry */
+typedef struct
+{
+    /**< Multicast Group address */
+    vtss_ipv4_t         group;
+
+    /**< SIP address. All zero address enables source independent MC groups [*.G] */
+    vtss_ipv4_t         source;
+} vtss_ipv4_mc_t;
+
+/** \brief IPv6 multicast routing entry */
+typedef struct
+{
+    /**< Multicast Group address */
+    vtss_ipv6_t         group;
+
+    /**< SIP address. All zero address enables source independent MC groups [*.G] */
+    vtss_ipv6_t         source;
+} vtss_ipv6_mc_t;
+
+/** \brief IPv4 unicast routing entry */
+typedef struct
+{
+    vtss_ipv4_network_t network;     /**< Network to route */
+    vtss_ipv4_t         destination; /**< IP address of next-hop router.
+                                          Zero if local route */
+} vtss_ipv4_uc_t;
+
+/** \brief IPv6 routing entry */
+typedef struct
+{
+    vtss_ipv6_network_t network;     /**< Network to route */
+    vtss_ipv6_t         destination; /**< IP address of next-hop router.
+                                          Zero if local route */
+} vtss_ipv6_uc_t;
+
+/** \brief Unicast Routing entry */
+typedef struct
+{
+   /** Type of unicast route */
+   vtss_routing_entry_type_t type;
+
+   union {
+       /** IPv6 unicast route */
+       vtss_ipv4_uc_t ipv4_uc;
+
+       /** IPv6 unicast route */
+       vtss_ipv6_uc_t ipv6_uc;
+   } route; /**< Route */
+
+   /** Link-local addresses needs to specify a egress vlan. */
+   vtss_vid_t vlan;
+
+} vtss_routing_entry_t;
+
+#define VTSS_RT_TYPE_IPV4_MC 0
+#define VTSS_RT_TYPE_IPV6_MC 1
+
+/** \brief Multicast Routing entry */
+typedef struct
+{
+    /** Type of multicast route: VTSS_RT_TYPE_IPV4_MC or VTSS_RT_TYPE_IPV6_MC */
+    BOOL type;
+
+    union {
+        /** IPv4 multicast route */
+        vtss_ipv4_mc_t ipv4_mc;
+
+        /** IPv6 multicast route */
+        vtss_ipv6_mc_t ipv6_mc;
+    } route; /**< MC Route */
+
+    /** Optional: Multicast Reverse Path Forwarding, use VTSS_VID_NULL to ignore */
+    vtss_vid_t source_rleg;
+} vtss_routing_mc_entry_t;
+
+/** \brief Routing interface statics counter */
+typedef struct {
+    u64 ipv4uc_received_octets;    /**< IPv4UC octets received and hardware forwarded */
+    u64 ipv4uc_received_frames;    /**< IPv4UC frames received and hardware forwarded */
+    u64 ipv6uc_received_octets;    /**< IPv6UC octets received and hardware forwarded */
+    u64 ipv6uc_received_frames;    /**< IPv6UC frames received and hardware forwarded */
+
+    u64 ipv4uc_transmitted_octets; /**< IPv4UC octets transmitted */
+    u64 ipv4uc_transmitted_frames; /**< IPv4UC frames transmitted */
+    u64 ipv6uc_transmitted_octets; /**< IPv6UC octets transmitted */
+    u64 ipv6uc_transmitted_frames; /**< IPv6UC frames transmitted */
+
+    u64 ipv4mc_received_octets;    /**< IPv4MC octets received and hardware forwarded */
+    u64 ipv4mc_received_frames;    /**< IPv4MC frames received and hardware forwarded */
+    u64 ipv6mc_received_octets;    /**< IPv6MC octets received and hardware forwarded */
+    u64 ipv6mc_received_frames;    /**< IPv6MC frames received and hardware forwarded */
+
+    u64 ipv4mc_transmitted_octets; /**< IPv4MC octets transmitted */
+    u64 ipv4mc_transmitted_frames; /**< IPv4MC frames transmitted */
+    u64 ipv6mc_transmitted_octets; /**< IPv6MC octets transmitted */
+    u64 ipv6mc_transmitted_frames; /**< IPv6MC frames transmitted */
+} vtss_l3_counters_t;
+
+/****************************************************************************
+ * VCAP types
+ ****************************************************************************/
+/** \brief VCAP 1 bit */
+typedef enum vtss_vcap_bit
+{
+    VTSS_VCAP_BIT_ANY, /**< Value 0 or 1 */
+    VTSS_VCAP_BIT_0,   /**< Value 0 */
+    VTSS_VCAP_BIT_1    /**< Value 1 */
+} vtss_vcap_bit_t;
+
+/** \brief VCAP 8 bit value and mask */
+typedef struct
+{
+    u8 value;   /**< Value */
+    u8 mask;    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u8_t;
+
+/** \brief VCAP 16 bit value and mask */
+typedef struct
+{
+    u8 value[2];   /**< Value */
+    u8 mask[2];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u16_t;
+
+/** \brief VCAP 24 bit value and mask */
+typedef struct
+{
+    u8 value[3];   /**< Value */
+    u8 mask[3];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u24_t;
+
+/** \brief VCAP 32 bit value and mask */
+typedef struct
+{
+    u8 value[4];   /**< Value */
+    u8 mask[4];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u32_t;
+
+/** \brief VCAP 40 bit value and mask */
+typedef struct
+{
+    u8 value[5];   /**< Value */
+    u8 mask[5];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u40_t;
+
+/** \brief VCAP 48 bit value and mask */
+typedef struct
+{
+    u8 value[6];   /**< Value */
+    u8 mask[6];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u48_t;
+
+/** \brief VCAP 128 bit value and mask */
+typedef struct
+{
+    u8 value[16];   /**< Value */
+    u8 mask[16];    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_u128_t;
+
+/** \brief VCAP VLAN ID value and mask */
+typedef struct
+{
+    u16 value;   /**< Value */
+    u16 mask;    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_vid_t;
+
+/** \brief VCAP IPv4 address value and mask */
+typedef struct
+{
+    vtss_ip_t value;   /**< Value */
+    vtss_ip_t mask;    /**< Mask, cleared bits are wildcards */
+} vtss_vcap_ip_t;
+
+/** \brief VCAP UDP/TCP port range */
+typedef struct
+{
+    BOOL           in_range;   /**< Port in range match */
+    vtss_udp_tcp_t low;        /**< Port low value */
+    vtss_udp_tcp_t high;       /**< Port high value */
+} vtss_vcap_udp_tcp_t;
+
+/** \brief Value/Range type */
+typedef enum
+{
+    VTSS_VCAP_VR_TYPE_VALUE_MASK,        /**< Used as value/mask */
+    VTSS_VCAP_VR_TYPE_RANGE_INCLUSIVE,   /**< Used as inclusive range: low <= range <= high */
+    VTSS_VCAP_VR_TYPE_RANGE_EXCLUSIVE    /**< Used as exclusive range: range < low or range > high */
+} vtss_vcap_vr_type_t;
+
+/** \brief VCAP universal value or range type */
+typedef u16 vtss_vcap_vr_value_t;
+
+/** \brief VCAP universal value or range */
+typedef struct
+{
+    vtss_vcap_vr_type_t type; /**< Type */
+    union
+    {
+        struct
+        {
+            vtss_vcap_vr_value_t value; /**< Value */
+            vtss_vcap_vr_value_t mask;  /**< Mask, cleared bits are wildcards */
+        } v; /**< type == VTSS_VCAP_VR_TYPE_VALUE_MASK */
+        struct
+        {
+            vtss_vcap_vr_value_t low;   /**< Low value */
+            vtss_vcap_vr_value_t high;  /**< High value */
+        } r; /**< type == VTSS_VCAP_VR_TYPE_RANGE_XXXXXX */
+    } vr; /**< Value or range */
+} vtss_vcap_vr_t;
+
+/** \brief VCAP key type */
+typedef enum {
+    VTSS_VCAP_KEY_TYPE_NORMAL,     /**< Half key, SIP only */
+    VTSS_VCAP_KEY_TYPE_DOUBLE_TAG, /**< Quarter key, two tags */
+    VTSS_VCAP_KEY_TYPE_IP_ADDR,    /**< Half key, SIP and DIP */
+    VTSS_VCAP_KEY_TYPE_MAC_IP_ADDR /**< Full key, MAC and IP addresses */
+} vtss_vcap_key_type_t;
+
+/****************************************************************************
+ * ACL types
+ ****************************************************************************/
+/** \brief ACL policer number */
+typedef u32 vtss_acl_policer_no_t;
+#define VTSS_ACL_POLICERS         16                                              /**< Number of ACL policers */
+#define VTSS_ACL_POLICER_NO_START 0                                               /**< ACL policer start number */
+#define VTSS_ACL_POLICER_NO_END   (VTSS_ACL_POLICER_NO_START + VTSS_ACL_POLICERS) /**< ACL policer end number */
+
+/** \brief ACL policy number */
+typedef u32 vtss_acl_policy_no_t;
+#define VTSS_ACL_POLICY_NO_NONE  0xffffffff                                     /**< ACLs disabled on port */
+#define VTSS_ACL_POLICY_NO_MIN   0                                              /**< ACLs policy minimum number */
+#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+#define VTSS_ACL_POLICY_NO_MAX   255                                            /**< ACLs policy maximum number */
+#elif defined(VTSS_ARCH_JAGUAR_2)
+#define VTSS_ACL_POLICY_NO_MAX   127                                            /**< ACLs policy maximum number */
+#elif defined(VTSS_ARCH_OCELOT)
+#define VTSS_ACL_POLICY_NO_MAX   63                                             /**< ACLs policy maximum number */
+#else
+#define VTSS_ACL_POLICY_NO_MAX   7                                              /**< ACLs policy maximum number */
+#endif /* VTSS_ARCH_LUTON26/JAGUAR_2 */
+#define VTSS_ACL_POLICIES        (VTSS_ACL_POLICY_NO_MAX + 1)                   /**< Number of ACL policies */
+#define VTSS_ACL_POLICY_NO_START  VTSS_ACL_POLICY_NO_MIN                        /**< ACL policy start number */
+#define VTSS_ACL_POLICY_NO_END   (VTSS_ACL_POLICY_NO_START + VTSS_ACL_POLICIES) /**< ACL policy end number */
+
+/** \brief Counter */
+typedef u64 vtss_counter_t;
+
+/** \brief Counter pair */
+typedef struct {
+    vtss_counter_t frames; /**< Number of frames */
+    vtss_counter_t bytes;  /**< Number of bytes */
+} vtss_counter_pair_t;
+
+#if defined(VTSS_FEATURE_EVC_COUNTERS) || defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_FEATURE_VOP)
+/** \brief EVC/ECE counters */
+typedef struct {
+    vtss_counter_pair_t rx_green;   /**< Rx green frames/bytes */
+    vtss_counter_pair_t rx_yellow;  /**< Rx yellow frames/bytes */
+    vtss_counter_pair_t rx_red;     /**< Rx red frames/bytes */
+    vtss_counter_pair_t rx_discard; /**< Rx discarded frames/bytes */
+    vtss_counter_pair_t tx_discard; /**< Tx discarded frames/bytes */
+    vtss_counter_pair_t tx_green;   /**< Tx green frames/bytes */
+    vtss_counter_pair_t tx_yellow;  /**< Tx yellow frames/bytes */
+} vtss_evc_counters_t;
+#endif
+
+/** \brief MPLS TC bits */
+typedef u8 vtss_mpls_tc_t;
+
+/****************************************************************************
+ * 1588 types
+ ****************************************************************************/
+
+/**
+ * \brief Clock adjustment rate in parts per billion (ppb) * 1<<16.
+ * Range is +-2**47 ppb
+ * For example, 8.25 ppb is expressed as 0x0000.0000.0008.4000
+ */
+typedef i64 vtss_clk_adj_rate_t;
+
+/**
+ * \brief Time interval in ns * 1<<16
+ * range +-2**47 ns = 140737 sec = 39 hours
+ * For example, 2.5 ns is expressed as 0x0000.0000.0002.8000
+ */
+typedef i64 vtss_timeinterval_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_ONE_MIA 1000000000 /**< One billion */
+#define VTSS_ONE_MILL   1000000 /**< One million */
+#define VTSS_MAX_TIMEINTERVAL 0x7fffffffffffffffLL /**< Maximum time interval */
+#endif // _VTSS_MAIN_TYPES_H_
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_INTERVAL_SEC(t) ((i32)VTSS_DIV64((t)>>16, VTSS_ONE_MIA)) /**< One Second time interval */
+#define VTSS_INTERVAL_MS(t)  ((i32)VTSS_DIV64((t)>>16, VTSS_ONE_MILL)) /**< One millisecond time interval */
+#define VTSS_INTERVAL_US(t)  ((i32)VTSS_DIV64((t)>>16, 1000)) /**< One microsecond time interval */
+#define VTSS_INTERVAL_NS(t)  ((i32)VTSS_MOD64((t)>>16, VTSS_ONE_MIA)) /**< This returns the ns part of the interval, not the total number of ns */
+#define VTSS_INTERVAL_PS(t)  (((((i32)(t & 0xffff))*1000)+0x8000)/0x10000) /**< This returns the ps part of the interval, not the total number of ps */
+#define VTSS_SEC_NS_INTERVAL(s,n) (((vtss_timeinterval_t)(n)+(vtss_timeinterval_t)(s)*VTSS_ONE_MIA)<<16)  /**< TBD */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/**
+ * \brief Time stamp in seconds and nanoseconds
+ */
+typedef struct {
+    u16 sec_msb;         /**< Seconds msb */
+    u32 seconds;         /**< Seconds */
+    u32 nanoseconds;     /**< nanoseconds */
+    u16 nanosecondsfrac; /**< 16 bit fraction of nano seconds */
+} vtss_timestamp_t;
+
+/**
+ * \brief Scaled nanosec as defined in 802.1AS clause 6.3.3.1:
+ *        The ScaledNs type represents signed values of time and time interval in units of 2**-16 ns.
+ */
+typedef struct {
+    i32 scaled_ns_high;     /**< Seconds */
+    u64 scaled_ns_low;      /**< nanoseconds */
+} vtss_scaled_ns_t;
+
+/**
+ * \brief Unsigned Scaled nanosec as defined in 802.1AS clause 6.3.3.2:
+ *        The UScaledNs type represents unsigned values of time and time interval in units of 2**-16 ns.
+ */
+typedef struct {
+    u32 uscaled_ns_high;    /**< Seconds */
+    u64 uscaled_ns_low;     /**< nanoseconds */
+} vtss_uscaled_ns_t;
+
+#ifndef _VTSS_MAIN_TYPES_H_
+#define VTSS_CLOCK_IDENTITY_LENGTH 8 /**< Length of unique PTP identifier */
+#endif // _VTSS_MAIN_TYPES_H_
+
+/**
+ * \brief PTP clock unique identifier
+ */
+typedef u8 vtss_clock_identity[VTSS_CLOCK_IDENTITY_LENGTH];
+
+/****************************************************************************
+ * SYNCE types
+ ****************************************************************************/
+
+#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+#define VTSS_SYNCE_CLK_PORT_ARRAY_SIZE  4    /**< SYNCE clock out port numberarray size */
+#else
+#define VTSS_SYNCE_CLK_PORT_ARRAY_SIZE  2    /**< SYNCE clock out port numberarray size */
+#endif
+
+/****************************************************************************
+ * VSTAX types
+ ****************************************************************************/
+
+/** \brief VStaX Unit Port Set ID (UPSID; 0-31). */
+typedef int vtss_vstax_upsid_t;
+
+/** \brief Unit Port Set Port Number */
+typedef u32 vtss_vstax_upspn_t;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* _VTSS_API_TYPES_H_ */
+:@byteposià:	@str" #ifndef _VTSS_API_TYPES_H_
+:@line_cacheo:Parslet::Source::LineCache:@line_endse:!Parslet::Source::RangeSearch[ûiPipiqirivii–iÛißiàiûiii5i…i†iÕiáiıişi1iŠiãiiii"i)i*iFiyii¶iiii6ii™iši³iiii:iSi­i¸i¹iÒi)i4i5iNi¢i­i³iŞiåiæihiêiliîip	iq	i„	i¯	i¶	iÊ	iö	iı	iş	i
+i1
+i2
+iL
+iQ
+iS
+iš
+ië
+iFi—iæi7i‡iˆi÷i]i^ixiñiJi·i0i¶i$išiiişiÿii;i¬ii{iÊi'i…iâi9i“iïiKi¡iikiÎiiiÏi#iyiÏiitiÆi!ipiÍi/i‚iÑi.iƒiïiPiØi_ i± i-!i‹!iÜ!i4"i¥"i÷"iK#iĞ#i#$ix$iÎ$iA%iB%iC%i_%i½%i¾%iİ%i8&iR&ip&iq&i¿&iÏ&i'i]'iy'iz'iœ'iÆ'iÇ'iË'iî'ie(iã(iè(i)i)i=)i>)ig)i‡)iˆ)i¤)i*i"*i#*i=*iY*iZ*i}*i*iŸ*i£*iÆ*iÉ*iñ*i(+iN+iQ+iƒ+i°+iê+i,i
+,i=,ir,i©,i¬,iá,i-iC-iz-i}-i·-iç-iê-i .i`.ic.i¡.i¥.i´.i#/i’/i0i0i0iP0iQ0i—0i±0iÈ0iú0i1iA1iB1i^1ix1i1iÁ1iâ1iô1iõ1iD2ik2i†2i2iĞ2iò2i3i3i)3iC3iZ3iŒ3i­3i¿3iÀ3i4i]4ix4i4iÂ4iä4i5i5i/5iJ5ia5i”5i¶5iÓ5iÔ5iø5i6i*6i]6i6i™6iš6i¾6iÙ6iğ6i#7iE7i_7i`7i‡7i¢7i¹7iì7i8i+8i,8ip8i‹8i¢8iÕ8i÷8i9i9i29iL9ig9i~9i±9iÓ9ió9iô9i4:iN:ii:i€:i³:iÕ:iÿ:i ;i†;iŸ;iº;iÑ;i<i&<ij<ik<iì<i=i =i7=ii=iŠ=i´=iµ=iü=i>i9>iP>iƒ>i¥>iÖ>i×>iú>i?i6?iM?i?i ?iÃ?iÄ?iâ?iı?i@iG@ii@ip@iq@i@i§@i¾@iğ@i÷@iş@iÿ@iFAi¥AiäAiêAi)BiJBiKBiuBi‘BiÔBi/CisCi‘CiæCi3Di4Di‚DiƒDiÅDiÒDiÔDiEiYEi›EiäEiFidFi·FiGiWGiŠGi¾GióGi-HitHi½HiõHi*Ii^Ii“IiÈIiüIi2Ji~JiKiKiİKiVLiÓLi,MiEMiFMiGMimMi|Mi~MiÌMiNiZNi[Ni{NiˆNiŠNiÁNiıNi4OikOi¢OiÙOiPiGPi~PiµPiìPi#QiZQiQiÙQiRiERi}Ri³RiSitSi·SiõSiCTi‘TißTiàTiöTi÷TiUi+Ui,UivUiwUi•Ui±Ui²UiViViVi,Vi-ViwVixViÆViÓVi"Wi@WiYWiuWiÎWi5Xi˜XiğXiOYimYinYi‰Yi£Yi¿YiZiqZiÉZi([iF[iG[i[i›[iÃ[iÛ[i÷[iM\iŸ\iï\i?]i]]i^]iŠ]i£]i¿]i^ig^i·^i_i%_i&_iP_il_i–_iº_iÿ_i `i=`iN`i‹`iÑ`iÒ`i$aitaiÄaiÅai÷aibibi/biFbiGbiKbibiÔbiÙbiõbiciSciqcircivci¥ciíciòcididiBdiOdiQdi°dieiVeiseitei”ei¬ei­eiĞeiëeiìei#fi0fi2finfi´fiËfiÌfiìfigigi0giOgiPgilgihi#hi$hiAhihhiihiÉhi@iiFii½ii	ji
+jiƒjiúji}ki~kiškiÀkiÁki!li˜lilimiamibmiÛmiRniÕniÖnioiYoi¼oiEpi¿piqicqiŠqi‹qi§qi¸qiáqiûqiriri,ri=rimriri¡ri¢ri°riÁriârisi"si#siqsisiÎsiÏsiísititi/tixtiÄtiui`ui·uiÕuiÖuiÚuiÿuiviviviJviŠviÌviáviâviÿviwiwiwiAwiEwiVwiwiÈwixi:xiMxiNxi‹xiŒxi¦xiµxi·xiäxiòxióxiyi‰yi§yi¨yiüyiıyi(zi7zi9zi`zi‹zizizi {i!{i={i{{iÀ{i
+|i(|i)|i?|i\|i]|i—|i˜|iº|iÖ|i}i6}i‚}iÏ}ií}iI~iJ~iq~i~i~iª~iè~i'igiºiØiÙiøi€iU€i˜€iş€iPinioi½iĞi‚iN‚ir‚is‚iŸ‚iâ‚iæ‚iƒi	ƒi5ƒixƒi|ƒiƒiŸƒi»ƒi÷ƒi„ib„i„iæ„i…iO…iu…iv…i–…i·…i†i †i…†i¤†iî†i‡i‡i-‡iN‡i˜‡i·‡iˆi;ˆi…ˆi£ˆi¤ˆiÃˆiäˆi.‰iM‰i²‰iÑ‰iŠi:Ši;Ši©Ši÷Šin‹iŒ‹i‹i¨‹iÁ‹iİ‹iŒi*Œi+ŒiRŒiaŒi±ŒièŒiiHizi¬iâiüiıi,iYijiiËiîiiiIiZi–iieiÇiÎi'‘i€‘i¯‘i’ia’i’i®’i¯’iÎ’iİ’i“iA“iO“iP“i“iª“iù“i(”iD”iE”ie”i|”i}”i”i¼”i½”i×”i÷”iø”i•i'•i)•iJ•iY•iZ•iŠ•i¨•i©•iÅ•iä•iå•i–i–iW–iœ–iá–ió–iô–i"—i3—i`—il—i›—iÊ—i÷—i	˜i
+˜i%˜i4˜i6˜ir˜iª˜iÁ˜iÂ˜iİ˜iì˜iî˜i*™ib™iy™iz™i•™i¤™i¦™iâ™iši/ši0šiQši^ši`ši‰ši²šiêši›i0›i1›i\›ik›im›i‘›i°›i±›iœi&œi8œi9œidœisœiuœi™œi¸œi¹œii.i@iAijiyi{i¹iiCiUiViwi†iˆiÆiŸiPŸibŸicŸi‡Ÿi–Ÿi˜Ÿi¸ŸiÛŸiÜŸiçŸi i' i( iI ih i‚ iƒ iÂ iÖ i× iï iğ i¡i.¡i/¡iU¡id¡if¡i·¡iÆ¡iÇ¡iÓ¡i÷¡i¢i¢i<¢i\¢iz¢i{¢iÏ¢ië¢i£i£i7£iH£i¡£iú£iS¤i¬¤i­¤iò¤i7¥i|¥iÁ¥iÂ¥i¦it¦iÍ¦i&§i'§il§i±§iö§i;¨iQ¨iR¨i ¨i®¨iı¨i©i1©i3©i_©i†©i­©iÀ©iÁ©ié©iø©iú©iªiQªicªidªiªiœªiªi¿ªiûªi«i«i8«iG«iI«ij«i¦«i¹«iº«iã«iò«iô«i¬iQ¬id¬ie¬i¬i¬iŸ¬iÀ¬iü¬i­i­i9­iH­iJ­ik­i§­iº­i»­iå­iô­iö­i®iU®ii®ij®i”®i£®i¥®iÄ®iş®i¯i¯iA¯iP¯iR¯iw¯i·¯iÉ¯iÊ¯iğ¯iÿ¯i°i<°ir°i©°iÀ°iÁ°ià°ií°iï°i3±i’±iø±i²i²iA²ic²id²i²iŸ²i¡²iÌ²iÖ²iÜ²ië²iõ²i+³i|³i¶³iÅ³iÏ³i	´iD´i€´i¡´i³´i´´iĞ´iß´iµi^µiŸµiéµi¶i¶iP¶i]¶i¬¶iÍ¶iğ¶ia·iÔ·iE¸iF¸if¸iˆ¸iö¸ii¹iÃ¹i6ºiXºiËºiëºi^»id»i×»iÿ»in¼iŞ¼iL½iM½ic½i½i€½i›½i¬½ià½i¾i*¾i+¾i¾i­¾i¾¾i ¿iC¿iƒ¿iÉ¿iÀiQÀi”Ài«Ài²Ài³ÀiÎÀiéÀiêÀi8ÁiFÁi•Ái–ÁišÁiŞÁiöÁi5Âi9ÂiZÂi[Âi_Âi…Âi±ÂiîÂiòÂiÃiÃi0ÃidÃi˜ÃiéÃiÄiÄi$Äi‹ÄiøÄi\ÅiïÅi‡ÆiıÆiÇiÇi ÇiPÇiTÇieÇi’Çi»ÇièÇi)Èi=Èi>ÈiBÈiÈiçÈiëÈiüÈi(ÉiXÉilÉimÉiqÉi¹Éi"Êi&Êi7ÊicÊi“Êi¨Êi©ÊiÅÊiËi0Ëi1Ëi5Ëi[Ëi_Ëi›ËiœËiêËiùËiHÌiIÌi†ÌiáÌiçÌiBÍiIÍiJÍi˜Íi§ÍiöÍi÷Íi+ÎiKÎiLÎitÎi”Îi•Îi¨ÎiªÎi±Îi²ÎiÒÎ:@last_line_endiÒÎ{;o;;o;	;
+@
+;iû;"!#define _VTSS_API_TYPES_H_
+
+;@{;o;;o;	;
+@
+;i;"##include <vtss/api/options.h>
+;@{;o;;o;	;
+@
+;i5;"V#include <vtss_os.h>            /* This defines the *runtime* OS environment */
+
+;@{;o;;o;	;
+@
+;iá;""#ifndef _VTSS_MAIN_TYPES_H_
+
+;@{;o;;o;	;
+@
+;i1;"^#define VTSS_I64_MAX  0x7FFFFFFFFFFFFFFFLL  /**<  Max value for 64 bit signed integer */
+;@{;o;;o;	;
+@
+;iŠ;"^#define VTSS_I64_MIN -0x8000000000000000LL  /**<  Min value for 64 bit signed integer */
+;@{;o;;o;	;
+@
+;iã;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{;o;;o;	;
+@
+;i;"#ifdef __cplusplus
+;@{:keywordo;;o;	;
+@
+;i;"extern;@:stringo;;o;	;
+@
+;i;""C";@; [Å{;o;;o;	;
+@
+;i";"#endif
+
+;@{;o;;o;	;
+@
+;i*;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iy;")#if __INTPTR_MAX__ == __INT32_MAX__
+;@{;o;;o;	;
+@
+;i;"#    if !defined(PRIu64)
+;@{;o;;o;	;
+@
+;i¶;"`#        define PRIu64 "llu"           /**< Fallback un-signed 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i;"#    endif
+
+;@{;o;;o;	;
+@
+;i;"#    if !defined(PRIi64)
+;@{;o;;o;	;
+@
+;i6;"]#        define PRIi64 "lli"           /**< Fallback signed 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i;"#    endif
+
+;@{;o;;o;	;
+@
+;iš;"#    if !defined(PRIx64)
+;@{;o;;o;	;
+@
+;i³;"Z#        define PRIx64 "llx"           /**< Fallback hex 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i;"#    endif
+
+;@{;o;;o;	;
+@
+;i;"+#elif __INTPTR_MAX__ == __INT64_MAX__
+;@{;o;;o;	;
+@
+;i:;"#    if !defined(PRIu64)
+;@{;o;;o;	;
+@
+;iS;"_#        define PRIu64 "lu"           /**< Fallback un-signed 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i­;"#    endif
+
+;@{;o;;o;	;
+@
+;i¹;"#    if !defined(PRIi64)
+;@{;o;;o;	;
+@
+;iÒ;"\#        define PRIi64 "li"           /**< Fallback signed 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i);"#    endif
+
+;@{;o;;o;	;
+@
+;i5;"#    if !defined(PRIx64)
+;@{;o;;o;	;
+@
+;iN;"Y#        define PRIx64 "lx"           /**< Fallback hex 64-bit formatting string */
+;@{;o;;o;	;
+@
+;i¢;"#    endif
+;@{;o;;o;	;
+@
+;i­;"#else
+;@{;o;;o;	;
+@
+;i³;"0#    error "Environment not 32 or 64-bit."
+;@{;o;;o;	;
+@
+;iŞ;"#endif
+
+;@{;o;;o;	;
+@
+;iæ;"‚#define VTSS_BIT64(x)                  (1ULL << (x))                           /**< Set one bit in a 64-bit mask               */
+;@{;o;;o;	;
+@
+;ih;"‚#define VTSS_BITMASK64(x)              ((1ULL << (x)) - 1)                     /**< Get a bitmask consisting of x ones         */
+;@{;o;;o;	;
+@
+;iê;"‚#define VTSS_EXTRACT_BITFIELD64(x,o,w) (((x) >> (o)) & VTSS_BITMASK64(w))      /**< Extract w bits from bit position o in x    */
+;@{;o;;o;	;
+@
+;il;"‚#define VTSS_ENCODE_BITFIELD64(x,o,w)  (((u64)(x) & VTSS_BITMASK64(w)) << (o)) /**< Place w bits of x at bit position o        */
+;@{;o;;o;	;
+@
+;iî;"ƒ#define VTSS_ENCODE_BITMASK64(o,w)     (VTSS_BITMASK64(w) << (o))              /**< Create a bitmask of w bits positioned at o */
+
+;@{;o;;o;	;
+@
+;iq	;"#if !defined(TRUE)
+;@{;o;;o;	;
+@
+;i„	;"0#define TRUE  1 /**< True boolean value */
+;@{;o;;o;	;
+@
+;i¯	;"#endif
+;@{;o;;o;	;
+@
+;i¶	;"#if !defined(FALSE)
+;@{;o;;o;	;
+@
+;iÊ	;"1#define FALSE 0 /**< False boolean value */
+;@{;o;;o;	;
+@
+;iö	;"#endif
+
+;@{
+;o;;o;	;
+@
+;i
+;"typedef;@:type_aliaso;;o;	;
+@
+;i$
+;"	int ;@:typedef_nameo;;o;	;
+@
+;i(
+;"vtss_rc;@:
+array[ :cap0{:enum_type_declare{;o;;o;	;
+@
+;iL
+;"	enum;@:
+enums[L{:	enum{	:enum_nameo;;o;	;
+@
+;iW
+;"1VTSS_RC_OK                                  ;@:operatoro;;o;	;
+@
+;iƒ
+;"=;@:	expro;;o;	;
+@
+;i†
+;"0;@;0{;{	;o;;o;	;
+@
+;i
+;"1VTSS_RC_ERROR                               ;@;o;;o;	;
+@
+;iÊ
+;"=;@;o;;o;	;
+@
+;iÌ
+;"-1;@;0{;{	;o;;o;	;
+@
+;iï
+;"1VTSS_RC_INV_STATE                           ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"-2;@;0{;{	;o;;o;	;
+@
+;iJ;"1VTSS_RC_INCOMPLETE                          ;@;o;;o;	;
+@
+;iv;"=;@;o;;o;	;
+@
+;ix;"-3;@;0{;{	;o;;o;	;
+@
+;i›;"1VTSS_RC_NOT_IMPLEMENTED                     ;@;o;;o;	;
+@
+;iÇ;"=;@;o;;o;	;
+@
+;iÉ;"-4;@;0{;{	;o;;o;	;
+@
+;iê;"1VTSS_RC_ERR_PARM                            ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"-5;@;0{;{	;o;;o;	;
+@
+;i;;"1VTSS_RC_ERR_NO_RES                          ;@;o;;o;	;
+@
+;ig;"=;@;o;;o;	;
+@
+;ii;"-6;@;0{;{	;o;;o;	;
+@
+;iŒ;"1VTSS_RC_ERR_KR_CONF_NOT_SUPPORTED           ;@;o;;o;	;
+@
+;i¸;"=;@;o;;o;	;
+@
+;iº;"-7;@;0{;{	;o;;o;	;
+@
+;iû;"1VTSS_RC_ERR_KR_CONF_INVALID_PARAMETER       ;@;o;;o;	;
+@
+;i';"=;@;o;;o;	;
+@
+;i);"-8;@;0{;{	;o;;o;	;
+@
+;i|;"1VTSS_RC_ERR_PHY_BASE_NO_NOT_FOUND           ;@;o;;o;	;
+@
+;i¨;"=;@;o;;o;	;
+@
+;iª;"-50;@;0{;{	;o;;o;	;
+@
+;iõ;"1VTSS_RC_ERR_PHY_6G_MACRO_SETUP              ;@;o;;o;	;
+@
+;i!;"=;@;o;;o;	;
+@
+;i#;"-51;@;0{;{	;o;;o;	;
+@
+;iN;"1VTSS_RC_ERR_PHY_MEDIA_IF_NOT_SUPPORTED      ;@;o;;o;	;
+@
+;iz;"=;@;o;;o;	;
+@
+;i|;"-52;@;0{;{	;o;;o;	;
+@
+;i»;"1VTSS_RC_ERR_PHY_CLK_CONF_NOT_SUPPORTED      ;@;o;;o;	;
+@
+;iç;"=;@;o;;o;	;
+@
+;ié;"-53;@;0{;{	;o;;o;	;
+@
+;i4;"1VTSS_RC_ERR_PHY_GPIO_ALT_MODE_NOT_SUPPORTED ;@;o;;o;	;
+@
+;i`;"=;@;o;;o;	;
+@
+;ib;"-54;@;0{;{	;o;;o;	;
+@
+;iº;"1VTSS_RC_ERR_PHY_GPIO_PIN_NOT_SUPPORTED      ;@;o;;o;	;
+@
+;iæ;"=;@;o;;o;	;
+@
+;iè;"-55;@;0{;{	;o;;o;	;
+@
+;i(;"1VTSS_RC_ERR_PHY_PORT_OUT_RANGE              ;@;o;;o;	;
+@
+;iT;"=;@;o;;o;	;
+@
+;iV;"-56;@;0{;{	;o;;o;	;
+@
+;i;"1VTSS_RC_ERR_PHY_PATCH_SETTING_NOT_SUPPORTED ;@;o;;o;	;
+@
+;iÊ;"=;@;o;;o;	;
+@
+;iÌ;"-57;@;0{;{	;o;;o;	;
+@
+;i ;"1VTSS_RC_ERR_PHY_LCPLL_NOT_SUPPORTED         ;@;o;;o;	;
+@
+;iL;"=;@;o;;o;	;
+@
+;iN;"-58;@;0{;{	;o;;o;	;
+@
+;i‘;"1VTSS_RC_ERR_PHY_RCPLL_NOT_SUPPORTED         ;@;o;;o;	;
+@
+;i½;"=;@;o;;o;	;
+@
+;i¿;"-59;@;0{;{	;o;;o;	;
+@
+;i!;"1VTSS_RC_ERR_MACSEC_INVALID_SCI_MACADDR      ;@;o;;o;	;
+@
+;iM;"=;@;o;;o;	;
+@
+;iO;"-60;@;0{;{	;o;;o;	;
+@
+;i?;"1VTSS_RC_ERR_MACSEC_NOT_ENABLED              ;@;o;;o;	;
+@
+;ik;"=;@;o;;o;	;
+@
+;im;"-61;@;0{;{	;o;;o;	;
+@
+;i°;"1VTSS_RC_ERR_MACSEC_SECY_ALREADY_IN_USE      ;@;o;;o;	;
+@
+;iÜ;"=;@;o;;o;	;
+@
+;iŞ;"-63;@;0{;{	;o;;o;	;
+@
+;i;"1VTSS_RC_ERR_MACSEC_NO_SECY_FOUND            ;@;o;;o;	;
+@
+;iH;"=;@;o;;o;	;
+@
+;iJ;"-64;@;0{;{	;o;;o;	;
+@
+;i;"1VTSS_RC_ERR_MACSEC_NO_SECY_VACANCY          ;@;o;;o;	;
+@
+;i«;"=;@;o;;o;	;
+@
+;i­;"-65;@;0{;{	;o;;o;	;
+@
+;iÎ;"1VTSS_RC_ERR_MACSEC_INVALID_VALIDATE_FRM     ;@;o;;o;	;
+@
+;iú;"=;@;o;;o;	;
+@
+;iü;"-66;@;0{;{	;o;;o;	;
+@
+;i+;"1VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_SA_MATCH   ;@;o;;o;	;
+@
+;iW;"=;@;o;;o;	;
+@
+;iY;"-67;@;0{;{	;o;;o;	;
+@
+;i‰;"1VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_SA_FLOW    ;@;o;;o;	;
+@
+;iµ;"=;@;o;;o;	;
+@
+;i·;"-68;@;0{;{	;o;;o;	;
+@
+;iæ;"1VTSS_RC_ERR_MACSEC_COULD_NOT_ENA_SA         ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"-69;@;0{;{	;o;;o;	;
+@
+;i=;"1VTSS_RC_ERR_MACSEC_COULD_NOT_SET_SA         ;@;o;;o;	;
+@
+;ii;"=;@;o;;o;	;
+@
+;ik;"-70;@;0{;{	;o;;o;	;
+@
+;i—;"1VTSS_RC_ERR_MACSEC_INVALID_BYPASS_HDR_LEN   ;@;o;;o;	;
+@
+;iÃ;"=;@;o;;o;	;
+@
+;iÅ;"-71;@;0{;{	;o;;o;	;
+@
+;ió;"1VTSS_RC_ERR_MACSEC_SC_NOT_FOUND             ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i!;"-72;@;0{;{	;o;;o;	;
+@
+;iO;"1VTSS_RC_ERR_MACSEC_NO_CTRL_FRM_MATCH        ;@;o;;o;	;
+@
+;i{;"=;@;o;;o;	;
+@
+;i};"-73;@;0{;{	;o;;o;	;
+@
+;i¥;"1VTSS_RC_ERR_MACSEC_COULD_NOT_SET_PATTERN    ;@;o;;o;	;
+@
+;iÑ;"=;@;o;;o;	;
+@
+;iÓ;"-74;@;0{;{	;o;;o;	;
+@
+;i;"1VTSS_RC_ERR_MACSEC_TIMEOUT_ISSUE            ;@;o;;o;	;
+@
+;i8;"=;@;o;;o;	;
+@
+;i:;"-75;@;0{;{	;o;;o;	;
+@
+;io;"1VTSS_RC_ERR_MACSEC_COULD_NOT_EMPTY_EGRESS   ;@;o;;o;	;
+@
+;i›;"=;@;o;;o;	;
+@
+;i;"-76;@;0{;{	;o;;o;	;
+@
+;iÒ;"1VTSS_RC_ERR_MACSEC_AN_NOT_CREATED           ;@;o;;o;	;
+@
+;iş;"=;@;o;;o;	;
+@
+;i ;"-77;@;0{;{	;o;;o;	;
+@
+;i!;"1VTSS_RC_ERR_MACSEC_COULD_NOT_EMPTY_INGRESS  ;@;o;;o;	;
+@
+;iM;"=;@;o;;o;	;
+@
+;iO;"-78;@;0{;{	;o;;o;	;
+@
+;i…;"1VTSS_RC_ERR_MACSEC_TX_SC_NOT_EXIST          ;@;o;;o;	;
+@
+;i±;"=;@;o;;o;	;
+@
+;i³;"-80;@;0{;{	;o;;o;	;
+@
+;iÓ;"1VTSS_RC_ERR_MACSEC_COULD_NOT_DISABLE_SA     ;@;o;;o;	;
+@
+;iÿ;"=;@;o;;o;	;
+@
+;i;"-81;@;0{;{	;o;;o;	;
+@
+;i';"1VTSS_RC_ERR_MACSEC_COULD_NOT_DEL_RX_SA      ;@;o;;o;	;
+@
+;iS;"=;@;o;;o;	;
+@
+;iU;"-82;@;0{;{	;o;;o;	;
+@
+;i};"1VTSS_RC_ERR_MACSEC_COULD_NOT_DEL_TX_SA      ;@;o;;o;	;
+@
+;i©;"=;@;o;;o;	;
+@
+;i«;"-83;@;0{;{	;o;;o;	;
+@
+;iÓ;"1VTSS_RC_ERR_MACSEC_PATTERN_NOT_SET          ;@;o;;o;	;
+@
+;iÿ;"=;@;o;;o;	;
+@
+;i;"-84;@;0{;{	;o;;o;	;
+@
+;i";"1VTSS_RC_ERR_MACSEC_HW_RESOURCE_EXHUSTED     ;@;o;;o;	;
+@
+;iN;"=;@;o;;o;	;
+@
+;iP;"-85;@;0{;{	;o;;o;	;
+@
+;ix;"1VTSS_RC_ERR_MACSEC_SCI_ALREADY_EXISTS       ;@;o;;o;	;
+@
+;i¤;"=;@;o;;o;	;
+@
+;i¦;"-86;@;0{;{	;o;;o;	;
+@
+;iÊ;"1VTSS_RC_ERR_MACSEC_SC_RESOURCE_NOT_FOUND    ;@;o;;o;	;
+@
+;iö;"=;@;o;;o;	;
+@
+;iø;"-87;@;0{;{	;o;;o;	;
+@
+;i%;"1VTSS_RC_ERR_MACSEC_RX_AN_ALREADY_IN_USE     ;@;o;;o;	;
+@
+;iQ;"=;@;o;;o;	;
+@
+;iS;"-88;@;0{;{	;o;;o;	;
+@
+;it;"1VTSS_RC_ERR_MACSEC_EMPTY_RECORD             ;@;o;;o;	;
+@
+;i ;"=;@;o;;o;	;
+@
+;i¢;"-89;@;0{;{	;o;;o;	;
+@
+;iÑ;"1VTSS_RC_ERR_MACSEC_COULD_NOT_PRG_XFORM      ;@;o;;o;	;
+@
+;iı;"=;@;o;;o;	;
+@
+;iÿ;"-90;@;0{;{	;o;;o;	;
+@
+;i3;"1VTSS_RC_ERR_MACSEC_COULD_NOT_TOGGLE_SA      ;@;o;;o;	;
+@
+;i_;"=;@;o;;o;	;
+@
+;ia;"-91;@;0{;{	;o;;o;	;
+@
+;i†;"1VTSS_RC_ERR_MACSEC_TX_AN_ALREADY_IN_USE     ;@;o;;o;	;
+@
+;i²;"=;@;o;;o;	;
+@
+;i´;"-92;@;0{;{	;o;;o;	;
+@
+;iÕ;"1VTSS_RC_ERR_MACSEC_ALL_AVAILABLE_SA_IN_USE  ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i;"-93;@;0{;{	;o;;o;	;
+@
+;i2;"1VTSS_RC_ERR_MACSEC_MATCH_DISABLE            ;@;o;;o;	;
+@
+;i^;"=;@;o;;o;	;
+@
+;i`;"-94;@;0{;{	;o;;o;	;
+@
+;i‡;"1VTSS_RC_ERR_MACSEC_ALL_CP_RULES_IN_USE      ;@;o;;o;	;
+@
+;i³;"=;@;o;;o;	;
+@
+;iµ;"-95;@;0{;{	;o;;o;	;
+@
+;ió;"1VTSS_RC_ERR_MACSEC_PATTERN_PRIO_NOT_VALID   ;@;o;;o;	;
+@
+;i;"=;@;o;;o;	;
+@
+;i!;"-96;@;0{;{	;o;;o;	;
+@
+;iT;"1VTSS_RC_ERR_MACSEC_BUFFER_TOO_SMALL         ;@;o;;o;	;
+@
+;i€;"=;@;o;;o;	;
+@
+;i‚;"-97;@;0{;{	;o;;o;	;
+@
+;iÜ;"1VTSS_RC_ERR_MACSEC_FRAME_TOO_LONG           ;@;o;;o;	;
+@
+;i ;"=;@;o;;o;	;
+@
+;i
+ ;"-98;@;0{;{	;o;;o;	;
+@
+;ic ;"1VTSS_RC_ERR_MACSEC_FRAME_TRUNCATED          ;@;o;;o;	;
+@
+;i ;"=;@;o;;o;	;
+@
+;i‘ ;"-99;@;0{;{	;o;;o;	;
+@
+;iµ ;"1VTSS_RC_ERR_MACSEC_PHY_POWERED_DOWN         ;@;o;;o;	;
+@
+;iá ;"=;@;o;;o;	;
+@
+;iã ;"	-100;@;0{;{	;o;;o;	;
+@
+;i1!;"1VTSS_RC_ERR_MACSEC_PHY_NOT_MACSEC_CAPABLE   ;@;o;;o;	;
+@
+;i]!;"=;@;o;;o;	;
+@
+;i_!;"	-101;@;0{;{	;o;;o;	;
+@
+;i!;"1VTSS_RC_ERR_MACSEC_AN_NOT_EXIST             ;@;o;;o;	;
+@
+;i»!;"=;@;o;;o;	;
+@
+;i½!;"	-102;@;0{;{	;o;;o;	;
+@
+;ià!;"1VTSS_RC_ERR_MACSEC_NO_PATTERN_CFG           ;@;o;;o;	;
+@
+;i";"=;@;o;;o;	;
+@
+;i";"	-103;@;0{;{	;o;;o;	;
+@
+;i8";"1VTSS_RC_ERR_MACSEC_MAX_MTU                  ;@;o;;o;	;
+@
+;id";"=;@;o;;o;	;
+@
+;if";"	-105;@;0{;{	;o;;o;	;
+@
+;i©";"1VTSS_RC_ERR_MACSEC_UNEXPECT_CP_MODE         ;@;o;;o;	;
+@
+;iÕ";"=;@;o;;o;	;
+@
+;i×";"	-106;@;0{;{	;o;;o;	;
+@
+;iû";"1VTSS_RC_ERR_MACSEC_COULD_NOT_DISABLE_AN     ;@;o;;o;	;
+@
+;i'#;"=;@;o;;o;	;
+@
+;i)#;"	-107;@;0{;{	;o;;o;	;
+@
+;iO#;"1VTSS_RC_ERR_MACSEC_RULE_OUT_OF_RANGE        ;@;o;;o;	;
+@
+;i{#;"=;@;o;;o;	;
+@
+;i}#;"	-108;@;0{;{	;o;;o;	;
+@
+;iÔ#;"1VTSS_RC_ERR_MACSEC_RULE_NOT_EXIST           ;@;o;;o;	;
+@
+;i $;"=;@;o;;o;	;
+@
+;i$;"	-109;@;0{;{	;o;;o;	;
+@
+;i'$;"1VTSS_RC_ERR_MACSEC_CSR_READ                 ;@;o;;o;	;
+@
+;iS$;"=;@;o;;o;	;
+@
+;iU$;"	-110;@;0{;{	;o;;o;	;
+@
+;i|$;"1VTSS_RC_ERR_MACSEC_CSR_WRITE                ;@;o;;o;	;
+@
+;i¨$;"=;@;o;;o;	;
+@
+;iª$;"	-111;@;0{;{	;o;;o;	;
+@
+;iÒ$;"1VTSS_RC_ERR_PHY_6G_RCPLL_ON_BASE_PORT_ONLY  ;@;o;;o;	;
+@
+;iş$;"=;@;o;;o;	;
+@
+;i %;"	-112;@;0{;{	;o;;o;	;
+@
+;ic%;"1VTSS_RC_ERR_INVALID_NULL_PTR                ;@;o;;o;	;
+@
+;i%;"=;@;o;;o;	;
+@
+;i‘%;"	-200;@;0{;{	;o;;o;	;
+@
+;iá%;"1VTSS_RC_ERR_PCS_BLOCK_NOT_SUPPORTED         ;@;o;;o;	;
+@
+;i&;"=;@;o;;o;	;
+@
+;i&;"
+-300 ;@;0{;o;;o;	;
+@
+;iR&;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i]';"typedef;@;o;;o;	;
+@
+;ie';"	u32 ;@;o;;o;	;
+@
+;ii';"vtss_chip_no_t;@;[ ;0{
+;o;;o;	;
+@
+;iœ';"typedef;@;o;;o;	;
+@
+;i¤';"struct vtss_state_s *;@;o;;o;	;
+@
+;i¹';"vtss_inst_t;@;[ ;0{;o;;o;	;
+@
+;iè(;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{
+;o;;o;	;
+@
+;i);"typedef;@;o;;o;	;
+@
+;i);"
+BOOL ;@;o;;o;	;
+@
+;i);"vtss_event_t;@;[ ;0{;o;;o;	;
+@
+;i);"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;ig);"typedef;@;o;;o;	;
+@
+;io);"	u32 ;@;o;;o;	;
+@
+;is);"vtss_packet_rate_t;@;[ ;0{;o;;o;	;
+@
+;iˆ);"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i¤);"e#define VTSS_PACKET_RATE_DISABLED 0xffffffff /**< Special value for disabling packet policer */
+;@{;o;;o;	;
+@
+;i*;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i=*;"typedef;@;o;;o;	;
+@
+;iE*;"	u32 ;@;o;;o;	;
+@
+;iI*;"vtss_port_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i}*;"typedef;@;o;;o;	;
+@
+;i…*;"	u32 ;@;o;;o;	;
+@
+;i‰*;"vtss_phys_port_no_t;@;[ ;0{
+;o;;o;	;
+@
+;i¥.;"typedef;@;{;o;;o;	;
+@
+;i­.;"	enum;@;[{;{	;o;;o;	;
+@
+;i¸.;"VTSS_MEM_FLAGS_NONE    ;@;o;;o;	;
+@
+;iÏ.;"=;@;o;;o;	;
+@
+;iÑ.;"0x0;@;0{;{	;o;;o;	;
+@
+;i'/;"VTSS_MEM_FLAGS_DMA     ;@;o;;o;	;
+@
+;i>/;"=;@;o;;o;	;
+@
+;i@/;"0x1;@;0{;{	;o;;o;	;
+@
+;i–/;"VTSS_MEM_FLAGS_PERSIST ;@;o;;o;	;
+@
+;i­/;"=;@;o;;o;	;
+@
+;i¯/;"0x2;@;0;o;;o;	;
+@
+;i0;"vtss_mem_flags_t;@;[ ;0{;o;;o;	;
+@
+;i0;"@#define VTSS_PORT_COUNT 1 /**< Default number of ports */
+
+;@{;o;;o;	;
+@
+;iQ0;"K#if defined(VTSS_CHIP_SERVAL_LITE) || defined(VTSS_CHIP_CARACAL_LITE)
+;@{;o;;o;	;
+@
+;i—0;"#if (VTSS_PORT_COUNT < 7)
+;@{;o;;o;	;
+@
+;i±0;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iÈ0;"7#define VTSS_PORT_COUNT 7 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iú0;"&#endif /* VTSS_PORT_COUNT < 7 */
+;@{;o;;o;	;
+@
+;i1;",#endif /* SERVAL_LITE/CARACAL_LITE */
+
+;@{;o;;o;	;
+@
+;iB1;"!#if defined(VTSS_CHIP_7513)
+;@{;o;;o;	;
+@
+;i^1;"#if (VTSS_PORT_COUNT < 9)
+;@{;o;;o;	;
+@
+;ix1;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i1;"7#define VTSS_PORT_COUNT 9 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iÁ1;"&#endif /* VTSS_PORT_COUNT < 9 */
+;@{;o;;o;	;
+@
+;iâ1;"#endif /* 7513 */
+
+;@{;o;;o;	;
+@
+;iõ1;"{#if defined(VTSS_CHIP_SPARX_III_10) || defined(VTSS_CHIP_SPARX_III_10_UM) || \
+    defined(VTSS_CHIP_SPARX_III_10_01)
+;@{;o;;o;	;
+@
+;ik2;" #if (VTSS_PORT_COUNT < 10)
+;@{;o;;o;	;
+@
+;i†2;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i2;"8#define VTSS_PORT_COUNT 10 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iĞ2;"'#endif /* VTSS_PORT_COUNT < 10 */
+;@{;o;;o;	;
+@
+;iò2;" #endif /* SPARX_III_10 */
+
+;@{;o;;o;	;
+@
+;i3;"!#if defined(VTSS_CHIP_7511)
+;@{;o;;o;	;
+@
+;i)3;"#if (VTSS_PORT_COUNT < 4)
+;@{;o;;o;	;
+@
+;iC3;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iZ3;"7#define VTSS_PORT_COUNT 4 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iŒ3;"&#endif /* VTSS_PORT_COUNT < 4 */
+;@{;o;;o;	;
+@
+;i­3;"#endif /* 7511 */
+
+;@{;o;;o;	;
+@
+;iÀ3;"#if defined(VTSS_CHIP_CARACAL_1) || defined(VTSS_CHIP_SERVAL) || \
+    defined(VTSS_CHIP_SPARX_III_11) || defined(VTSS_CHIP_7512) || defined(VTSS_CHIP_7514)
+;@{;o;;o;	;
+@
+;i]4;" #if (VTSS_PORT_COUNT < 11)
+;@{;o;;o;	;
+@
+;ix4;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i4;"8#define VTSS_PORT_COUNT 11 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iÂ4;"'#endif /* VTSS_PORT_COUNT < 11 */
+;@{;o;;o;	;
+@
+;iä4;")#endif /* CARACAL_1/SERVAL/7514 */
+
+;@{;o;;o;	;
+@
+;i5;",#if defined(VTSS_CHIP_SPARX_III_17_UM)
+;@{;o;;o;	;
+@
+;i/5;" #if (VTSS_PORT_COUNT < 17)
+;@{;o;;o;	;
+@
+;iJ5;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;ia5;"8#define VTSS_PORT_COUNT 17 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i”5;"'#endif /* VTSS_PORT_COUNT < 17 */
+;@{;o;;o;	;
+@
+;i¶5;"##endif /* SPARX_III_17_UM */
+
+;@{;o;;o;	;
+@
+;iÔ5;")#if defined(VTSS_CHIP_SPARX_III_18)
+;@{;o;;o;	;
+@
+;iø5;" #if (VTSS_PORT_COUNT < 18)
+;@{;o;;o;	;
+@
+;i6;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i*6;"8#define VTSS_PORT_COUNT 18 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i]6;"'#endif /* VTSS_PORT_COUNT < 18 */
+;@{;o;;o;	;
+@
+;i6;" #endif /* SPARX_III_18 */
+
+;@{;o;;o;	;
+@
+;iš6;")#if defined(VTSS_CHIP_SPARX_III_24)
+;@{;o;;o;	;
+@
+;i¾6;" #if (VTSS_PORT_COUNT < 24)
+;@{;o;;o;	;
+@
+;iÙ6;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iğ6;"8#define VTSS_PORT_COUNT 24 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i#7;"'#endif /* VTSS_PORT_COUNT < 24 */
+;@{;o;;o;	;
+@
+;iE7;" #endif /* SPARX_III_24 */
+
+;@{;o;;o;	;
+@
+;i`7;",#if defined(VTSS_CHIP_SPARX_III_25_UM)
+;@{;o;;o;	;
+@
+;i‡7;" #if (VTSS_PORT_COUNT < 25)
+;@{;o;;o;	;
+@
+;i¢7;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i¹7;"8#define VTSS_PORT_COUNT 25 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iì7;"'#endif /* VTSS_PORT_COUNT < 25 */
+;@{;o;;o;	;
+@
+;i8;"##endif /* SPARX_III_25_UM */
+
+;@{;o;;o;	;
+@
+;i,8;"I#if defined(VTSS_CHIP_SPARX_III_26) || defined(VTSS_CHIP_CARACAL_2)
+;@{;o;;o;	;
+@
+;ip8;" #if (VTSS_PORT_COUNT < 26)
+;@{;o;;o;	;
+@
+;i‹8;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i¢8;"8#define VTSS_PORT_COUNT 26 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iÕ8;"'#endif /* VTSS_PORT_COUNT < 26 */
+;@{;o;;o;	;
+@
+;i÷8;" #endif /* SPARX_III_26 */
+
+;@{;o;;o;	;
+@
+;i9;"%#if defined(VTSS_CHIP_SERVAL_2)
+;@{;o;;o;	;
+@
+;iL9;" #if (VTSS_PORT_COUNT < 15)
+;@{;o;;o;	;
+@
+;ig9;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i~9;"8#define VTSS_PORT_COUNT 15 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i±9;"'#endif /* VTSS_PORT_COUNT < 15 */
+;@{;o;;o;	;
+@
+;iÓ9;"&#endif /* VTSS_CHIP_SERVAL_2 */
+
+;@{;o;;o;	;
+@
+;iô9;"E#if defined(VTSS_CHIP_LYNX_2) || defined(VTSS_CHIP_SPARX_IV_44)
+;@{;o;;o;	;
+@
+;iN:;" #if (VTSS_PORT_COUNT < 27)
+;@{;o;;o;	;
+@
+;ii:;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i€:;"8#define VTSS_PORT_COUNT 27 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i³:;"'#endif /* VTSS_PORT_COUNT < 27 */
+;@{;o;;o;	;
+@
+;iÕ:;"0#endif /* VTSS_CHIP_LYNX_2/SPARX_IV_44 */
+
+;@{;o;;o;	;
+@
+;i ;;"†#if defined(VTSS_CHIP_JAGUAR_2) || defined(VTSS_CHIP_SPARX_IV_52) || defined(VTSS_CHIP_SPARX_IV_80) || defined(VTSS_CHIP_SPARX_IV_90)
+;@{;o;;o;	;
+@
+;iŸ;;" #if (VTSS_PORT_COUNT < 53)
+;@{;o;;o;	;
+@
+;iº;;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iÑ;;"8#define VTSS_PORT_COUNT 53 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i<;"'#endif /* VTSS_PORT_COUNT < 53 */
+;@{;o;;o;	;
+@
+;i&<;"J#endif /* VTSS_CHIP_JAGUAR_2/SPARX_IV_52/SPARX_IV_80/SPARX_IV_90 */
+
+;@{;o;;o;	;
+@
+;ik<;"#if defined(VTSS_CHIP_SERVAL_T) || defined(VTSS_CHIP_SERVAL_TP) || defined(VTSS_CHIP_SERVAL_TE) || defined(VTSS_CHIP_SERVAL_TEP)
+;@{;o;;o;	;
+@
+;i=;"#if (VTSS_PORT_COUNT < 7)
+;@{;o;;o;	;
+@
+;i =;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i7=;"7#define VTSS_PORT_COUNT 7 /**< Number of ports */
+;@{;o;;o;	;
+@
+;ii=;"&#endif /* VTSS_PORT_COUNT < 7 */
+;@{;o;;o;	;
+@
+;iŠ=;"0#endif /* VTSS_CHIP_SERVAL_T/SERVAL_TE */
+
+;@{;o;;o;	;
+@
+;iµ=;"L#if defined(VTSS_CHIP_SERVAL_2_LITE) || defined(VTSS_CHIP_SPARX_IV_34)
+;@{;o;;o;	;
+@
+;i>;" #if (VTSS_PORT_COUNT < 11)
+;@{;o;;o;	;
+@
+;i9>;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iP>;"8#define VTSS_PORT_COUNT 11 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iƒ>;"'#endif /* VTSS_PORT_COUNT < 11 */
+;@{;o;;o;	;
+@
+;i¥>;"7#endif /* VTSS_CHIP_SERVAL_2_LITE/SPARX_IV_34 */
+
+;@{;o;;o;	;
+@
+;i×>;"(#if defined(VTSS_CHIP_SERVAL_TE10)
+;@{;o;;o;	;
+@
+;i?;"#if (VTSS_PORT_COUNT < 9)
+;@{;o;;o;	;
+@
+;i6?;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;iM?;"7#define VTSS_PORT_COUNT 9 /**< Number of ports */
+;@{;o;;o;	;
+@
+;i?;"&#endif /* VTSS_PORT_COUNT < 9 */
+;@{;o;;o;	;
+@
+;i ?;")#endif /* VTSS_CHIP_SERVAL_TE10 */
+
+;@{;o;;o;	;
+@
+;iÄ?;"##if defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;iâ?;" #if (VTSS_PORT_COUNT < 65)
+;@{;o;;o;	;
+@
+;iı?;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i@;"8#define VTSS_PORT_COUNT 65 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iG@;"'#endif /* VTSS_PORT_COUNT < 65 */
+;@{;o;;o;	;
+@
+;ii@;"#endif
+
+;@{;o;;o;	;
+@
+;iq@;"!#if defined(VTSS_CHIP_966X)
+;@{;o;;o;	;
+@
+;i@;"#if (VTSS_PORT_COUNT < 8)
+;@{;o;;o;	;
+@
+;i§@;"#undef VTSS_PORT_COUNT
+;@{;o;;o;	;
+@
+;i¾@;"7#define VTSS_PORT_COUNT 8 /**< Number of ports */
+;@{;o;;o;	;
+@
+;iğ@;"#endif
+;@{;o;;o;	;
+@
+;i÷@;"#endif
+
+;@{;o;;o;	;
+@
+;iFA;"d#if VTSS_OPT_PORT_COUNT && ((VTSS_PORT_COUNT == 1) || (VTSS_OPT_PORT_COUNT < VTSS_PORT_COUNT))
+;@{;o;;o;	;
+@
+;i¥A;"D#define VTSS_PORTS VTSS_OPT_PORT_COUNT /**< Number of ports */
+;@{;o;;o;	;
+@
+;iäA;"#else
+;@{;o;;o;	;
+@
+;iêA;"D#define VTSS_PORTS VTSS_PORT_COUNT     /**< Number of ports */
+;@{;o;;o;	;
+@
+;i)B;"'#endif /* VTSS_OPT_PORT_COUNT */
+
+;@{;o;;o;	;
+@
+;iuB;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i‘B;"H#define VTSS_PORT_NO_NONE    (0xffffffff) /**< Port number none */
+;@{;o;;o;	;
+@
+;iÔB;"`#define VTSS_PORT_NO_CPU     (0xfffffffe) /**< Port number for CPU for special purposes */
+;@{;o;;o;	;
+@
+;i/C;"I#define VTSS_PORT_NO_START   (0)          /**< Port start number */
+;@{;o;;o;	;
+@
+;isC;"##endif // _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i‘C;"Z#define VTSS_PORT_NO_END     (VTSS_PORT_NO_START+VTSS_PORTS) /**< Port end number */
+;@{;o;;o;	;
+@
+;iæC;"S#define VTSS_PORT_ARRAY_SIZE VTSS_PORT_NO_END /**< Port number array size */
+
+;@{;o;;o;	;
+@
+;i4D;"T#define VTSS_PORT_IS_PORT(x) ((x)<VTSS_PORT_NO_END) /**< Valid port number */
+
+;@{
+;o;;o;	;
+@
+;iÅD;"typedef;@;{;o;;o;	;
+@
+;iÍD;"	enum;@;["{;{;o;;o;	;
+@
+;iØD;"&VTSS_PORT_INTERFACE_NO_CONNECTION;@;0{;{;o;;o;	;
+@
+;iE;"!VTSS_PORT_INTERFACE_LOOPBACK;@;0{;{;o;;o;	;
+@
+;i]E;"!VTSS_PORT_INTERFACE_INTERNAL;@;0{;{;o;;o;	;
+@
+;iŸE;"VTSS_PORT_INTERFACE_MII;@;0{;{;o;;o;	;
+@
+;ièE;"VTSS_PORT_INTERFACE_GMII;@;0{;{;o;;o;	;
+@
+;iF;"VTSS_PORT_INTERFACE_RGMII;@;0{;{;o;;o;	;
+@
+;ihF;"!VTSS_PORT_INTERFACE_RGMII_ID;@;0{;{;o;;o;	;
+@
+;i»F;"#VTSS_PORT_INTERFACE_RGMII_RXID;@;0{;{;o;;o;	;
+@
+;iG;"#VTSS_PORT_INTERFACE_RGMII_TXID;@;0{;{;o;;o;	;
+@
+;i[G;"VTSS_PORT_INTERFACE_TBI;@;0{;{;o;;o;	;
+@
+;iG;"VTSS_PORT_INTERFACE_RTBI;@;0{;{;o;;o;	;
+@
+;iÂG;"VTSS_PORT_INTERFACE_SGMII;@;0{;{;o;;o;	;
+@
+;i÷G;""VTSS_PORT_INTERFACE_SGMII_2G5;@;0{;{;o;;o;	;
+@
+;i1H;"$VTSS_PORT_INTERFACE_SGMII_CISCO;@;0{;{;o;;o;	;
+@
+;ixH;"VTSS_PORT_INTERFACE_SERDES;@;0{;{;o;;o;	;
+@
+;iÁH;"VTSS_PORT_INTERFACE_VAUI;@;0{;{;o;;o;	;
+@
+;iùH;"VTSS_PORT_INTERFACE_100FX;@;0{;{;o;;o;	;
+@
+;i.I;"VTSS_PORT_INTERFACE_XAUI;@;0{;{;o;;o;	;
+@
+;ibI;"VTSS_PORT_INTERFACE_RXAUI;@;0{;{;o;;o;	;
+@
+;i—I;"VTSS_PORT_INTERFACE_XGMII;@;0{;{;o;;o;	;
+@
+;iÌI;"VTSS_PORT_INTERFACE_SPI4;@;0{;{;o;;o;	;
+@
+;i J;"VTSS_PORT_INTERFACE_QSGMII;@;0{;{;o;;o;	;
+@
+;i6J;"VTSS_PORT_INTERFACE_SFI;@;0{;{;o;;o;	;
+@
+;i‚J;"VTSS_PORT_INTERFACE_SXGMII;@;0{;{;o;;o;	;
+@
+;iK;"VTSS_PORT_INTERFACE_USGMII;@;0{;{;o;;o;	;
+@
+;i…K;"VTSS_PORT_INTERFACE_QXGMII;@;0{;{;o;;o;	;
+@
+;iáK;""VTSS_PORT_INTERFACE_DXGMII_5G;@;0{;{;o;;o;	;
+@
+;iZL;"#VTSS_PORT_INTERFACE_DXGMII_10G;@;0{;{;o;;o;	;
+@
+;i×L;"VTSS_PORT_INTERFACE_CPU;@;0;o;;o;	;
+@
+;i.M;"vtss_port_interface_t;@;[ ;0{
+;o;;o;	;
+@
+;imM;"typedef;@:struct_type_declare{:struct_members[{:member{:normal{	:	typeo;;o;	;
+@
+;i‚M;"
+BOOL ;@:	nameo;;o;	;
+@
+;i‡M;"obey_pause;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iĞM;"
+BOOL ;@;#o;;o;	;
+@
+;iÕM;"generate_pause;@;[ ;0;o;;o;	;
+@
+;iN;"vtss_aneg_t;@;[ ;0{
+;o;;o;	;
+@
+;i{N;"typedef;@;{;o;;o;	;
+@
+;iƒN;"	enum;@;[{;{;o;;o;	;
+@
+;iN;"VTSS_SERDES_MODE_DISABLE;@;0{;{;o;;o;	;
+@
+;iÅN;"VTSS_SERDES_MODE_NONE;@;0{;{;o;;o;	;
+@
+;iO;"VTSS_SERDES_MODE_XAUI_12G;@;0{;{;o;;o;	;
+@
+;i8O;"VTSS_SERDES_MODE_XAUI;@;0{;{;o;;o;	;
+@
+;ioO;"VTSS_SERDES_MODE_RXAUI;@;0{;{;o;;o;	;
+@
+;i¦O;"VTSS_SERDES_MODE_RXAUI_12G;@;0{;{;o;;o;	;
+@
+;iİO;"VTSS_SERDES_MODE_2G5;@;0{;{;o;;o;	;
+@
+;iP;"VTSS_SERDES_MODE_QSGMII;@;0{;{;o;;o;	;
+@
+;iKP;"VTSS_SERDES_MODE_SGMII;@;0{;{;o;;o;	;
+@
+;i‚P;"VTSS_SERDES_MODE_100FX;@;0{;{;o;;o;	;
+@
+;i¹P;"VTSS_SERDES_MODE_1000BaseX;@;0{;{;o;;o;	;
+@
+;iğP;"VTSS_SERDES_MODE_SFI;@;0{;{;o;;o;	;
+@
+;i'Q;"VTSS_SERDES_MODE_SFI_DAC;@;0{;{;o;;o;	;
+@
+;i^Q;"VTSS_SERDES_MODE_SFI_SR;@;0{;{;o;;o;	;
+@
+;i”Q;"VTSS_SERDES_MODE_SFI_ZR;@;0{;{;o;;o;	;
+@
+;iİQ;"VTSS_SERDES_MODE_SFI_BP;@;0{;{;o;;o;	;
+@
+;iR;"VTSS_SERDES_MODE_SFI_B2B;@;0{;{;o;;o;	;
+@
+;iIR;"VTSS_SERDES_MODE_SFI_KR;@;0{;{;o;;o;	;
+@
+;iR;"!VTSS_SERDES_MODE_SFI_PR_NONE;@;0{;{;o;;o;	;
+@
+;i·R;"VTSS_SERDES_MODE_IDLE;@;0{;{;o;;o;	;
+@
+;iS;"VTSS_SERDES_MODE_TEST_MODE;@;0{;{;o;;o;	;
+@
+;ixS;"VTSS_SERDES_MODE_USXGMII;@;0{;{;o;;o;	;
+@
+;i»S;"VTSS_SERDES_MODE_USGMII;@;0{;{;o;;o;	;
+@
+;iùS;"VTSS_SERDES_MODE_QXGMII;@;0{;{;o;;o;	;
+@
+;iGT;" VTSS_SERDES_MODE_DXGMII_10G;@;0{;{;o;;o;	;
+@
+;i•T;"!VTSS_SERDES_MODE_DXGMII_5G  ;@;0;o;;o;	;
+@
+;iâT;"vtss_serdes_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;iU;"typedef;@;o;;o;	;
+@
+;iU;"	u32 ;@;o;;o;	;
+@
+;iU;"vtss_voe_idx_t;@;[ ;0{;o;;o;	;
+@
+;i,U;"P#define VTSS_VOE_IDX_NONE 0xFFFFFFFF /**< Special value meaning no VOE */
+
+;@{
+;o;;o;	;
+@
+;i•U;"typedef;@;o;;o;	;
+@
+;iU;"	u32 ;@;o;;o;	;
+@
+;i¡U;"vtss_voi_idx_t;@;[ ;0{;o;;o;	;
+@
+;i²U;"V#define VTSS_VOI_IDX_NONE 0xFFFFFFFF /**< Special value meaning no VOI (MIP) */
+
+;@{
+;o;;o;	;
+@
+;iV;"typedef;@;o;;o;	;
+@
+;iV;"	u32 ;@;o;;o;	;
+@
+;iV;"vtss_mrp_idx_t;@;[ ;0{;o;;o;	;
+@
+;i-V;"P#define VTSS_MRP_IDX_NONE 0xFFFFFFFF /**< Special value meaning no MRP */
+
+;@{
+;o;;o;	;
+@
+;i@W;"typedef;@;o;;o;	;
+@
+;iHW;"	u32 ;@;o;;o;	;
+@
+;iLW;"vtss_prio_t;@;[ ;0{;o;;o;	;
+@
+;iYW;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iuW;"^#define VTSS_PRIOS           8                              /**< Number of priorities */
+;@{;o;;o;	;
+@
+;iÎW;"l#define VTSS_PRIO_NO_NONE    0xffffffff                     /**< Priority number none (= undefined) */
+;@{;o;;o;	;
+@
+;i5X;"h#define VTSS_PRIO_START      0                              /**< Priority start number (lowest) */
+;@{;o;;o;	;
+@
+;i˜X;"]#define VTSS_PRIO_END        (VTSS_PRIO_START + VTSS_PRIOS) /**< Priority end number */
+;@{;o;;o;	;
+@
+;iğX;"d#define VTSS_PRIO_ARRAY_SIZE VTSS_PRIO_END                  /**< Priority number array size */
+;@{;o;;o;	;
+@
+;iOY;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i‰Y;"typedef;@;o;;o;	;
+@
+;i‘Y;"	u32 ;@;o;;o;	;
+@
+;i•Y;"vtss_queue_t;@;[ ;0{;o;;o;	;
+@
+;i£Y;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i¿Y;"]#define VTSS_QUEUES           VTSS_PRIOS                       /**< Number of queues */
+;@{;o;;o;	;
+@
+;iZ;"_#define VTSS_QUEUE_START      0                                /**< Queue start number */
+;@{;o;;o;	;
+@
+;iqZ;"]#define VTSS_QUEUE_END        (VTSS_QUEUE_START + VTSS_QUEUES) /**< Queue end number */
+;@{;o;;o;	;
+@
+;iÉZ;"d#define VTSS_QUEUE_ARRAY_SIZE VTSS_QUEUE_END                   /**< Queue number array size */
+;@{;o;;o;	;
+@
+;i([;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i[;"typedef;@;o;;o;	;
+@
+;i‡[;"	u32 ;@;o;;o;	;
+@
+;i‹[;"vtss_tagprio_t;@;[ ;0{
+;o;;o;	;
+@
+;iÃ[;"typedef;@;o;;o;	;
+@
+;iË[;"	u8  ;@;o;;o;	;
+@
+;iÏ[;"vtss_pcp_t;@;[ ;0{;o;;o;	;
+@
+;iÛ[;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i÷[;"[#define VTSS_PCPS           8                            /**< Number of PCP values */
+;@{;o;;o;	;
+@
+;iM\;"W#define VTSS_PCP_START      0                            /**< PCP start number */
+;@{;o;;o;	;
+@
+;iŸ\;"U#define VTSS_PCP_END        (VTSS_PCP_START + VTSS_PCPS) /**< PCP end number */
+;@{;o;;o;	;
+@
+;iï\;"U#define VTSS_PCP_ARRAY_SIZE VTSS_PCP_END                 /**< PCP array size */
+;@{;o;;o;	;
+@
+;i?];"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iŠ];"typedef;@;o;;o;	;
+@
+;i’];"
+BOOL ;@;o;;o;	;
+@
+;i—];"vtss_dei_t;@;[ ;0{;o;;o;	;
+@
+;i£];"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i¿];"[#define VTSS_DEIS           2                            /**< Number of DEI values */
+;@{;o;;o;	;
+@
+;i^;"W#define VTSS_DEI_START      0                            /**< DEI start number */
+;@{;o;;o;	;
+@
+;ig^;"U#define VTSS_DEI_END        (VTSS_DEI_START + VTSS_DEIS) /**< DEI end number */
+;@{;o;;o;	;
+@
+;i·^;"U#define VTSS_DEI_ARRAY_SIZE VTSS_DEI_END                 /**< DEI array size */
+;@{;o;;o;	;
+@
+;i_;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iP_;"typedef;@;o;;o;	;
+@
+;iX_;"u8 ;@;o;;o;	;
+@
+;i[_;"vtss_dp_level_t;@;[ ;0{
+;o;;o;	;
+@
+;i–_;"typedef;@;o;;o;	;
+@
+;i_;"vtss_dp_level_t ;@;o;;o;	;
+@
+;i®_;"vtss_dpl_t;@;[ ;0{;o;;o;	;
+@
+;iº_;"K#define VTSS_DPLS 2 /**< Default number of drop precedence levels */
+
+;@{;o;;o;	;
+@
+;i `;"B#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i=`;"#undef VTSS_DPLS
+;@{;o;;o;	;
+@
+;iN`;"B#define VTSS_DPLS 4 /**< Number of drop precedence levels */
+;@{;o;;o;	;
+@
+;i‹`;"L#endif /* defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5) */
+
+;@{;o;;o;	;
+@
+;iÒ`;"W#define VTSS_DPL_START      0                            /**< DPL start number */
+;@{;o;;o;	;
+@
+;i$a;"U#define VTSS_DPL_END        (VTSS_DPL_START + VTSS_DPLS) /**< DPL end number */
+;@{;o;;o;	;
+@
+;ita;"V#define VTSS_DPL_ARRAY_SIZE VTSS_DPL_END                 /**< DPL array size */
+
+;@{
+;o;;o;	;
+@
+;i÷a;"typedef;@;o;;o;	;
+@
+;iÿa;"u8 ;@;o;;o;	;
+@
+;ib;"vtss_cos_t;@;[ ;0{
+;o;;o;	;
+@
+;i/b;"typedef;@;o;;o;	;
+@
+;i7b;"u8 ;@;o;;o;	;
+@
+;i:b;"vtss_pct_t;@;[ ;0{
+;o;;o;	;
+@
+;iÙb;"typedef;@;o;;o;	;
+@
+;iáb;"	u32 ;@;o;;o;	;
+@
+;iåb;"vtss_bitrate_t;@;[ ;0{;o;;o;	;
+@
+;iõb;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;ic;"G#define VTSS_BITRATE_DISABLED 0xffffffff /**< Bitrate disabled */
+;@{;o;;o;	;
+@
+;iSc;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iòc;"typedef;@;o;;o;	;
+@
+;iúc;"	u32 ;@;o;;o;	;
+@
+;işc;"vtss_burst_level_t;@;[ ;0{
+;o;;o;	;
+@
+;iBd;"typedef;@;{;o;;o;	;
+@
+;iJd;"	enum;@;[{;{;o;;o;	;
+@
+;iUd;"*VTSS_STORM_POLICER_MODE_PORTS_AND_CPU;@;0{;{;o;;o;	;
+@
+;i´d;"'VTSS_STORM_POLICER_MODE_PORTS_ONLY;@;0{;{;o;;o;	;
+@
+;ie;",VTSS_STORM_POLICER_MODE_CPU_ONLY       ;@;0;o;;o;	;
+@
+;iXe;"vtss_storm_policer_mode_t;@;[ ;0{
+;o;;o;	;
+@
+;i”e;"typedef;@;o;;o;	;
+@
+;iœe;"u8 ;@;o;;o;	;
+@
+;iŸe;"vtss_dscp_t;@;[ ;0{
+;o;;o;	;
+@
+;iĞe;"typedef;@;o;;o;	;
+@
+;iØe;"	u32 ;@;o;;o;	;
+@
+;iÜe;"vtss_qce_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i#f;"typedef;@;{;o;;o;	;
+@
+;i+f;"	enum;@;[{;{;o;;o;	;
+@
+;i6f;"VTSS_POLICER_TYPE_MEF;@;0{;{;o;;o;	;
+@
+;irf;"VTSS_POLICER_TYPE_SINGLE  ;@;0;o;;o;	;
+@
+;i¶f;"vtss_policer_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iìf;"typedef;@;o;;o;	;
+@
+;iôf;"	u16 ;@;o;;o;	;
+@
+;iøf;"vtss_evc_policer_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i0g;"typedef;@;o;;o;	;
+@
+;i8g;"	u32 ;@;o;;o;	;
+@
+;i<g;"vtss_wred_group_t;@;[ ;0{;o;;o;	;
+@
+;iPg;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;ilg;"™#define VTSS_QOS_MAP_ID_NONE  0xfff                                                              /**< ID for unallocated/unused ingress or egress map */
+;@{;o;;o;	;
+@
+;ih;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iAh;"typedef;@;o;;o;	;
+@
+;iIh;"	u16 ;@;o;;o;	;
+@
+;iMh;"vtss_qos_ingress_map_id_t;@;[ ;0{;o;;o;	;
+@
+;iih;"e#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;iÉh;"|#define VTSS_QOS_INGRESS_MAP_IDS      256                                                        /**< Number of IDs */
+;@{;o;;o;	;
+@
+;i@i;"#else
+;@{;o;;o;	;
+@
+;iFi;"|#define VTSS_QOS_INGRESS_MAP_IDS      128                                                        /**< Number of IDs */
+;@{;o;;o;	;
+@
+;i½i;"R#endif /* defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) */
+
+;@{;o;;o;	;
+@
+;i
+j;"~#define VTSS_QOS_INGRESS_MAP_ID_START 0                                                          /**< ID start number */
+;@{;o;;o;	;
+@
+;iƒj;"|#define VTSS_QOS_INGRESS_MAP_ID_END   (VTSS_QOS_INGRESS_MAP_ID_START + VTSS_QOS_INGRESS_MAP_IDS) /**< ID end number */
+;@{;o;;o;	;
+@
+;iúj;"„#define VTSS_QOS_INGRESS_MAP_ID_NONE  VTSS_QOS_MAP_ID_NONE                                       /**< ID for unallocated/unused */
+
+;@{
+;o;;o;	;
+@
+;išk;"typedef;@;o;;o;	;
+@
+;i¢k;"	u16 ;@;o;;o;	;
+@
+;i¦k;"vtss_qos_egress_map_id_t;@;[ ;0{;o;;o;	;
+@
+;iÁk;"e#if defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) || defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i!l;"|#define VTSS_QOS_EGRESS_MAP_IDS       512                                                        /**< Number of IDs */
+;@{;o;;o;	;
+@
+;i˜l;"#else
+;@{;o;;o;	;
+@
+;il;"|#define VTSS_QOS_EGRESS_MAP_IDS       256                                                        /**< Number of IDs */
+;@{;o;;o;	;
+@
+;im;"R#endif /* defined(VTSS_ARCH_JAGUAR_2_B) || defined(VTSS_ARCH_JAGUAR_2_C) */
+
+;@{;o;;o;	;
+@
+;ibm;"~#define VTSS_QOS_EGRESS_MAP_ID_START  0                                                          /**< ID start number */
+;@{;o;;o;	;
+@
+;iÛm;"|#define VTSS_QOS_EGRESS_MAP_ID_END    (VTSS_QOS_EGRESS_MAP_ID_START + VTSS_QOS_EGRESS_MAP_IDS)   /**< ID end number */
+;@{;o;;o;	;
+@
+;iRn;"„#define VTSS_QOS_EGRESS_MAP_ID_NONE   VTSS_QOS_MAP_ID_NONE                                       /**< ID for unallocated/unused */
+
+;@{;o;;o;	;
+@
+;io;"A#if defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;iYo;"h#define VTSS_QOS_TAS_GCL_LEN_MAX     256 /**< Maximum supported length of TAS gate control list */
+;@{;o;;o;	;
+@
+;i¼o;"‰#define VTSS_QOS_TAS_CT_MIN          256 /**< Minimum supported Gate CycleTime in nS. This is due to STARTUP_TIME register resolution */
+;@{;o;;o;	;
+@
+;iEp;"#define VTSS_QOS_TAS_CT_MAX   (1000000000-1) /**< Maximum supported Gate CycleTime in nS. Must be less than one second */
+;@{;o;;o;	;
+@
+;i¿p;"W#define VTSS_QOS_TAS_MAX_SDU_MAX  (255*64) /**< Maximum supported MAX SDU size */
+;@{;o;;o;	;
+@
+;iq;"W#define VTSS_QOS_TAS_MAX_SDU_MIN  64       /**< Minimum supported MAX SDU size */
+;@{;o;;o;	;
+@
+;icq;"-#endif /* defined(VTSS_ARCH_SPARX5) */
+
+;@{
+;o;;o;	;
+@
+;i§q;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i¼q;"
+BOOL ;@;#o;;o;	;
+@
+;iÁq;"enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iåq;"
+BOOL ;@;#o;;o;	;
+@
+;iêq;"
+value;@;[ ;0;o;;o;	;
+@
+;iıq;"vtss_opt_bool_t;@;[ ;0{
+;o;;o;	;
+@
+;i,r;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iAr;"BOOL        ;@;#o;;o;	;
+@
+;iMr;"enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iqr;"vtss_prio_t ;@;#o;;o;	;
+@
+;i}r;"
+value;@;[ ;0;o;;o;	;
+@
+;ir;"vtss_opt_prio_t;@;[ ;0{
+;o;;o;	;
+@
+;i°r;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iÅr;"	u32 ;@;#o;;o;	;
+@
+;iÉr;"	nsec;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iær;"	u32 ;@;#o;;o;	;
+@
+;iêr;"nsec_ext;@;[ ;0;o;;o;	;
+@
+;is;"vtss_cycle_time_t;@;[ ;0{
+;o;;o;	;
+@
+;iís;"typedef;@;o;;o;	;
+@
+;iõs;"	u16 ;@;o;;o;	;
+@
+;iùs;"vtss_vid_t;@;[ ;0{;o;;o;	;
+@
+;it;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i/t;"N#define VTSS_VID_NULL     ((const vtss_vid_t)0)     /**< NULL VLAN ID */
+;@{;o;;o;	;
+@
+;ixt;"Q#define VTSS_VID_DEFAULT  ((const vtss_vid_t)1)     /**< Default VLAN ID */
+;@{;o;;o;	;
+@
+;iÄt;"R#define VTSS_VID_RESERVED ((const vtss_vid_t)0xFFF) /**< Reserved VLAN ID */
+;@{;o;;o;	;
+@
+;iu;"T#define VTSS_VIDS         ((const vtss_vid_t)4096)  /**< Number of VLAN IDs */
+;@{;o;;o;	;
+@
+;i`u;"\#define VTSS_VID_ALL      ((const vtss_vid_t)0x1000)/**< Untagged VID: All VLAN IDs */
+;@{;o;;o;	;
+@
+;i·u;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iv;"typedef;@;{;o;;o;	;
+@
+;iv;"	enum;@;[{;{;o;;o;	;
+@
+;iv;"VTSS_VLAN_FRAME_ALL;@;0{;{;o;;o;	;
+@
+;iNv;"VTSS_VLAN_FRAME_TAGGED;@;0{;{;o;;o;	;
+@
+;iv;"VTSS_VLAN_FRAME_UNTAGGED  ;@;0;o;;o;	;
+@
+;iÎv;"vtss_vlan_frame_t;@;[ ;0{
+;o;;o;	;
+@
+;iÿv;"typedef;@;o;;o;	;
+@
+;iw;"	u16 ;@;o;;o;	;
+@
+;iw;"vtss_etype_t;@;[ ;0{
+;o;;o;	;
+@
+;iEw;"typedef;@;{;[	{; {;!{	;"o;;o;	;
+@
+;iZw;"vtss_etype_t   ;@;#o;;o;	;
+@
+;iiw;"	tpid;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i“w;"vtss_tagprio_t ;@;#o;;o;	;
+@
+;i¢w;"pcp;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÌw;"BOOL           ;@;#o;;o;	;
+@
+;iÛw;"dei;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;ix;"vtss_vid_t     ;@;#o;;o;	;
+@
+;ix;"vid;@;[ ;0;o;;o;	;
+@
+;i<x;"vtss_vlan_tag_t;@;[ ;0{;o;;o;	;
+@
+;iNx;"C#define VTSS_ETYPE_VTSS 0x8880 /**< Vitesse Ethernet Type */
+
+;@{
+;o;;o;	;
+@
+;i¦x;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i»x;"u8 ;@;#o;;o;	;
+@
+;i¾x;"	addr;@;[{;o;;o;	;
+@
+;iÃx;"6;@;0;o;;o;	;
+@
+;iæx;"vtss_mac_t;@;[ ;0{;o;;o;	;
+@
+;ióx;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iy;"#define VTSS_MAC_ADDR_SZ_BYTES    6                 /**< Number of bytes for representing MAC address (SMAC/DMAC) type */
+;@{;o;;o;	;
+@
+;i‰y;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i¨y;"typedef;@;o;;o;	;
+@
+;i°y;"u8 ;@;o;;o;	;
+@
+;i³y;"vtss_mac_addr_t;@;[{;o;;o;	;
+@
+;iÃy;"VTSS_MAC_ADDR_SZ_BYTES;@;0{
+;o;;o;	;
+@
+;i(z;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i=z;"vtss_vid_t  ;@;#o;;o;	;
+@
+;iIz;"vid;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;idz;"vtss_mac_t  ;@;#o;;o;	;
+@
+;ipz;"mac;@;[ ;0;o;;o;	;
+@
+;iz;"vtss_vid_mac_t;@;[ ;0{;o;;o;	;
+@
+;iz;"ƒ#define MAC_ADDR_BROADCAST {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}  /**< Broadcast address used for addr in the vtss_mac_t struct */
+
+;@{;o;;o;	;
+@
+;i!{;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{
+;o;;o;	;
+@
+;i={;"typedef;@;o;;o;	;
+@
+;iE{;"	u32 ;@;o;;o;	;
+@
+;iI{;"vtss_isdx_t;@;[ ;0{;o;;o;	;
+@
+;i{{;"J#define VTSS_ISDX_NONE (0) /**< Ingress Service Index number none */
+;@{;o;;o;	;
+@
+;iÀ{;"O#define VTSS_VSI_NONE  (0) /**< Virtual Switching Instance number none */
+;@{;o;;o;	;
+@
+;i
+|;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i?|;"typedef;@;o;;o;	;
+@
+;iG|;"	u16 ;@;o;;o;	;
+@
+;iK|;"vtss_iflow_id_t;@;[ ;0{;o;;o;	;
+@
+;i]|;"@#define VTSS_IFLOW_ID_NONE 0 /**< No flow ID allocated */
+
+;@{
+;o;;o;	;
+@
+;iº|;"typedef;@;o;;o;	;
+@
+;iÂ|;"	u32 ;@;o;;o;	;
+@
+;iÆ|;"vtss_aggr_no_t;@;[ ;0{;o;;o;	;
+@
+;iÖ|;"I#define VTSS_AGGRS           (VTSS_PORTS/2) /**< Number of LLAGs */
+;@{;o;;o;	;
+@
+;i};"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i6};"Q#define VTSS_AGGR_NO_NONE    0xffffffff     /**< Aggregation number none */
+;@{;o;;o;	;
+@
+;i‚};"R#define VTSS_AGGR_NO_START   0              /**< Aggregation start number */
+;@{;o;;o;	;
+@
+;iÏ};"##endif // _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;ií};"b#define VTSS_AGGR_NO_END     (VTSS_AGGR_NO_START+VTSS_AGGRS) /**< Aggregation number end */
+
+;@{
+;o;;o;	;
+@
+;iq~;"typedef;@;o;;o;	;
+@
+;iy~;"	u32 ;@;o;;o;	;
+@
+;i}~;"vtss_glag_no_t;@;[ ;0{;o;;o;	;
+@
+;i~;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iª~;"C#define VTSS_GLAGS         32         /**< Number of GLAGs */
+;@{;o;;o;	;
+@
+;iè~;"D#define VTSS_GLAG_NO_NONE  0xffffffff /**< GLAG number none */
+;@{;o;;o;	;
+@
+;i';"E#define VTSS_GLAG_NO_START 0          /**< GLAG start number */
+;@{;o;;o;	;
+@
+;ig;"X#define VTSS_GLAG_NO_END   (VTSS_GLAG_NO_START+VTSS_GLAGS) /**< GLAG end number */
+;@{;o;;o;	;
+@
+;iº;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{;o;;o;	;
+@
+;iø;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i€;"F#define VTSS_GLAG_PORTS           8 /**< Number of GLAG ports */
+;@{;o;;o;	;
+@
+;iU€;"H#define VTSS_GLAG_PORT_START      0 /**< GLAG port start number */
+;@{;o;;o;	;
+@
+;i˜€;"k#define VTSS_GLAG_PORT_END        (VTSS_GLAG_PORT_START+VTSS_GLAG_PORTS) /**< GLAG port end number */
+;@{;o;;o;	;
+@
+;iş€;"W#define VTSS_GLAG_PORT_ARRAY_SIZE VTSS_GLAG_PORT_END /**< GLAG port array size */
+;@{;o;;o;	;
+@
+;iP;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iN‚;"typedef;@;o;;o;	;
+@
+;iV‚;"	u32 ;@;o;;o;	;
+@
+;iZ‚;"vtss_packet_rx_queue_t;@;[ ;0{
+;o;;o;	;
+@
+;iæ‚;"typedef;@;o;;o;	;
+@
+;iî‚;"	u32 ;@;o;;o;	;
+@
+;iò‚;"vtss_packet_rx_grp_t;@;[ ;0{
+;o;;o;	;
+@
+;i|ƒ;"typedef;@;o;;o;	;
+@
+;i„ƒ;"	u32 ;@;o;;o;	;
+@
+;iˆƒ;"vtss_packet_tx_grp_t;@;[ ;0{;o;;o;	;
+@
+;iŸƒ;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i»ƒ;"A#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;i÷ƒ;"&#undef  VTSS_PACKET_RX_QUEUE_CNT
+;@{;o;;o;	;
+@
+;i„;"O#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+;@{;o;;o;	;
+@
+;ib„;"$#undef  VTSS_PACKET_RX_GRP_CNT
+;@{;o;;o;	;
+@
+;i„;"j#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+;@{;o;;o;	;
+@
+;iæ„;"$#undef  VTSS_PACKET_TX_GRP_CNT
+;@{;o;;o;	;
+@
+;i…;"O#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+;@{;o;;o;	;
+@
+;iO…;",#endif /* VTSS_ARCH_LUTON26/SERVAL */
+
+;@{;o;;o;	;
+@
+;iv…;"%#if defined(VTSS_ARCH_JAGUAR_2)
+;@{;o;;o;	;
+@
+;i–…;"&#undef  VTSS_PACKET_RX_QUEUE_CNT
+;@{;o;;o;	;
+@
+;i·…;"O#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+;@{;o;;o;	;
+@
+;i†;"$#undef  VTSS_PACKET_RX_GRP_CNT
+;@{;o;;o;	;
+@
+;i †;"j#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+;@{;o;;o;	;
+@
+;i…†;"$#undef  VTSS_PACKET_TX_GRP_CNT
+;@{;o;;o;	;
+@
+;i¤†;"O#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+;@{;o;;o;	;
+@
+;iî†;"&#endif /* VTSS_ARCH_JAGUAR_2 */
+
+;@{;o;;o;	;
+@
+;i‡;"##if defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i-‡;"&#undef  VTSS_PACKET_RX_QUEUE_CNT
+;@{;o;;o;	;
+@
+;iN‡;"O#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+;@{;o;;o;	;
+@
+;i˜‡;"$#undef  VTSS_PACKET_RX_GRP_CNT
+;@{;o;;o;	;
+@
+;i·‡;"j#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+;@{;o;;o;	;
+@
+;iˆ;"$#undef  VTSS_PACKET_TX_GRP_CNT
+;@{;o;;o;	;
+@
+;i;ˆ;"O#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+;@{;o;;o;	;
+@
+;i…ˆ;"$#endif /* VTSS_ARCH_SPARX5 */
+
+;@{;o;;o;	;
+@
+;i¤ˆ;"$#if defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;iÃˆ;"&#undef  VTSS_PACKET_RX_QUEUE_CNT
+;@{;o;;o;	;
+@
+;iäˆ;"O#define VTSS_PACKET_RX_QUEUE_CNT    8  /**< Number of Rx packet queues */
+;@{;o;;o;	;
+@
+;i.‰;"$#undef  VTSS_PACKET_RX_GRP_CNT
+;@{;o;;o;	;
+@
+;iM‰;"j#define VTSS_PACKET_RX_GRP_CNT      2  /**< Number of Rx packet groups to which any queue can map */
+;@{;o;;o;	;
+@
+;i²‰;"$#undef  VTSS_PACKET_TX_GRP_CNT
+;@{;o;;o;	;
+@
+;iÑ‰;"O#define VTSS_PACKET_TX_GRP_CNT      2  /**< Number of Tx packet groups */
+;@{;o;;o;	;
+@
+;iŠ;"%#endif /* VTSS_ARCH_LAN966X */
+
+;@{;o;;o;	;
+@
+;i;Š;"s#define VTSS_PACKET_RX_QUEUE_NONE  (0xffffffff) /**< Rx queue not selected for a particular type of frames */
+;@{;o;;o;	;
+@
+;i©Š;"S#define VTSS_PACKET_RX_QUEUE_START (0)          /**< Rx queue start number */
+;@{;o;;o;	;
+@
+;i÷Š;"|#define VTSS_PACKET_RX_QUEUE_END   (VTSS_PACKET_RX_QUEUE_START + VTSS_PACKET_RX_QUEUE_CNT) /**< Rx queue end number */
+;@{;o;;o;	;
+@
+;in‹;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i¨‹;"typedef;@;o;;o;	;
+@
+;i°‹;"u8 ;@;o;;o;	;
+@
+;i³‹;"vtss_cosid_t;@;[ ;0{;o;;o;	;
+@
+;iÁ‹;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iİ‹;"4#define VTSS_COSIDS 8 /**< Number of COSIDs */
+;@{;o;;o;	;
+@
+;iŒ;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iRŒ;"typedef;@;{;o;;o;	;
+@
+;iZŒ;"	enum;@;[{;{;o;;o;	;
+@
+;ieŒ;"VTSS_PACKET_REG_NORMAL;@;0{;{;o;;o;	;
+@
+;iµŒ;"VTSS_PACKET_REG_FORWARD;@;0{;o;;o;	;
+@
+;ièŒ;"7#if defined(VTSS_FEATURE_PACKET_PORT_REG_DISCARD)
+;@{;{;o;;o;	;
+@
+;i;"VTSS_PACKET_REG_DISCARD;@;0{;{;o;;o;	;
+@
+;iL;"VTSS_PACKET_REG_CPU_COPY;@;0{;o;;o;	;
+@
+;iz;"7#endif /* VTSS_FEATURE_PACKET_PORT_REG_DISCARD */
+;@{;{;o;;o;	;
+@
+;i°;"VTSS_PACKET_REG_CPU_ONLY  ;@;0;o;;o;	;
+@
+;iä;"vtss_packet_reg_type_t;@;[ ;0{;o;;o;	;
+@
+;iı;"4#if defined(VTSS_FEATURE_PACKET_PORT_L2CP_REG)
+;@{
+;o;;o;	;
+@
+;iY;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;in;"BOOL         ;@;#o;;o;	;
+@
+;i{;"cosid_enable;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¢;"vtss_cosid_t ;@;#o;;o;	;
+@
+;i¯;"
+cosid;@;[ ;0;o;;o;	;
+@
+;iÍ;"$vtss_packet_rx_port_l2cp_conf_t;@;[ ;0{;o;;o;	;
+@
+;iî;"5#endif /* VTSS_FEATURE_PACKET_PORT_L2CP_REG */
+
+;@{
+;o;;o;	;
+@
+;iI;"typedef;@;{;[{;o;;o;	;
+@
+;iZ;"A#if defined(VTSS_ARCH_OCELOT) || defined(VTSS_ARCH_LAN966X)
+;@{; {;!{	;"o;;o;	;
+@
+;iš;"%vtss_packet_reg_type_t          ;@;#o;;o;	;
+@
+;iº;"ipmc_ctrl_reg;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i;"%vtss_packet_reg_type_t          ;@;#o;;o;	;
+@
+;i&;"igmp_reg;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;ii;"%vtss_packet_reg_type_t          ;@;#o;;o;	;
+@
+;i‰;"mld_reg;@;[ ;0{;o;;o;	;
+@
+;iÇ;"#endif
+;@{; {;!{	;"o;;o;	;
+@
+;iÒ;"%vtss_packet_reg_type_t          ;@;#o;;o;	;
+@
+;iò;"bpdu_reg;@;[{;o;;o;	;
+@
+;iû;"16;@;0{; {;!{	;"o;;o;	;
+@
+;i+‘;"%vtss_packet_reg_type_t          ;@;#o;;o;	;
+@
+;iK‘;"garp_reg;@;[{;o;;o;	;
+@
+;iT‘;"16;@;0{;o;;o;	;
+@
+;i€‘;"4#if defined(VTSS_FEATURE_PACKET_PORT_L2CP_REG)
+;@{; {;!{	;"o;;o;	;
+@
+;i³‘;"%vtss_packet_rx_port_l2cp_conf_t ;@;#o;;o;	;
+@
+;iÓ‘;"	bpdu;@;[{;o;;o;	;
+@
+;iØ‘;"16;@;0{; {;!{	;"o;;o;	;
+@
+;i’;"%vtss_packet_rx_port_l2cp_conf_t ;@;#o;;o;	;
+@
+;i,’;"	garp;@;[{;o;;o;	;
+@
+;i1’;"16;@;0{;o;;o;	;
+@
+;ia’;"4#endif /* VTSS_FEATURE_PACKET_PORT_L2CP_REG */
+;@;o;;o;	;
+@
+;i’’;"vtss_packet_rx_port_conf_t;@;[ ;0{
+;o;;o;	;
+@
+;iÎ’;"typedef;@;{;o;;o;	;
+@
+;iÖ’;"	enum;@;[{;{;o;;o;	;
+@
+;iá’;"VTSS_VDD_1V0;@;0{;{;o;;o;	;
+@
+;i“;"VTSS_VDD_1V2;@;0;o;;o;	;
+@
+;iC“;"vtss_vdd_t;@;[ ;0{
+;o;;o;	;
+@
+;i(”;"typedef;@;o;;o;	;
+@
+;i0”;"	u16 ;@;o;;o;	;
+@
+;i4”;"vtss_udp_tcp_t;@;[ ;0{
+;o;;o;	;
+@
+;ie”;"typedef;@;o;;o;	;
+@
+;im”;"	u32 ;@;o;;o;	;
+@
+;iq”;"vtss_ip_t;@;[ ;0{
+;o;;o;	;
+@
+;i”;"typedef;@;o;;o;	;
+@
+;i¥”;"vtss_ip_t ;@;o;;o;	;
+@
+;i¯”;"vtss_ipv4_t;@;[ ;0{
+;o;;o;	;
+@
+;i×”;"typedef;@;o;;o;	;
+@
+;iß”;"	u32 ;@;o;;o;	;
+@
+;iã”;"vtss_prefix_size_t;@;[ ;0{
+;o;;o;	;
+@
+;i•;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i-•;"u8 ;@;#o;;o;	;
+@
+;i0•;"	addr;@;[{;o;;o;	;
+@
+;i5•;"16;@;0;o;;o;	;
+@
+;iL•;"vtss_ipv6_t;@;[ ;0{
+;o;;o;	;
+@
+;iÅ•;"typedef;@;o;;o;	;
+@
+;iÍ•;"	u32 ;@;o;;o;	;
+@
+;iÑ•;"vtss_l3_rleg_id_t;@;[ ;0{
+;o;;o;	;
+@
+;i–;"typedef;@;{;o;;o;	;
+@
+;i–;"	enum;@;[{;{	;o;;o;	;
+@
+;i–;"VTSS_IP_TYPE_NONE ;@;o;;o;	;
+@
+;i(–;"=;@;o;;o;	;
+@
+;i*–;"0;@;0{;{	;o;;o;	;
+@
+;i[–;"VTSS_IP_TYPE_IPV4 ;@;o;;o;	;
+@
+;im–;"=;@;o;;o;	;
+@
+;io–;"1;@;0{;{	;o;;o;	;
+@
+;i –;"VTSS_IP_TYPE_IPV6 ;@;o;;o;	;
+@
+;i²–;"=;@;o;;o;	;
+@
+;i´–;"2;@;0;o;;o;	;
+@
+;iã–;"vtss_ip_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i"—;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i7—;"vtss_ip_type_t  ;@;#o;;o;	;
+@
+;iG—;"	type;@;[ ;0{:member_union{:union_type_declare{;o;;o;	;
+@
+;id—;"
+union;@:union_members[{; {;!{	;"o;;o;	;
+@
+;it—;"vtss_ipv4_t ;@;#o;;o;	;
+@
+;i€—;"	ipv4;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i£—;"vtss_ipv6_t ;@;#o;;o;	;
+@
+;i¯—;"	ipv6;@;[ ;0;#o;;o;	;
+@
+;iĞ—;"	addr;@;[ ;o;;o;	;
+@
+;iù—;"vtss_ip_addr_t;@;[ ;0{
+;o;;o;	;
+@
+;i%˜;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i:˜;"vtss_ipv4_t        ;@;#o;;o;	;
+@
+;iM˜;"address;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iv˜;"vtss_prefix_size_t ;@;#o;;o;	;
+@
+;i‰˜;"prefix_size;@;[ ;0;o;;o;	;
+@
+;i¬˜;"vtss_ipv4_network_t;@;[ ;0{
+;o;;o;	;
+@
+;iİ˜;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iò˜;"vtss_ipv6_t        ;@;#o;;o;	;
+@
+;i™;"address;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i.™;"vtss_prefix_size_t ;@;#o;;o;	;
+@
+;iA™;"prefix_size;@;[ ;0;o;;o;	;
+@
+;id™;"vtss_ipv6_network_t;@;[ ;0{
+;o;;o;	;
+@
+;i•™;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iª™;"vtss_ip_addr_t     ;@;#o;;o;	;
+@
+;i½™;"address;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iæ™;"vtss_prefix_size_t ;@;#o;;o;	;
+@
+;iù™;"prefix_size;@;[ ;0;o;;o;	;
+@
+;iš;"vtss_ip_network_t;@;[ ;0{
+;o;;o;	;
+@
+;iQš;"typedef;@;{;o;;o;	;
+@
+;iYš;"	enum;@;[	{;{	;o;;o;	;
+@
+;idš;"%VTSS_ROUTING_ENTRY_TYPE_INVALID ;@;o;;o;	;
+@
+;i„š;"=;@;o;;o;	;
+@
+;i†š;"0;@;0{;{	;o;;o;	;
+@
+;iš;"%VTSS_ROUTING_ENTRY_TYPE_IPV6_UC ;@;o;;o;	;
+@
+;i­š;"=;@;o;;o;	;
+@
+;i¯š;"1;@;0{;{	;o;;o;	;
+@
+;i¶š;"%VTSS_ROUTING_ENTRY_TYPE_IPV4_MC ;@;o;;o;	;
+@
+;iÖš;"=;@;o;;o;	;
+@
+;iØš;"2;@;0{;{	;o;;o;	;
+@
+;iîš;"%VTSS_ROUTING_ENTRY_TYPE_IPV4_UC ;@;o;;o;	;
+@
+;i›;"=;@;o;;o;	;
+@
+;i›;"3;@;0;o;;o;	;
+@
+;i›;"vtss_routing_entry_type_t;@;[ ;0{
+;o;;o;	;
+@
+;i\›;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i•›;"vtss_ipv4_t         ;@;#o;;o;	;
+@
+;i©›;"
+group;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i
+œ;"vtss_ipv4_t         ;@;#o;;o;	;
+@
+;iœ;"source;@;[ ;0;o;;o;	;
+@
+;i(œ;"vtss_ipv4_mc_t;@;[ ;0{
+;o;;o;	;
+@
+;idœ;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iœ;"vtss_ipv6_t         ;@;#o;;o;	;
+@
+;i±œ;"
+group;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i;"vtss_ipv6_t         ;@;#o;;o;	;
+@
+;i&;"source;@;[ ;0;o;;o;	;
+@
+;i0;"vtss_ipv6_mc_t;@;[ ;0{
+;o;;o;	;
+@
+;ij;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i;"vtss_ipv4_network_t ;@;#o;;o;	;
+@
+;i“;"network;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i½;"vtss_ipv4_t         ;@;#o;;o;	;
+@
+;iÑ;"destination;@;[ ;0;o;;o;	;
+@
+;iE;"vtss_ipv4_uc_t;@;[ ;0{
+;o;;o;	;
+@
+;iw;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iŒ;"vtss_ipv6_network_t ;@;#o;;o;	;
+@
+;i ;"network;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÊ;"vtss_ipv6_t         ;@;#o;;o;	;
+@
+;iŞ;"destination;@;[ ;0;o;;o;	;
+@
+;iRŸ;"vtss_ipv6_uc_t;@;[ ;0{
+;o;;o;	;
+@
+;i‡Ÿ;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i»Ÿ;"vtss_routing_entry_type_t ;@;#o;;o;	;
+@
+;iÕŸ;"	type;@;[ ;0{;${;%{;o;;o;	;
+@
+;ißŸ;"
+union;@;&[{; {;!{	;"o;;o;	;
+@
+;i ;"vtss_ipv4_uc_t ;@;#o;;o;	;
+@
+;i ;"ipv4_uc;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iP ;"vtss_ipv6_uc_t ;@;#o;;o;	;
+@
+;i_ ;"ipv6_uc;@;[ ;0;#o;;o;	;
+@
+;im ;"
+route;@;[ {; {;!{	;"o;;o;	;
+@
+;iÅ ;"vtss_vid_t ;@;#o;;o;	;
+@
+;iĞ ;"	vlan;@;[ ;0;o;;o;	;
+@
+;iÙ ;"vtss_routing_entry_t;@;[ ;0{;o;;o;	;
+@
+;iğ ;"$#define VTSS_RT_TYPE_IPV4_MC 0
+;@{;o;;o;	;
+@
+;i¡;"%#define VTSS_RT_TYPE_IPV6_MC 1
+
+;@{
+;o;;o;	;
+@
+;iU¡;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i»¡;"
+BOOL ;@;#o;;o;	;
+@
+;iÀ¡;"	type;@;[ ;0{;${;%{;o;;o;	;
+@
+;iË¡;"
+union;@;&[{; {;!{	;"o;;o;	;
+@
+;iÿ¡;"vtss_ipv4_mc_t ;@;#o;;o;	;
+@
+;i¢;"ipv4_mc;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iD¢;"vtss_ipv6_mc_t ;@;#o;;o;	;
+@
+;iS¢;"ipv6_mc;@;[ ;0;#o;;o;	;
+@
+;ib¢;"
+route;@;[ {; {;!{	;"o;;o;	;
+@
+;iÓ¢;"vtss_vid_t ;@;#o;;o;	;
+@
+;iŞ¢;"source_rleg;@;[ ;0;o;;o;	;
+@
+;ií¢;"vtss_routing_mc_entry_t;@;[ ;0{
+;o;;o;	;
+@
+;i7£;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iL£;"	u64 ;@;#o;;o;	;
+@
+;iP£;"ipv4uc_received_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¥£;"	u64 ;@;#o;;o;	;
+@
+;i©£;"ipv4uc_received_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iş£;"	u64 ;@;#o;;o;	;
+@
+;i¤;"ipv6uc_received_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iW¤;"	u64 ;@;#o;;o;	;
+@
+;i[¤;"ipv6uc_received_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i±¤;"	u64 ;@;#o;;o;	;
+@
+;iµ¤;"ipv4uc_transmitted_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iö¤;"	u64 ;@;#o;;o;	;
+@
+;iú¤;"ipv4uc_transmitted_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i;¥;"	u64 ;@;#o;;o;	;
+@
+;i?¥;"ipv6uc_transmitted_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i€¥;"	u64 ;@;#o;;o;	;
+@
+;i„¥;"ipv6uc_transmitted_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÆ¥;"	u64 ;@;#o;;o;	;
+@
+;iÊ¥;"ipv4mc_received_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¦;"	u64 ;@;#o;;o;	;
+@
+;i#¦;"ipv4mc_received_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;ix¦;"	u64 ;@;#o;;o;	;
+@
+;i|¦;"ipv6mc_received_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÑ¦;"	u64 ;@;#o;;o;	;
+@
+;iÕ¦;"ipv6mc_received_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i+§;"	u64 ;@;#o;;o;	;
+@
+;i/§;"ipv4mc_transmitted_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;ip§;"	u64 ;@;#o;;o;	;
+@
+;it§;"ipv4mc_transmitted_frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iµ§;"	u64 ;@;#o;;o;	;
+@
+;i¹§;"ipv6mc_transmitted_octets;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iú§;"	u64 ;@;#o;;o;	;
+@
+;iş§;"ipv6mc_transmitted_frames;@;[ ;0;o;;o;	;
+@
+;i=¨;"vtss_l3_counters_t;@;[ ;0{
+;o;;o;	;
+@
+;i©;"typedef;@;{;o;;o;	;
+@
+;i©;"	enum;@;[{;{;o;;o;	;
+@
+;i7©;"VTSS_VCAP_BIT_ANY;@;0{;{;o;;o;	;
+@
+;ic©;"VTSS_VCAP_BIT_0;@;0{;{;o;;o;	;
+@
+;iŠ©;"VTSS_VCAP_BIT_1    ;@;0;o;;o;	;
+@
+;i¯©;"vtss_vcap_bit_t;@;[ ;0{
+;o;;o;	;
+@
+;ié©;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iş©;"u8 ;@;#o;;o;	;
+@
+;iª;"
+value;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iª;"u8 ;@;#o;;o;	;
+@
+;iª;"	mask;@;[ ;0;o;;o;	;
+@
+;iSª;"vtss_vcap_u8_t;@;[ ;0{
+;o;;o;	;
+@
+;iª;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i¢ª;"u8 ;@;#o;;o;	;
+@
+;i¥ª;"
+value;@;[{;o;;o;	;
+@
+;i«ª;"2;@;0{; {;!{	;"o;;o;	;
+@
+;iÃª;"u8 ;@;#o;;o;	;
+@
+;iÆª;"	mask;@;[{;o;;o;	;
+@
+;iËª;"2;@;0;o;;o;	;
+@
+;iıª;"vtss_vcap_u16_t;@;[ ;0{
+;o;;o;	;
+@
+;i8«;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iM«;"u8 ;@;#o;;o;	;
+@
+;iP«;"
+value;@;[{;o;;o;	;
+@
+;iV«;"3;@;0{; {;!{	;"o;;o;	;
+@
+;in«;"u8 ;@;#o;;o;	;
+@
+;iq«;"	mask;@;[{;o;;o;	;
+@
+;iv«;"3;@;0;o;;o;	;
+@
+;i¨«;"vtss_vcap_u24_t;@;[ ;0{
+;o;;o;	;
+@
+;iã«;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iø«;"u8 ;@;#o;;o;	;
+@
+;iû«;"
+value;@;[{;o;;o;	;
+@
+;i¬;"4;@;0{; {;!{	;"o;;o;	;
+@
+;i¬;"u8 ;@;#o;;o;	;
+@
+;i¬;"	mask;@;[{;o;;o;	;
+@
+;i!¬;"4;@;0;o;;o;	;
+@
+;iS¬;"vtss_vcap_u32_t;@;[ ;0{
+;o;;o;	;
+@
+;i¬;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i£¬;"u8 ;@;#o;;o;	;
+@
+;i¦¬;"
+value;@;[{;o;;o;	;
+@
+;i¬¬;"5;@;0{; {;!{	;"o;;o;	;
+@
+;iÄ¬;"u8 ;@;#o;;o;	;
+@
+;iÇ¬;"	mask;@;[{;o;;o;	;
+@
+;iÌ¬;"5;@;0;o;;o;	;
+@
+;iş¬;"vtss_vcap_u40_t;@;[ ;0{
+;o;;o;	;
+@
+;i9­;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iN­;"u8 ;@;#o;;o;	;
+@
+;iQ­;"
+value;@;[{;o;;o;	;
+@
+;iW­;"6;@;0{; {;!{	;"o;;o;	;
+@
+;io­;"u8 ;@;#o;;o;	;
+@
+;ir­;"	mask;@;[{;o;;o;	;
+@
+;iw­;"6;@;0;o;;o;	;
+@
+;i©­;"vtss_vcap_u48_t;@;[ ;0{
+;o;;o;	;
+@
+;iå­;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iú­;"u8 ;@;#o;;o;	;
+@
+;iı­;"
+value;@;[{;o;;o;	;
+@
+;i®;"16;@;0{; {;!{	;"o;;o;	;
+@
+;i®;"u8 ;@;#o;;o;	;
+@
+;i®;"	mask;@;[{;o;;o;	;
+@
+;i$®;"16;@;0;o;;o;	;
+@
+;iW®;"vtss_vcap_u128_t;@;[ ;0{
+;o;;o;	;
+@
+;i”®;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i©®;"	u16 ;@;#o;;o;	;
+@
+;i­®;"
+value;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÈ®;"	u16 ;@;#o;;o;	;
+@
+;iÌ®;"	mask;@;[ ;0;o;;o;	;
+@
+;i ¯;"vtss_vcap_vid_t;@;[ ;0{
+;o;;o;	;
+@
+;iA¯;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iV¯;"vtss_ip_t ;@;#o;;o;	;
+@
+;i`¯;"
+value;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i{¯;"vtss_ip_t ;@;#o;;o;	;
+@
+;i…¯;"	mask;@;[ ;0;o;;o;	;
+@
+;i¹¯;"vtss_vcap_ip_t;@;[ ;0{
+;o;;o;	;
+@
+;iğ¯;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i°;"BOOL           ;@;#o;;o;	;
+@
+;i°;"in_range;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i@°;"vtss_udp_tcp_t ;@;#o;;o;	;
+@
+;iO°;"low;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iv°;"vtss_udp_tcp_t ;@;#o;;o;	;
+@
+;i…°;"	high;@;[ ;0;o;;o;	;
+@
+;i«°;"vtss_vcap_udp_tcp_t;@;[ ;0{
+;o;;o;	;
+@
+;ià°;"typedef;@;{;o;;o;	;
+@
+;iè°;"	enum;@;[{;{;o;;o;	;
+@
+;ió°;"!VTSS_VCAP_VR_TYPE_VALUE_MASK;@;0{;{;o;;o;	;
+@
+;i7±;"&VTSS_VCAP_VR_TYPE_RANGE_INCLUSIVE;@;0{;{;o;;o;	;
+@
+;i–±;"*VTSS_VCAP_VR_TYPE_RANGE_EXCLUSIVE    ;@;0;o;;o;	;
+@
+;iú±;"vtss_vcap_vr_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iA²;"typedef;@;o;;o;	;
+@
+;iI²;"	u16 ;@;o;;o;	;
+@
+;iM²;"vtss_vcap_vr_value_t;@;[ ;0{
+;o;;o;	;
+@
+;i²;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i¥²;"vtss_vcap_vr_type_t ;@;#o;;o;	;
+@
+;i¹²;"	type;@;[ ;0{;${;%{;o;;o;	;
+@
+;iĞ²;"
+union;@;&[{:member_struct{;{;[{; {;!{	;"o;;o;	;
+@
+;i³;"vtss_vcap_vr_value_t ;@;#o;;o;	;
+@
+;i³;"
+value;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i7³;"vtss_vcap_vr_value_t ;@;#o;;o;	;
+@
+;iL³;"	mask;@;[ ;0;#o;;o;	;
+@
+;i†³;"v;@;[ {;'{;{;[{; {;!{	;"o;;o;	;
+@
+;iÛ³;"vtss_vcap_vr_value_t ;@;#o;;o;	;
+@
+;iğ³;"low;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i´;"vtss_vcap_vr_value_t ;@;#o;;o;	;
+@
+;i*´;"	high;@;[ ;0;#o;;o;	;
+@
+;iN´;"r;@;[ ;#o;;o;	;
+@
+;i†´;"vr;@;[ ;o;;o;	;
+@
+;i£´;"vtss_vcap_vr_t;@;[ ;0{
+;o;;o;	;
+@
+;iĞ´;"typedef;@;{;o;;o;	;
+@
+;iØ´;"	enum;@;[	{;{;o;;o;	;
+@
+;iã´;"VTSS_VCAP_KEY_TYPE_NORMAL;@;0{;{;o;;o;	;
+@
+;i!µ;""VTSS_VCAP_KEY_TYPE_DOUBLE_TAG;@;0{;{;o;;o;	;
+@
+;ibµ;"VTSS_VCAP_KEY_TYPE_IP_ADDR;@;0{;{;o;;o;	;
+@
+;i£µ;"$VTSS_VCAP_KEY_TYPE_MAC_IP_ADDR ;@;0;o;;o;	;
+@
+;iëµ;"vtss_vcap_key_type_t;@;[ ;0{
+;o;;o;	;
+@
+;iÍ¶;"typedef;@;o;;o;	;
+@
+;iÕ¶;"	u32 ;@;o;;o;	;
+@
+;iÙ¶;"vtss_acl_policer_no_t;@;[ ;0{;o;;o;	;
+@
+;iğ¶;"v#define VTSS_ACL_POLICERS         16                                              /**< Number of ACL policers */
+;@{;o;;o;	;
+@
+;ia·;"x#define VTSS_ACL_POLICER_NO_START 0                                               /**< ACL policer start number */
+;@{;o;;o;	;
+@
+;iÔ·;"w#define VTSS_ACL_POLICER_NO_END   (VTSS_ACL_POLICER_NO_START + VTSS_ACL_POLICERS) /**< ACL policer end number */
+
+;@{
+;o;;o;	;
+@
+;if¸;"typedef;@;o;;o;	;
+@
+;in¸;"	u32 ;@;o;;o;	;
+@
+;ir¸;"vtss_acl_policy_no_t;@;[ ;0{;o;;o;	;
+@
+;iˆ¸;"s#define VTSS_ACL_POLICY_NO_NONE  0xffffffff                                     /**< ACLs disabled on port */
+;@{;o;;o;	;
+@
+;iö¸;"x#define VTSS_ACL_POLICY_NO_MIN   0                                              /**< ACLs policy minimum number */
+;@{;o;;o;	;
+@
+;ii¹;"_#if defined(VTSS_ARCH_LUTON26) || defined(VTSS_ARCH_SPARX5) || defined(VTSS_ARCH_LAN966X)
+;@{;o;;o;	;
+@
+;iÃ¹;"x#define VTSS_ACL_POLICY_NO_MAX   255                                            /**< ACLs policy maximum number */
+;@{;o;;o;	;
+@
+;i6º;"'#elif defined(VTSS_ARCH_JAGUAR_2)
+;@{;o;;o;	;
+@
+;iXº;"x#define VTSS_ACL_POLICY_NO_MAX   127                                            /**< ACLs policy maximum number */
+;@{;o;;o;	;
+@
+;iËº;"%#elif defined(VTSS_ARCH_OCELOT)
+;@{;o;;o;	;
+@
+;iëº;"x#define VTSS_ACL_POLICY_NO_MAX   63                                             /**< ACLs policy maximum number */
+;@{;o;;o;	;
+@
+;i^»;"#else
+;@{;o;;o;	;
+@
+;id»;"x#define VTSS_ACL_POLICY_NO_MAX   7                                              /**< ACLs policy maximum number */
+;@{;o;;o;	;
+@
+;i×»;"-#endif /* VTSS_ARCH_LUTON26/JAGUAR_2 */
+;@{;o;;o;	;
+@
+;iÿ»;"t#define VTSS_ACL_POLICIES        (VTSS_ACL_POLICY_NO_MAX + 1)                   /**< Number of ACL policies */
+;@{;o;;o;	;
+@
+;in¼;"u#define VTSS_ACL_POLICY_NO_START  VTSS_ACL_POLICY_NO_MIN                        /**< ACL policy start number */
+;@{;o;;o;	;
+@
+;iŞ¼;"t#define VTSS_ACL_POLICY_NO_END   (VTSS_ACL_POLICY_NO_START + VTSS_ACL_POLICIES) /**< ACL policy end number */
+
+;@{
+;o;;o;	;
+@
+;ic½;"typedef;@;o;;o;	;
+@
+;ik½;"	u64 ;@;o;;o;	;
+@
+;io½;"vtss_counter_t;@;[ ;0{
+;o;;o;	;
+@
+;i›½;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i°½;"vtss_counter_t ;@;#o;;o;	;
+@
+;i¿½;"frames;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iä½;"vtss_counter_t ;@;#o;;o;	;
+@
+;ió½;"
+bytes;@;[ ;0;o;;o;	;
+@
+;i¾;"vtss_counter_pair_t;@;[ ;0{;o;;o;	;
+@
+;i+¾;"h#if defined(VTSS_FEATURE_EVC_COUNTERS) || defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_FEATURE_VOP)
+;@{
+;o;;o;	;
+@
+;i­¾;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;iÂ¾;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;iÖ¾;"rx_green;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¿;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;i¿;"rx_yellow;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iG¿;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;i[¿;"rx_red;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i‡¿;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;i›¿;"rx_discard;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÍ¿;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;iá¿;"tx_discard;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iÀ;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;i'À;"tx_green;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iUÀ;"vtss_counter_pair_t ;@;#o;;o;	;
+@
+;iiÀ;"tx_yellow;@;[ ;0;o;;o;	;
+@
+;i–À;"vtss_evc_counters_t;@;[ ;0{;o;;o;	;
+@
+;i«À;"#endif
+
+;@{
+;o;;o;	;
+@
+;iÎÀ;"typedef;@;o;;o;	;
+@
+;iÖÀ;"u8 ;@;o;;o;	;
+@
+;iÙÀ;"vtss_mpls_tc_t;@;[ ;0{
+;o;;o;	;
+@
+;i9Â;"typedef;@;o;;o;	;
+@
+;iAÂ;"	i64 ;@;o;;o;	;
+@
+;iEÂ;"vtss_clk_adj_rate_t;@;[ ;0{
+;o;;o;	;
+@
+;iòÂ;"typedef;@;o;;o;	;
+@
+;iúÂ;"	i64 ;@;o;;o;	;
+@
+;işÂ;"vtss_timeinterval_t;@;[ ;0{;o;;o;	;
+@
+;iÃ;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i0Ã;"9#define VTSS_ONE_MIA 1000000000 /**< One billion */
+;@{;o;;o;	;
+@
+;idÃ;"9#define VTSS_ONE_MILL   1000000 /**< One million */
+;@{;o;;o;	;
+@
+;i˜Ã;"V#define VTSS_MAX_TIMEINTERVAL 0x7fffffffffffffffLL /**< Maximum time interval */
+;@{;o;;o;	;
+@
+;iéÃ;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{;o;;o;	;
+@
+;iÄ;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;i$Ä;"l#define VTSS_INTERVAL_SEC(t) ((i32)VTSS_DIV64((t)>>16, VTSS_ONE_MIA)) /**< One Second time interval */
+;@{;o;;o;	;
+@
+;i‹Ä;"r#define VTSS_INTERVAL_MS(t)  ((i32)VTSS_DIV64((t)>>16, VTSS_ONE_MILL)) /**< One millisecond time interval */
+;@{;o;;o;	;
+@
+;iøÄ;"i#define VTSS_INTERVAL_US(t)  ((i32)VTSS_DIV64((t)>>16, 1000)) /**< One microsecond time interval */
+;@{;o;;o;	;
+@
+;i\Å;"“#define VTSS_INTERVAL_NS(t)  ((i32)VTSS_MOD64((t)>>16, VTSS_ONE_MIA)) /**< This returns the ns part of the interval, not the total number of ns */
+;@{;o;;o;	;
+@
+;iïÅ;"˜#define VTSS_INTERVAL_PS(t)  (((((i32)(t & 0xffff))*1000)+0x8000)/0x10000) /**< This returns the ps part of the interval, not the total number of ps */
+;@{;o;;o;	;
+@
+;i‡Æ;"{#define VTSS_SEC_NS_INTERVAL(s,n) (((vtss_timeinterval_t)(n)+(vtss_timeinterval_t)(s)*VTSS_ONE_MIA)<<16)  /**< TBD */
+;@{;o;;o;	;
+@
+;iıÆ;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;iTÇ;"typedef;@;{;[	{; {;!{	;"o;;o;	;
+@
+;iiÇ;"	u16 ;@;#o;;o;	;
+@
+;imÇ;"sec_msb;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i–Ç;"	u32 ;@;#o;;o;	;
+@
+;išÇ;"seconds;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i¿Ç;"	u32 ;@;#o;;o;	;
+@
+;iÃÇ;"nanoseconds;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;iìÇ;"	u16 ;@;#o;;o;	;
+@
+;iğÇ;"nanosecondsfrac;@;[ ;0;o;;o;	;
+@
+;i+È;"vtss_timestamp_t;@;[ ;0{
+;o;;o;	;
+@
+;iëÈ;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i É;"	i32 ;@;#o;;o;	;
+@
+;iÉ;"scaled_ns_high;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;i,É;"	u64 ;@;#o;;o;	;
+@
+;i0É;"scaled_ns_low;@;[ ;0;o;;o;	;
+@
+;iZÉ;"vtss_scaled_ns_t;@;[ ;0{
+;o;;o;	;
+@
+;i&Ê;"typedef;@;{;[{; {;!{	;"o;;o;	;
+@
+;i;Ê;"	u32 ;@;#o;;o;	;
+@
+;i?Ê;"uscaled_ns_high;@;[ ;0{; {;!{	;"o;;o;	;
+@
+;igÊ;"	u64 ;@;#o;;o;	;
+@
+;ikÊ;"uscaled_ns_low;@;[ ;0;o;;o;	;
+@
+;i•Ê;"vtss_uscaled_ns_t;@;[ ;0{;o;;o;	;
+@
+;i©Ê;"!#ifndef _VTSS_MAIN_TYPES_H_
+;@{;o;;o;	;
+@
+;iÅÊ;"R#define VTSS_CLOCK_IDENTITY_LENGTH 8 /**< Length of unique PTP identifier */
+;@{;o;;o;	;
+@
+;iË;"$#endif // _VTSS_MAIN_TYPES_H_
+
+;@{
+;o;;o;	;
+@
+;i_Ë;"typedef;@;o;;o;	;
+@
+;igË;"u8 ;@;o;;o;	;
+@
+;ijË;"vtss_clock_identity;@;[{;o;;o;	;
+@
+;i~Ë;"VTSS_CLOCK_IDENTITY_LENGTH;@;0{;o;;o;	;
+@
+;iIÌ;"B#if defined(VTSS_ARCH_JAGUAR_2) || defined(VTSS_ARCH_SPARX5)
+;@{;o;;o;	;
+@
+;i†Ì;"`#define VTSS_SYNCE_CLK_PORT_ARRAY_SIZE  4    /**< SYNCE clock out port numberarray size */
+;@{;o;;o;	;
+@
+;iáÌ;"#else
+;@{;o;;o;	;
+@
+;içÌ;"`#define VTSS_SYNCE_CLK_PORT_ARRAY_SIZE  2    /**< SYNCE clock out port numberarray size */
+;@{;o;;o;	;
+@
+;iBÍ;"#endif
+
+;@{
+;o;;o;	;
+@
+;i+Î;"typedef;@;o;;o;	;
+@
+;i3Î;"	int ;@;o;;o;	;
+@
+;i7Î;"vtss_vstax_upsid_t;@;[ ;0{
+;o;;o;	;
+@
+;itÎ;"typedef;@;o;;o;	;
+@
+;i|Î;"	u32 ;@;o;;o;	;
+@
+;i€Î;"vtss_vstax_upspn_t;@;[ ;0{;o;;o;	;
+@
+;i•Î;"#ifdef __cplusplus
+;@{;o;;o;	;
+@
+;iªÎ;"#endif
+
+;@{;o;;o;	;
+@
+;i²Î;"%#endif /* _VTSS_API_TYPES_H_ */
+;@
